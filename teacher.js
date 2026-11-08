@@ -77,36 +77,55 @@
   const link = (route, fallback) => SCREENS[route.split(':')[0]] ? route : T.soon(fallback);
 
   // ---------- home ----------
-  SCREENS['t.home'] = { home: true, title: () => 'স্বাগতম, ' + S.me.full_name, sub: () => isAdmin() ? 'অ্যাডমিন' : 'শিক্ষক', hdr: 'var(--teal-dark)',
+  SCREENS['t.home'] = { home: true, title: () => 'স্বাগতম, ' + S.me.full_name,
+    sub: () => (isAdmin() ? 'অ্যাডমিন' : 'শিক্ষক') + ' · ' + todayBnLong() + (shiftNow() ? ` · এখন ${shiftBn(shiftNow())} শিফট` : ''), hdr: 'var(--teal-dark)',
     trail: () => '<button class="pill white" data-logout>লগআউট</button>', render: async (el) => {
     flushOutbox().catch(() => {});
-    const counts = await Promise.all(SHIFTS.map(s => T.rosterOf(s.id).then(l => l.length).catch(() => null)));
-    const admin = isAdmin();
-    // Same sections, tiles and order as StaffHome.kt.
-    const sections = [
-      ...(admin ? [['ব্যবস্থাপনা', [['users', 'অ্যাকাউন্ট ব্যবস্থাপনা', 'a.users'], ['note_edit', 'প্রোফাইল সম্পাদনা', 'a.people'], ['calendar', 'ক্লাস রুটিন', 'a.routine'], ['question', 'পরিবর্তনের অনুরোধ', 't.requests'],
-        ['phone', 'নম্বর সংশোধন', 'a.phones'], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['money', 'শিক্ষকদের সম্মানী', 't.honorarium']]]] : []),
-      ['প্রতিদিনের ক্লাস', [['attendance', 'উপস্থিতি গ্রহণ', 't.att'], ['star', 'ক্লাস রেটিং', 't.rate'], ['signal', 'শিক্ষার্থীদের সংকেত', 't.signals'], ['question', 'প্রশ্ন বক্স', 't.doubts'], ['mic', 'ভয়েস ও মুখস্থ পড়া', 't.voice'], ['camera', 'CCTV যাচাই', 't.gate']]],
-      ['পরীক্ষা ও ফলাফল', [['numbers', 'নম্বর এন্ট্রি', 't.marks'], ['document', 'রিপোর্ট কার্ড ও টপার', 'a.reports'], ['calendar', 'পরীক্ষার রুটিন', 't.routine'], ['calendar', 'পরীক্ষার পরিকল্পনা', 't.exams'], ['archive', 'প্রশ্ন ব্যাংক', 't.qbank'], ['ai_spark', 'AI প্রশ্নপত্র তৈরি', 't.aipaper'],
-        ['note_edit', 'AI খাতা মূল্যায়ন', 't.grading'], ['seat', 'সিট প্ল্যান', 't.seat']]],
-      ['শিক্ষার্থী ও অগ্রগতি', [['alert', 'ঝুঁকিতে থাকা শিক্ষার্থী', 't.risk'], ['chart', 'ব্যাচ তুলনা', 't.compare'], ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 't.challenges'], ['book', 'সিলেবাস ট্র্যাকার', 'syllabus:6'], ['flashcards', 'ফ্ল্যাশকার্ড', 'flash:6'], ['book', 'শিক্ষা উপকরণ', 'materials:5']]],
-      ['যোগাযোগ ও নোটিশ', [['megaphone', 'নোটিশ পাঠান', 't.notice'], ['bell', 'সকল নোটিশ', 'notices'], ['chat', 'অভিভাবকদের বার্তা', 'chats'], ['handshake', 'অভিভাবক মিটিং', 'meetings'], ['mic', 'পরিচালকের বার্তা', 'director']]],
-      [admin ? 'আমার অফিস' : 'অফিস', [['palm', 'ছুটি ও বদলি', 't.leave'], ...(admin ? [] : [['money', 'আমার সম্মানী', 't.honorarium'], ['question', 'আমার অনুরোধ', 't.requests']]), ['lock', 'পিন বদলান', 'pin']]],
-    ];
-    const todo = admin ? await Promise.all([
-      sel('student_change_requests', 'select=id&status=eq.pending&limit=200').then(r => r.length).catch(() => 0),
-      sel('phone_change_requests', 'select=id&status=eq.pending&limit=200').then(r => r.length).catch(() => 0),
-      sel('leave_requests', 'select=id&status=eq.pending&limit=200').then(r => r.length).catch(() => 0),
-    ]) : null;
-    const todoRows = todo ? [['শিক্ষকের পরিবর্তনের অনুরোধ', todo[0], 't.requests'], ['অভিভাবকের নম্বর সংশোধন', todo[1], 'a.phones'], ['ছুটির আবেদন', todo[2], 't.leave']].filter(r => r[1] > 0) : [];
-    el.innerHTML = `${pendingCard()}<div id="snotes"></div>
-      <div class="card"><h2>আজকের শিক্ষার্থী</h2><div class="mute small">শিফটে চাপলে তালিকা ও অভিভাবকের নম্বর দেখবেন</div>
-        <div class="seg soft" style="margin-top:10px">${SHIFTS.map((s, i) => `<button data-go="t.shift:${s.id}"><span class="lic">${I(s.icon)}</span><span>${s.bn}</span><b>${counts[i] == null ? '…' : bn(counts[i]) + ' জন'}</b></button>`).join('')}</div></div>
-      ${todo ? `<div class="card"><h3>আপনার জন্য কাজ</h3>${todoRows.map(([t, n, r]) => `<div class="row tap" data-go="${r}"><span>${t}</span><b>${bn(n)} ›</b></div>`).join('') || '<div class="mute">এই মুহূর্তে কোনো কাজ বাকি নেই ✓</div>'}</div>` : ''}
+    const admin = isAdmin(), today = dhakaToday(), now = shiftNow();
+    // Same order as StaffHome.kt: notices, staff notes, offline, today per shift, work waiting, 4 big jobs, folding categories.
+    const [nh, perShift, todo] = await Promise.all([
+      noticeHighlight(null),
+      Promise.all(SHIFTS.map(async s => {
+        try {
+          const l = await T.rosterOf(s.id);
+          if (!l.length) return [0, 0];
+          const a = await sel('attendance', `select=student_id,check_in&date=eq.${today}&student_id=${inList(l.map(x => x.id))}`);
+          return [l.length, new Set(a.filter(x => x.check_in).map(x => x.student_id)).size];
+        } catch { return null; }
+      })),
+      Promise.all([
+        sel('student_change_requests', `select=id&status=eq.pending${admin ? '' : '&requested_by=eq.' + S.uid}&limit=200`).then(r => r.length).catch(() => 0),
+        admin ? sel('phone_change_requests', 'select=id&status=eq.pending&limit=200').then(r => r.length).catch(() => 0) : 0,
+        admin ? sel('leave_requests', 'select=id&status=eq.pending&limit=200').then(r => r.length).catch(() => 0) : 0,
+      ]),
+    ]);
+    const badge = n => n > 0 ? bn(n) : null;
+    const manage = admin ? [['users', 'অ্যাকাউন্ট ব্যবস্থাপনা', 'a.users'], ['note_edit', 'প্রোফাইল সম্পাদনা', 'a.people'], ['calendar', 'ক্লাস রুটিন', 'a.routine'],
+      ['question', 'পরিবর্তনের অনুরোধ', 't.requests', badge(todo[0])], ['phone', 'নম্বর সংশোধন', 'a.phones', badge(todo[1])], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['money', 'শিক্ষকদের সম্মানী', 't.honorarium']] : [];
+    const daily = [['attendance', 'উপস্থিতি গ্রহণ', 't.att'], ['star', 'ক্লাস রেটিং', 't.rate'], ['signal', 'শিক্ষার্থীদের সংকেত', 't.signals'], ['question', 'প্রশ্ন বক্স', 't.doubts'], ['mic', 'ভয়েস ও মুখস্থ পড়া', 't.voice'], ['camera', 'CCTV যাচাই', 't.gate']];
+    const exams = [['numbers', 'নম্বর এন্ট্রি', 't.marks'], ['document', 'রিপোর্ট কার্ড ও টপার', 'a.reports'], ['calendar', 'পরীক্ষার রুটিন', 't.routine'], ['calendar', 'পরীক্ষার পরিকল্পনা', 't.exams'],
+      ['archive', 'প্রশ্ন ব্যাংক', 't.qbank'], ['ai_spark', 'AI প্রশ্নপত্র তৈরি', 't.aipaper'], ['note_edit', 'AI খাতা মূল্যায়ন', 't.grading'], ['seat', 'সিট প্ল্যান', 't.seat']];
+    const progress = [['alert', 'ঝুঁকিতে থাকা শিক্ষার্থী', 't.risk'], ['chart', 'ব্যাচ তুলনা', 't.compare'], ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 't.challenges'], ['book', 'সিলেবাস ট্র্যাকার', 'syllabus:6'], ['flashcards', 'ফ্ল্যাশকার্ড', 'flash:6'], ['book', 'শিক্ষা উপকরণ', 'materials:5']];
+    const talk = [['megaphone', 'নোটিশ পাঠান', 't.notice'], ['bell', 'সকল নোটিশ', 'notices'], ['chat', 'অভিভাবকদের বার্তা', 'chats'], ['handshake', 'অভিভাবক মিটিং', 'meetings'], ['mic', 'পরিচালকের বার্তা', 'director']];
+    const office = [['palm', 'ছুটি ও বদলি', 't.leave', admin ? badge(todo[2]) : null], ...(admin ? [] : [['money', 'আমার সম্মানী', 't.honorarium'], ['question', 'আমার অনুরোধ', 't.requests', badge(todo[0])]]), ['lock', 'পিন বদলান', 'pin']];
+    const fix = l => l.map(([ic, t, r, b]) => [ic, t, link(r, t), b]);
+    const scr = admin ? 'admin' : 'teacher';
+    el.innerHTML = `${nh}<div id="snotes"></div>${pendingCard()}
+      <div class="card"><div style="display:flex;align-items:center"><h3 style="flex:1">আজকের উপস্থিতি</h3><b class="tap" id="hreload" style="color:var(--teal-dark);font-size:14px">হালনাগাদ</b></div>
+        <div class="mute small">শিফটে চাপলে তালিকা ও অভিভাবকের নম্বর</div>
+        <div class="shifts3">${SHIFTS.map((s, i) => { const live = s.id === now, v = perShift[i]; return `<button class="${live ? 'live' : ''}" data-go="t.shift:${s.id}"><span class="lic">${I(s.icon)}</span><small>${s.bn}${live ? ' · এখন' : ''}</small><b>${v ? `${bn(v[1])}/${bn(v[0])}` : '…'}</b><small>উপস্থিত</small></button>`; }).join('')}</div></div>
+      ${admin ? todoCard([['শিক্ষকের পরিবর্তনের অনুরোধ', todo[0], 't.requests'], ['অভিভাবকের নম্বর সংশোধন', todo[1], 'a.phones'], ['ছুটির আবেদন', todo[2], 't.leave']], false) : ''}
       <div class="grid2">${action('attendance', 'উপস্থিতি', 'ক্লাস বা পরীক্ষা', 't.att')}${action('star', 'ক্লাস রেটিং', 'আজকের স্কোর', 't.rate')}${action('numbers', 'নম্বর এন্ট্রি', 'মডেল টেস্ট', 't.marks')}${action('megaphone', 'নোটিশ', 'সবাইকে জানান', 't.notice')}</div>
-      ${sections.map(([h, tiles]) => section(h) + grid3(tiles.map(([ic, t, r]) => compact(ic, t, link(r, t))))).join('')}
-      <div class="card cream"><h3>CCTV-ভিত্তিক উপস্থিতি</h3><div class="mute">কোচিং-এর কম্পিউটারে Diff Gate চালু হলে গেটের ক্যামেরা স্বয়ংক্রিয়ভাবে উপস্থিতি গ্রহণ করবে। অনিশ্চিত শনাক্তকরণ "CCTV যাচাই" অংশে দেখা যাবে।</div></div>
+      ${dashSection(scr, 'manage', 'users', 'ব্যবস্থাপনা', fix(manage), true)}
+      ${dashSection(scr, 'daily', 'attendance', 'প্রতিদিনের ক্লাস', fix(daily), !admin)}
+      ${dashSection(scr, 'exams', 'note_edit', 'পরীক্ষা ও ফলাফল', fix(exams), true)}
+      ${dashSection(scr, 'progress', 'chart', 'শিক্ষার্থী ও অগ্রগতি', fix(progress), false)}
+      ${dashSection(scr, 'talk', 'chat', 'যোগাযোগ ও নোটিশ', fix(talk), false)}
+      ${dashSection(scr, 'office', 'palm', admin ? 'আমার অফিস' : 'অফিস', fix(office), false)}
+      <div class="mute small" style="padding:0 4px">কোনো বিভাগে চাপ দিলে খোলে বা বন্ধ হয়; ফোন মনে রাখে কোনগুলো খোলা।</div>
       ${apkBanner()}`;
+    bindDash(el);
+    el.querySelector('#hreload').onclick = () => render();
     if (T.staffNotesCard) T.staffNotesCard(el.querySelector('#snotes')).catch(() => {});
     bindSync(el);
     setTimeout(apkPopup, 1500);

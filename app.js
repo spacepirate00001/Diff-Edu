@@ -56,6 +56,53 @@ const grid3 = tiles => `<div class="grid3">${tiles.join('')}</div>`;
 const empty = (icon, text) => `<div class="empty"><div class="circ">${I(icon)}</div><div>${text}</div></div>`;
 const pill = (t, cls = '') => `<span class="pill ${cls}">${esc(t)}</span>`;
 const section = t => `<div class="section">${esc(t)}</div>`;
+// ---------- home pieces shared by every home screen (ui/screens/home/Dashboard.kt) ----------
+/** "রবিবার, ৮ নভেম্বর" (Dhaka time). */
+const todayBnLong = () => { const d = dhakaToday(); return DAYS[new Date(d + 'T00:00:00').getDay()] + ', ' + fmtDate(d); };
+/** The shift running right now, if any (the coaching's usual times). */
+const shiftNow = () => {
+  const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()).split(':');
+  const m = +p[0] * 60 + +p[1];
+  return m >= 420 && m < 540 ? 'morning' : m >= 900 && m < 1020 ? 'afternoon' : m >= 1140 && m < 1260 ? 'night' : null;
+};
+/** Notices on top of the home screen: the newest large ("নতুন" for 3 days), the next two as one-liners. */
+async function noticeHighlight(aud) {
+  const f = aud ? `&audience=in.(all,${aud})` : '';
+  let list;
+  try { list = await cached('nh' + (aud || ''), () => sel('notices', `select=id,title,body,audience,created_at&archived_at=is.null&order=created_at.desc&limit=3${f}`)); } catch { return ''; }
+  const go = 'notices' + (aud ? ':' + aud : '');
+  let h = `<div class="nboard tap" data-go="${go}"><div class="nb-top"><b>নোটিশ বোর্ড</b><span>সব দেখুন</span></div>`;
+  if (!list.length) return h + '<div class="nb-mute">এখন কোনো নোটিশ নেই।</div></div>';
+  const [first, ...rest] = list, day = String(first.created_at).slice(0, 10);
+  h += `<div class="nb-meta">${day >= daysAgo(3) ? '<span class="pill nb-new">নতুন</span>' : ''}<span>${fmtDateY(first.created_at)}</span></div>
+    <div class="nb-title">${esc(bn(first.title))}</div>${first.body ? `<div class="nb-body">${esc(bn(first.body))}</div>` : ''}`;
+  h += rest.slice(0, 2).map(n => `<div class="nb-row"><i></i><span>${esc(bn(n.title))}</span><small>${fmtDate(n.created_at)}</small></div>`).join('');
+  return h + '</div>';
+}
+/** A folding category of tiles (3 per row); the phone remembers which are open. tiles: [icon, title, go, badge?] */
+function dashSection(screen, key, icon, title, tiles, defaultOpen) {
+  if (!tiles.length) return '';
+  const saved = store.get(`dash.${screen}.${key}`), open = saved == null ? defaultOpen : saved;
+  const waiting = tiles.filter(t => t[3]).length;
+  return `<div class="card tap dsec" data-dsec="${screen}.${key}" data-open="${open ? 1 : 0}"><div class="dsec-row">${chip(icon, 40)}<div style="flex:1"><h3>${esc(title)}</h3>
+      <div class="mute small">${bn(tiles.length)}টি অপশন${waiting ? ` · ${bn(waiting)}টিতে কাজ বাকি` : ''}</div></div>${waiting ? '<span class="dsec-dot"></span>' : ''}<b class="dsec-t">${open ? 'বন্ধ করুন' : 'খুলুন'}</b></div></div>
+    <div class="grid3 dsec-body"${open ? '' : ' hidden'}>${tiles.map(([ic, t, go, b]) => compact(ic, t, go, b)).join('')}</div>`;
+}
+function bindDash(el) {
+  el.querySelectorAll('[data-dsec]').forEach(c => c.onclick = () => {
+    const open = c.dataset.open !== '1';
+    c.dataset.open = open ? 1 : 0; store.set('dash.' + c.dataset.dsec, open);
+    c.querySelector('.dsec-t').textContent = open ? 'বন্ধ করুন' : 'খুলুন';
+    c.nextElementSibling.hidden = !open;
+  });
+}
+/** "Work waiting" card: only items above zero; "no work" otherwise. items: [label, count, go] */
+const todoCard = (items, loading) => {
+  const w = items.filter(i => i[1] > 0);
+  return `<div class="card ${w.length ? 'sun' : 'teal'}"><h3>আপনার জন্য কাজ</h3><div style="margin-top:6px">${loading ? '<span class="mute">দেখা হচ্ছে…</span>'
+    : !w.length ? '<span style="color:var(--teal-dark)">এই মুহূর্তে কোনো কাজ বাকি নেই ✓</span>'
+    : w.map(([l, n, go]) => `<div class="todo tap" data-go="${go}"><span class="todo-n">${bn(n)}</span><span style="flex:1">${esc(l)}</span><b>দেখুন</b></div>`).join('')}</div></div>`;
+};
 const bar = (frac, color) => `<div class="bar"${color ? ` style="--c:${color}"` : ''}><i style="width:${Math.max(0, Math.min(1, frac)) * 100}%"></i></div>`;
 const skel = (n = 3) => '<div class="skel"></div>'.repeat(n);
 const avatar = name => `<span class="av">${esc((name || '?').trim().charAt(0))}</span>`;
@@ -257,6 +304,7 @@ function show(dir = 1) {
   const sub = v(sc.sub); $('#sub').textContent = sub || ''; $('#sub').hidden = !sub;
   $('#back').hidden = !!sc.home || stack.length <= 1;
   $('#trail').innerHTML = sc.trail ? sc.trail(p) : '';
+  const hx = sc.extra ? sc.extra(p) : ''; $('#hx').innerHTML = hx; $('#hx').hidden = !hx; // ScreenScaffold headerExtra
   $('#trail').querySelectorAll('[data-logout]').forEach(b => b.onclick = confirmLogout);
   $('#trail').querySelectorAll('[data-go]').forEach(bindGo);
   saveStack();
@@ -318,16 +366,16 @@ async function enterApp(restore) {
 
 // ---------- welcome / login / admission / pin ----------
 const back44 = `<button class="dback" data-back aria-label="ফিরে যান">${'<svg viewBox="0 0 24 24"><path d="M15 5L8 12L15 19" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'}</button>`;
+// First screen (AuthScreens.WelcomeScreen, design B): big logo, gold wordmark, tagline and only two actions.
+// No role picker: the account itself decides where the user goes.
 SCREENS.welcome = { dark: true, home: true, render: async (el) => {
-  el.innerHTML = `<div class="welcome"><div class="rule"></div>
-    <img class="wlogo" src="logo.svg" alt="ডিফ এডু">
+  el.innerHTML = `<div class="welcome wb"><div class="wb-top"><img class="wlogo" src="logo.svg" alt="ডিফ এডু">
     <div class="wordmark">Different Academic<br>&amp; Exam Care</div><div class="since">SINCE 2008</div>
-    <div class="tag">Every child is Different.</div>
-    <div class="grid2 roles">
-      ${roleTile('role_guardian', 'অভিভাবক', 'Guardian', 'login:guardian')}${roleTile('role_student', 'শিক্ষার্থী', 'Student', 'login:student')}
-      ${roleTile('role_teacher', 'শিক্ষক ও অ্যাডমিন', 'Teacher / Admin', 'login:teacher')}${roleTile('role_admission', 'ভর্তি তথ্য', 'Admission', 'admission')}
-    </div>
-    ${isAndroid ? `<a class="apklink" href="${APK_URL}" download>অ্যান্ড্রয়েড অ্যাপ ডাউনলোড করুন</a>` : ''}<div class="rule"></div></div>`;
+    <div class="tag">Every child is Different.</div></div>
+    <div class="wb-bottom"><button class="wb-login" data-go="login">লগইন করুন&nbsp;&nbsp;→</button>
+    <button class="wb-adm" data-go="admission">নতুন ভর্তির আবেদন</button>
+    <div class="wb-who" aria-label="অভিভাবক, শিক্ষার্থী ও শিক্ষক সবাই একই লগইন ব্যবহার করবেন"><span>অভিভাবক</span><span>শিক্ষার্থী</span><span>শিক্ষক</span></div>
+    ${isAndroid ? `<a class="apklink" href="${APK_URL}" download>অ্যান্ড্রয়েড অ্যাপ ডাউনলোড করুন</a>` : ''}</div></div>`;
 } };
 const roleTile = (icon, t, c, go) => `<button class="rtile" data-go="${go}"><span class="ring">${I(icon)}</span><b>${t}</b><span>${c}</span></button>`;
 
