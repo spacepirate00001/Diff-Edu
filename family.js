@@ -74,17 +74,17 @@
           <div style="flex:1">${pill(h.subject?.name || 'বিষয়', 'teal')}<h3 style="margin-top:4px;${done.has(h.id) ? 'color:var(--ink-soft)' : ''}">${esc(h.title)}</h3><div class="mute small">জমা দেওয়ার শেষ দিন: ${h.due_date ? fmtDate(h.due_date) : '—'}</div></div></div>`).join('')}`}
       ${section('খেলা ও অভ্যাস')}
       ${grid2([
-        fun('timer', 'ফোকাস টাইমার', 'focus', { tint: 'coral', sub: '২৫ মিনিট পড়ো, স্টার পাও' }), fun('swords', 'কুইজ ডুয়েল', 'soon:কুইজ ডুয়েল', { tint: 'sky', sub: 'বন্ধুকে চ্যালেঞ্জ করো' }),
-        fun('target', 'সাপ্তাহিক চ্যালেঞ্জ', 'soon:সাপ্তাহিক চ্যালেঞ্জ', { tint: 'sun' }), fun('shop_bag', 'পয়েন্টের দোকান', 'soon:পয়েন্টের দোকান', { tint: 'grape', sub: 'অবতার ও রং' }),
-        fun('letters', 'শব্দ ও বানান', 'soon:শব্দ ও বানান', { tint: 'teal' }), fun('gamepad', 'শিক্ষামূলক খেলা', 'soon:শিক্ষামূলক খেলা', { tint: 'coral', sub: 'দ্রুত গণিত, নামতা' }),
+        fun('timer', 'ফোকাস টাইমার', 'focus', { tint: 'coral', sub: '২৫ মিনিট পড়ো, স্টার পাও' }), fun('swords', 'কুইজ ডুয়েল', 's.duel', { tint: 'sky', sub: 'বন্ধুকে চ্যালেঞ্জ করো' }),
+        fun('target', 'সাপ্তাহিক চ্যালেঞ্জ', 's.challenges', { tint: 'sun' }), fun('shop_bag', 'পয়েন্টের দোকান', 's.shop', { tint: 'grape', sub: 'অবতার ও রং' }),
+        fun('letters', 'শব্দ ও বানান', 'soon:শব্দ ও বানান', { tint: 'teal' }), fun('gamepad', 'শিক্ষামূলক খেলা', 's.games', { tint: 'coral', sub: 'দ্রুত গণিত, নামতা' }),
         fun('mic', 'মুখস্থ পড়া ও ভয়েস', 'soon:মুখস্থ পড়া ও ভয়েস', { tint: 'coral', sub: 'রেকর্ড করে স্যারকে শোনাও' }),
         `<button class="fun t-${big ? 'sun' : 'sky'}" id="bigt">${chip('search')}<b>বড় লেখা</b><span class="small">${big ? 'চালু · বন্ধ করতে চাপো' : 'বন্ধ · চালু করতে চাপো'}</span></button>`,
-        fun('star', 'আমার রেটিং ও কার্ড', 'progress:' + st.id, { tint: 'sun' }), fun('question', 'প্রশ্ন বক্স', 'soon:প্রশ্ন বক্স', { tint: 'grape' }),
-        fun('target', 'আমার লক্ষ্য', 'soon:আমার লক্ষ্য', { tint: 'teal' }), fun('trophy', 'সার্টিফিকেট', 'soon:সার্টিফিকেট', { tint: 'sun' }),
-        fun('notebook', 'ভুলের খাতা', 'soon:ভুলের খাতা', { tint: 'coral' }), fun('flashcards', 'ফ্ল্যাশকার্ড', 'soon:ফ্ল্যাশকার্ড', { tint: 'grape' }),
-        fun('book', 'সিলেবাস ও বইয়ের পৃষ্ঠা', 'soon:সিলেবাস ও বইয়ের পৃষ্ঠা', { tint: 'sky' }), fun('bell', 'নোটিশ', 'notices:students', { tint: 'teal' }),
-        fun('book', 'শিক্ষা উপকরণ', 'materials:' + st.class_level, { tint: 'sky' }), fun('puzzle', 'দৈনিক ধাঁধা', 'soon:দৈনিক ধাঁধা', { tint: 'coral' }),
-        fun('ai_spark', 'AI পড়ার সহায়ক', 'soon:AI পড়ার সহায়ক', { tint: 'grape' }), fun('trophy', 'কুইজ ও লিডারবোর্ড', 'soon:কুইজ ও লিডারবোর্ড', { tint: 'sun' }),
+        fun('star', 'আমার রেটিং ও কার্ড', 'progress:' + st.id, { tint: 'sun' }), fun('question', 'প্রশ্ন বক্স', 's.doubts', { tint: 'grape' }),
+        fun('target', 'আমার লক্ষ্য', 's.goals', { tint: 'teal' }), fun('trophy', 'সার্টিফিকেট', 'soon:সার্টিফিকেট', { tint: 'sun' }),
+        fun('notebook', 'ভুলের খাতা', 's.mistakes', { tint: 'coral' }), fun('flashcards', 'ফ্ল্যাশকার্ড', 'flash:' + st.class_level, { tint: 'grape' }),
+        fun('book', 'সিলেবাস ও বইয়ের পৃষ্ঠা', 'syllabus:' + st.class_level, { tint: 'sky' }), fun('bell', 'নোটিশ', 'notices:students', { tint: 'teal' }),
+        fun('book', 'শিক্ষা উপকরণ', 'materials:' + st.class_level, { tint: 'sky' }), fun('puzzle', 'দৈনিক ধাঁধা', 's.puzzle', { tint: 'coral' }),
+        fun('ai_spark', 'AI পড়ার সহায়ক', 'soon:AI পড়ার সহায়ক', { tint: 'grape' }), fun('trophy', 'কুইজ ও লিডারবোর্ড', 's.quiz', { tint: 'sun' }),
       ])}
       ${apkBanner()}`;
     el.querySelectorAll('[data-logout]').forEach(b => b.onclick = confirmLogout);
