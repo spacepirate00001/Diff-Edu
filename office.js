@@ -13,7 +13,7 @@
   // ---------- marks entry ----------
   // New exam(s) for a class, one exam per picked subject (MarksRepository.createExams). Past dates are fine.
   const lastFriday = () => { const d = new Date(dhakaToday() + 'T00:00:00'); d.setDate(d.getDate() - ((d.getDay() + 2) % 7)); return d.toLocaleDateString('en-CA'); };
-  async function newExams(cls, done) {
+  async function newExams(cls, done, anyDate = false) {
     let subs = [];
     try {
       const seen = new Set();
@@ -21,7 +21,7 @@
         .filter(r => (r.name || '').trim() && !seen.has(r.name) && seen.add(r.name)).map(r => ({ name: r.name, label: r.name_bn || r.name }));
     } catch { /* empty list below */ }
     sheet(`<h2>নতুন পরীক্ষা · ক্লাস ${bn(cls)}</h2>
-      <label>তারিখ</label><input id="xd" type="date" value="${lastFriday()}" max="${dhakaToday()}">
+      <label>তারিখ</label><input id="xd" type="date" value="${anyDate ? dhakaToday() : lastFriday()}" ${anyDate ? '' : `max="${dhakaToday()}"`}>
       <label>পরীক্ষার নাম</label><input id="xt" maxlength="80" value="সাপ্তাহিক মডেল টেস্ট">
       <label>প্রতি বিষয়ের পূর্ণমান</label><input id="xf" inputmode="numeric" value="২০">
       <label>বিষয় (একাধিক বাছা যায়, প্রতিটি আলাদা পরীক্ষা হবে)</label><div class="chips" id="xs">${subs.map((x, i) => `<button class="chip-btn" data-i="${i}">${esc(x.label)}</button>`).join('') || '<span class="mute small">এই ক্লাসের কোনো বিষয় পাওয়া যায়নি।</span>'}</div>
@@ -108,6 +108,132 @@
       try { await ins('exams', { coaching_id: S.me.coaching_id, title: t, class_level: +el.querySelector('#ec').value, subject_id: el.querySelector('#es').value || null, exam_date: el.querySelector('#ed').value || null, full_marks: f, created_by: S.uid }); toast('যোগ হয়েছে'); render(); }
       catch { toast('যোগ করা যায়নি'); }
     };
+  } };
+
+  // ---------- exam routine (ExamRoutineScreen.kt, exam-routine.sql) ----------
+  // Everyone sees every class's exams by date; teachers add, admin edits / moves a day / deletes / sends a notice.
+  const WEEKDAY = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
+  const weekdayBn = d => WEEKDAY[new Date(d + 'T00:00:00').getDay()] || '';
+  const examErr = e => {
+    const m = e?.body || '';
+    return /full marks below given marks/.test(m) ? 'দেওয়া নম্বরের চেয়ে পূর্ণমান কম রাখা যাবে না।'
+      : /bad full marks/.test(m) ? 'পূর্ণমান ১ থেকে ১০০০ এর মধ্যে দিন।'
+      : /title required/.test(m) ? 'পরীক্ষার নাম লিখুন।'
+      : /admin only/.test(m) ? 'শুধু অ্যাডমিন পরীক্ষা বদলাতে পারেন।'
+      : !e?.status ? 'ইন্টারনেট সংযোগ পাওয়া যায়নি।' : 'সংরক্ষণ হয়নি। আবার চেষ্টা করুন।';
+  };
+  const ER = { cls: null, past: false, open: null, confirm: null, msg: null, failed: false };
+  SCREENS['t.routine'] = { title: 'পরীক্ষার রুটিন', sub: () => isAdmin() ? 'তারিখ, সময়, পূর্ণমান বদলান · সরান · মুছুন' : 'সব ক্লাসের পরীক্ষা', render: async (el) => {
+    const admin = isAdmin();
+    let exams = null, loadError = false;
+    async function load() {
+      try {
+        const from = ER.past ? daysAgo(60) : dhakaToday();
+        const rows = await sel('exams', `select=id,title,exam_date,class_level,full_marks,subject:subjects(name,name_bn)&exam_date=gte.${from}&order=exam_date,class_level&limit=600`);
+        const marked = {};
+        for (let i = 0; i < rows.length; i += 100) {
+          const chunk = rows.slice(i, i + 100).map(r => r.id);
+          (await sel('marks', `select=exam_id&obtained=not.is.null&exam_id=${inList(chunk)}&limit=10000`)).forEach(m => { marked[m.exam_id] = (marked[m.exam_id] || 0) + 1; });
+        }
+        exams = rows.map(r => ({ id: r.id, cls: r.class_level, subject: r.subject?.name_bn || r.subject?.name || '', title: r.title, date: r.exam_date, full: +r.full_marks, marked: marked[r.id] || 0 }));
+        loadError = false;
+      } catch { loadError = true; exams = null; }
+    }
+    async function run(job) {
+      ER.msg = null;
+      try { ER.msg = await job(); ER.failed = false; ER.open = null; ER.confirm = null; await load(); }
+      catch (e) { ER.failed = true; ER.msg = examErr(e); }
+      draw();
+    }
+    function sendNotice() {
+      const list = (exams || []).filter(e => e.date >= dhakaToday());
+      return run(async () => {
+        if (!list.length) return 'সামনে কোনো পরীক্ষা নেই, নোটিশ পাঠানো হয়নি।';
+        const byDate = {};
+        list.forEach(e => (byDate[e.date] ||= []).push(e));
+        const body = Object.keys(byDate).sort().map(d => {
+          const groups = {};
+          byDate[d].forEach(e => (groups[e.subject + '\u0000' + e.title] ||= []).push(e));
+          return `${fmtDate(d)} (${weekdayBn(d)}): ` + Object.entries(groups).map(([k, rows]) => {
+            const [subject, title] = k.split('\u0000'), time = /\((.+)\)/.exec(title)?.[1];
+            return 'ক্লাস ' + [...new Set(rows.map(r => r.cls))].sort((a, b) => a - b).map(bn).join(', ') + ' ' + subject + (time ? ` (${time})` : '');
+          }).join('; ');
+        }).join('\n');
+        await ins('notices', { coaching_id: S.me.coaching_id, title: 'পরীক্ষার রুটিন (হালনাগাদ)', body: body + '\n\nআদেশক্রমে - পরিচালক', audience: 'all', created_by: S.uid });
+        return 'নোটিশ পাঠানো হয়েছে। সবাই হোমের নোটিশ বোর্ডে দেখবেন।';
+      });
+    }
+    function card(e) {
+      const open = admin && ER.open === e.id;
+      let h = `<div class="card ${open ? 'teal' : ''} ${admin ? 'tap' : ''}" data-ex="${e.id}"><div style="display:flex;gap:8px;align-items:center"><div style="flex:1">
+        <h3>ক্লাস ${bn(e.cls)} · ${esc(e.subject || 'বিষয় নেই')}</h3><div class="mute">${esc(e.title)}</div>
+        <div class="mute small">পূর্ণমান ${num(e.full)}${e.marked ? ` · ${bn(e.marked)} জনের নম্বর দেওয়া` : ''}</div></div>${admin ? `<b style="color:var(--teal-dark)">${open ? 'বন্ধ' : 'বদলান'}</b>` : ''}</div>`;
+      if (open) {
+        const armed = ER.confirm === e.id;
+        h += `<div class="stack" style="margin-top:8px" data-form="${e.id}">
+          <label>তারিখ</label><input type="date" data-f="date" value="${e.date}">
+          <label>নাম ও সময় (যেমন: মডেল টেস্ট ২০২৬ (বিকাল ৩:৪৫))</label><input data-f="title" maxlength="80" value="${esc(e.title)}">
+          <label>বিষয়</label><input data-f="subject" maxlength="60" value="${esc(e.subject)}">
+          <label>পূর্ণমান</label><input data-f="full" inputmode="decimal" maxlength="5" value="${num(e.full)}">
+          <div class="grid2"><button class="btn ${armed ? 'coral' : 'ghost'}" data-del="${e.id}">${armed ? 'নিশ্চিত, মুছুন' : 'মুছুন'}</button><button class="btn" data-save="${e.id}">সংরক্ষণ</button></div>
+          ${armed ? `<div class="err">${e.marked ? `সতর্কতা: এই পরীক্ষায় ${bn(e.marked)} জনের নম্বর দেওয়া আছে। মুছলে নম্বরগুলোও মুছে যাবে, আর ফেরত আনা যাবে না।` : 'আবার "নিশ্চিত, মুছুন" চাপলে পরীক্ষাটি মুছে যাবে।'}</div>` : ''}</div>`;
+      }
+      return h + '</div>';
+    }
+    function draw() {
+      let h = chipRow([['', 'সব ক্লাস'], ...CLASSES.map(c => [c, 'ক্লাস ' + bn(c)])], ER.cls ?? '')
+        + chipRow([['0', 'আজ থেকে সামনে'], ['1', 'গত ৬০ দিনসহ']], ER.past ? '1' : '0', 'data-past')
+        + `<button class="btn ghost" id="addEx">+ নতুন পরীক্ষা যোগ করুন</button>`
+        + (admin ? '<button class="btn ghost" id="sendN">হালনাগাদ রুটিন নোটিশে পাঠান</button>' : '')
+        + (ER.msg ? `<div class="${ER.failed ? 'err' : 'center'}" style="${ER.failed ? '' : 'color:var(--teal-dark)'}">${esc(ER.msg)}</div>` : '');
+      if (loadError) h += empty('wifi_off', 'রুটিন আনা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।');
+      else if (!exams) h += skel(3);
+      else {
+        const shown = exams.filter(e => ER.cls == null || e.cls === ER.cls);
+        if (!shown.length) h += empty('calendar', 'এই সময়ে কোনো পরীক্ষা নেই।');
+        const byDate = {};
+        shown.forEach(e => (byDate[e.date] ||= []).push(e));
+        Object.keys(byDate).sort().forEach(d => {
+          h += `<div style="display:flex;align-items:center;gap:8px;margin-top:8px"><div style="flex:1"><h3>${fmtDateY(d)}</h3><div class="mute small">${weekdayBn(d)} · ${bn(byDate[d].length)}টি পরীক্ষা</div></div>
+            ${admin ? `<label class="pill teal" style="position:relative">দিন বদলান<input type="date" data-move="${d}" value="${d}" style="position:absolute;inset:0;opacity:0"></label>` : ''}</div>`
+            + byDate[d].map(card).join('');
+        });
+      }
+      const y = window.scrollY; el.innerHTML = h; window.scrollTo(0, y);
+      el.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => { ER.cls = b.dataset.chip === '' ? null : +b.dataset.chip; draw(); });
+      el.querySelectorAll('[data-past]').forEach(b => b.onclick = async () => { const p = b.dataset.past === '1'; if (p === ER.past) return; ER.past = p; exams = null; draw(); await load(); draw(); });
+      el.querySelector('#addEx').onclick = () => {
+        if (ER.cls == null) { ER.failed = true; ER.msg = 'নতুন পরীক্ষা যোগ করতে উপরে একটি ক্লাস বাছুন।'; return draw(); }
+        newExams(ER.cls, async () => { ER.msg = 'পরীক্ষা যোগ হয়েছে।'; ER.failed = false; await load(); draw(); }, true);
+      };
+      const sn = el.querySelector('#sendN'); if (sn) sn.onclick = sendNotice;
+      if (!admin) return;
+      el.querySelectorAll('[data-ex]').forEach(c => c.onclick = ev => {
+        if (ev.target.closest('[data-form]')) return;
+        ER.open = ER.open === c.dataset.ex ? null : c.dataset.ex; ER.confirm = null; draw();
+      });
+      el.querySelectorAll('[data-move]').forEach(i => i.onchange = () => {
+        const from = i.dataset.move, to = i.value;
+        if (!to || to === from) return;
+        run(async () => {
+          const n = await rpc('admin_move_exams', { p_from: from, p_to: to, p_classes: ER.cls == null ? null : [ER.cls] });
+          return `${bn(+n || 0)}টি পরীক্ষা ${fmtDateY(to)} এ সরানো হয়েছে। সবাইকে জানাতে "হালনাগাদ রুটিন নোটিশে পাঠান" চাপুন।`;
+        });
+      });
+      el.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+        const e = exams.find(x => x.id === b.dataset.del);
+        if (ER.confirm !== e.id) { ER.confirm = e.id; return draw(); }
+        run(async () => { await rpc('admin_delete_exam', { p_id: e.id, p_force: e.marked > 0 }); return 'পরীক্ষা মুছে ফেলা হয়েছে।'; });
+      });
+      el.querySelectorAll('[data-save]').forEach(b => b.onclick = () => {
+        const f = el.querySelector(`[data-form="${b.dataset.save}"]`), v = k => f.querySelector(`[data-f="${k}"]`).value;
+        const full = parseFloat(ascii(v('full'))), title = v('title').trim();
+        if (!title || isNaN(full)) { ER.failed = true; ER.msg = !title ? 'পরীক্ষার নাম লিখুন।' : 'পূর্ণমান ১ থেকে ১০০০ এর মধ্যে দিন।'; return draw(); }
+        run(async () => { await rpc('admin_update_exam', { p_id: b.dataset.save, p_date: v('date'), p_title: title, p_full: full, p_subject: v('subject').trim() }); return 'সংরক্ষিত হয়েছে।'; });
+      });
+    }
+    ER.msg = null; ER.open = null; ER.confirm = null;
+    draw(); await load(); draw();
   } };
 
   // ---------- honorarium ----------

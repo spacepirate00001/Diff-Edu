@@ -87,7 +87,7 @@
       ...(admin ? [['ব্যবস্থাপনা', [['users', 'অ্যাকাউন্ট ব্যবস্থাপনা', 'a.users'], ['note_edit', 'প্রোফাইল সম্পাদনা', 'a.people'], ['calendar', 'ক্লাস রুটিন', 'a.routine'], ['question', 'পরিবর্তনের অনুরোধ', 't.requests'],
         ['phone', 'নম্বর সংশোধন', 'a.phones'], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['money', 'শিক্ষকদের সম্মানী', 't.honorarium']]]] : []),
       ['প্রতিদিনের ক্লাস', [['attendance', 'উপস্থিতি গ্রহণ', 't.att'], ['star', 'ক্লাস রেটিং', 't.rate'], ['signal', 'শিক্ষার্থীদের সংকেত', 't.signals'], ['question', 'প্রশ্ন বক্স', 't.doubts'], ['mic', 'ভয়েস ও মুখস্থ পড়া', 't.voice'], ['camera', 'CCTV যাচাই', 't.gate']]],
-      ['পরীক্ষা ও ফলাফল', [['numbers', 'নম্বর এন্ট্রি', 't.marks'], ['document', 'রিপোর্ট কার্ড ও টপার', 'a.reports'], ['calendar', 'পরীক্ষার পরিকল্পনা', 't.exams'], ['archive', 'প্রশ্ন ব্যাংক', 't.qbank'], ['ai_spark', 'AI প্রশ্নপত্র তৈরি', 't.aipaper'],
+      ['পরীক্ষা ও ফলাফল', [['numbers', 'নম্বর এন্ট্রি', 't.marks'], ['document', 'রিপোর্ট কার্ড ও টপার', 'a.reports'], ['calendar', 'পরীক্ষার রুটিন', 't.routine'], ['calendar', 'পরীক্ষার পরিকল্পনা', 't.exams'], ['archive', 'প্রশ্ন ব্যাংক', 't.qbank'], ['ai_spark', 'AI প্রশ্নপত্র তৈরি', 't.aipaper'],
         ['note_edit', 'AI খাতা মূল্যায়ন', 't.grading'], ['seat', 'সিট প্ল্যান', 't.seat']]],
       ['শিক্ষার্থী ও অগ্রগতি', [['alert', 'ঝুঁকিতে থাকা শিক্ষার্থী', 't.risk'], ['chart', 'ব্যাচ তুলনা', 't.compare'], ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 't.challenges'], ['book', 'সিলেবাস ট্র্যাকার', 'syllabus:6'], ['flashcards', 'ফ্ল্যাশকার্ড', 'flash:6'], ['book', 'শিক্ষা উপকরণ', 'materials:5']]],
       ['যোগাযোগ ও নোটিশ', [['megaphone', 'নোটিশ পাঠান', 't.notice'], ['bell', 'সকল নোটিশ', 'notices'], ['chat', 'অভিভাবকদের বার্তা', 'chats'], ['handshake', 'অভিভাবক মিটিং', 'meetings'], ['mic', 'পরিচালকের বার্তা', 'director']]],
@@ -352,10 +352,33 @@
   } };
 
   // ---------- shared read screens (same as family) ----------
-  SCREENS.notices = { title: 'সকল নোটিশ', render: async (el) => {
-    const ns = await cached('notices', () => sel('notices', 'select=id,title,body,audience,class_level,created_at&order=created_at.desc&limit=60'));
+  // Notice board; the admin can archive a notice (hidden from families, restorable) and delete it for good
+  // from the archive (VisitorScreens.NoticesScreen, notices-archive.sql).
+  const NB = { archive: false, confirm: null, msg: null };
+  SCREENS.notices = { title: () => NB.archive ? 'নোটিশ আর্কাইভ' : 'সকল নোটিশ', sub: () => NB.archive ? 'সরিয়ে রাখা নোটিশ; চাইলে ফিরিয়ে আনুন' : '', render: async (el) => {
+    const admin = isAdmin();
+    if (!admin) NB.archive = false;
     const AUD = { all: 'সবাই', guardians: 'অভিভাবক', students: 'শিক্ষার্থী', teachers: 'শিক্ষক' };
-    el.innerHTML = ns.map(n => `<div class="card"><div class="mute small">${fmtDateY(n.created_at)} · ${AUD[n.audience] || ''}${n.class_level ? ' · ক্লাস ' + bn(n.class_level) : ''}</div><h3>${esc(n.title)}</h3><div style="white-space:pre-wrap;margin-top:4px">${esc(n.body)}</div></div>`).join('') || empty('bell', 'এখনো কোনো নোটিশ নেই।');
+    const COLS = 'select=id,title,body,audience,class_level,created_at';
+    const ns = NB.archive ? await sel('notices', `${COLS}&archived_at=not.is.null&order=archived_at.desc&limit=100`)
+      : await cached('notices', () => sel('notices', `${COLS}&archived_at=is.null&order=created_at.desc&limit=60`));
+    const act = async (done, job) => {
+      try { await job(); NB.msg = done; } catch { NB.msg = 'করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।'; }
+      NB.confirm = null; render();
+    };
+    el.innerHTML = (admin ? `<div class="chips"><button class="chip-btn ${NB.archive ? '' : 'on'}" data-nb="0">বোর্ড</button><button class="chip-btn ${NB.archive ? 'on' : ''}" data-nb="1">আর্কাইভ</button></div>` : '')
+      + (NB.msg ? `<div class="mute">${esc(NB.msg)}</div>` : '')
+      + (ns.map(n => `<div class="card"><div class="mute small">${fmtDateY(n.created_at)} · ${AUD[n.audience] || ''}${n.class_level ? ' · ক্লাস ' + bn(n.class_level) : ''}</div><h3>${esc(n.title)}</h3><div style="white-space:pre-wrap;margin-top:4px">${esc(n.body)}</div>
+        ${!admin ? '' : NB.archive ? `<div class="chips" style="margin-top:8px"><button class="pill teal" data-restore="${n.id}">ফিরিয়ে আনুন</button><button class="pill${NB.confirm === n.id ? ' coral' : ''}" data-purge="${n.id}">${NB.confirm === n.id ? 'নিশ্চিত, চিরতরে মুছুন' : 'চিরতরে মুছুন'}</button></div>`
+          : `<div class="chips" style="margin-top:8px"><button class="pill" data-arch="${n.id}">আর্কাইভে রাখুন</button></div>`}</div>`).join('')
+        || empty('inbox', NB.archive ? 'আর্কাইভে কোনো নোটিশ নেই' : 'এখনো কোনো নোটিশ নেই।'));
+    el.querySelectorAll('[data-nb]').forEach(b => b.onclick = () => { NB.archive = b.dataset.nb === '1'; NB.msg = null; NB.confirm = null; setTitle(SCREENS.notices.title()); setSub(SCREENS.notices.sub()); render(); });
+    el.querySelectorAll('[data-arch]').forEach(b => b.onclick = () => act('নোটিশটি আর্কাইভে রাখা হয়েছে। অভিভাবকরা আর দেখবেন না; আর্কাইভ থেকে ফিরিয়ে আনা যাবে।', () => rpc('set_notice_archived', { p_id: b.dataset.arch, p_archived: true })));
+    el.querySelectorAll('[data-restore]').forEach(b => b.onclick = () => act('নোটিশটি আবার বোর্ডে দেখা যাবে।', () => rpc('set_notice_archived', { p_id: b.dataset.restore, p_archived: false })));
+    el.querySelectorAll('[data-purge]').forEach(b => b.onclick = () => {
+      if (NB.confirm !== b.dataset.purge) { NB.confirm = b.dataset.purge; return render(); }
+      act('নোটিশটি চিরতরে মুছে ফেলা হয়েছে।', () => rpc('delete_archived_notice', { p_id: b.dataset.purge }));
+    });
   } };
   SCREENS.director = { title: 'পরিচালকের বার্তা', render: async (el) => {
     const ms = await cached('director', () => sel('director_messages', 'select=id,title,body,video_url,published_on&order=published_on.desc'));

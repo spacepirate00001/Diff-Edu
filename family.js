@@ -166,7 +166,7 @@
   // ---------- notices ----------
   SCREENS.notices = { title: 'নোটিশ', render: async (el, aud) => {
     const f = aud ? `&audience=in.(all,${aud})` : '';
-    const ns = await cached('notices' + (aud || ''), () => sel('notices', `select=id,title,body,audience,created_at&order=created_at.desc&limit=50${f}`));
+    const ns = await cached('notices' + (aud || ''), () => sel('notices', `select=id,title,body,audience,created_at&archived_at=is.null&order=created_at.desc&limit=50${f}`));
     el.innerHTML = ns.map(n => `<div class="card"><div class="mute small">${fmtDateY(n.created_at)}</div><h3>${esc(n.title)}</h3><div style="white-space:pre-wrap;margin-top:4px">${esc(n.body)}</div>
       <button class="pill teal" data-speak="${esc(n.title + '। ' + (n.body || ''))}" style="margin-top:8px">পড়ে শোনাও</button></div>`).join('') || empty('bell', 'এখনো কোনো নোটিশ নেই।');
     bindSpeak(el);
