@@ -12,6 +12,33 @@ const MONTHS = ['জানুয়ারি', 'ফেব্রুয়ার�
 const fmtDate = d => { const x = new Date(d); return `${bn(x.getDate())} ${MONTHS[x.getMonth()]}`; };
 const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2200); };
 
+// ---------- APK nudge (Android only: iPhone can't install an APK) ----------
+const APK_URL = CFG.url + '/storage/v1/object/public/app-updates/DiffEdu.apk';
+const isAndroid = /Android/i.test(navigator.userAgent);
+let apkSize = null;
+if (isAndroid) fetch(CFG.url + '/storage/v1/object/public/app-updates/version.json', { cache: 'no-store' })
+  .then(r => r.json()).then(v => { apkSize = v.size; }).catch(() => {});
+const sizeText = () => apkSize ? ` (${bn((apkSize / 1048576).toFixed(1))} MB)` : '';
+const apkBanner = () => isAndroid
+  ? `<div class="card apk"><b>অ্যান্ড্রয়েড অ্যাপটি নিন</b><div class="mute">ছোট অ্যাপ, দ্রুত চলে, নেট ছাড়াও কাজ করে, নোটিফিকেশন আসে।</div><a class="primary" href="${APK_URL}" download>অ্যাপ ডাউনলোড${sizeText()}</a></div>` : '';
+function apkPopup() {
+  if (!isAndroid || document.querySelector('.sheet')) return;
+  const last = store.get('apkAsked') || 0;
+  if (Date.now() - last < 3 * 864e5) return; // at most once every 3 days
+  store.set('apkAsked', Date.now());
+  const d = document.createElement('div');
+  d.className = 'sheet-bg';
+  d.innerHTML = `<div class="sheet" role="dialog" aria-label="অ্যান্ড্রয়েড অ্যাপ"><h2>অ্যান্ড্রয়েড অ্যাপ ব্যবহার করুন</h2>
+    <p class="mute">একই আইডি ও পিন দিয়ে ঢুকবেন। অ্যাপে নোটিফিকেশন সাথে সাথে আসে, নেট ছাড়াও হাজিরা নেওয়া যায়, আর চলেও দ্রুত।</p>
+    <a class="primary" href="${APK_URL}" download>অ্যাপ ডাউনলোড${sizeText()}</a>
+    <p class="mute small">ডাউনলোডের পর ফাইলটি খুলুন। "অজানা উৎস" জিজ্ঞেস করলে অনুমতি দিন।</p>
+    <button class="link" id="later">এখন না, ওয়েবেই চালাই</button></div>`;
+  document.body.appendChild(d);
+  const close = () => d.remove();
+  d.querySelector('#later').onclick = close;
+  d.onclick = e => { if (e.target === d) close(); };
+}
+
 // ---------- storage (try/catch: private windows may block it) ----------
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem('de.' + k)); } catch { return null; } },
@@ -147,6 +174,7 @@ const dhakaToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asi
 
 const SCREENS = {
   async home(k) {
+    setTimeout(apkPopup, 1200);
     const [att, fees, notes] = await Promise.all([D.att(k.id), D.fees(k.id), D.notes().catch(() => [])]);
     const today = att.find(a => a.date === dhakaToday());
     const month = dhakaToday().slice(0, 7);
@@ -157,7 +185,8 @@ const SCREENS = {
       <div class="row"><span>আজ</span><span class="chip ${today?.check_in ? 'ok' : ''}">${today?.check_in ? 'উপস্থিত' : 'এখনো আসেনি'}</span></div>
       <div class="row"><span>এ মাসে উপস্থিতি</span><b>${bn(present)} দিন</b></div></div>
       ${due > 0 ? `<div class="card" data-go="fees"><h2>বকেয়া ফি</h2><div class="big bad">${taka(due)}</div><div class="mute">বিস্তারিত দেখুন ›</div></div>` : ''}
-      ${unread ? `<div class="card" data-go="notes"><h2>নতুন বার্তা</h2><div class="big">${bn(unread)}টি</div></div>` : ''}`;
+      ${unread ? `<div class="card" data-go="notes"><h2>নতুন বার্তা</h2><div class="big">${bn(unread)}টি</div></div>` : ''}
+      ${apkBanner()}`;
   },
   async att(k) {
     const att = await D.att(k.id);
@@ -219,13 +248,16 @@ function loginView() {
   view.innerHTML = `<div class="login"><img class="logo" src="icon.svg" alt=""><h1>ডিফ এডু</h1><div class="mute">লগইন আইডি ও পিন দিন</div>
     <form id="f" autocomplete="on"><label for="id">লগইন আইডি (মোবাইল নম্বর বা রোল)</label><input id="id" name="username" inputmode="text" autocomplete="username" required>
     <label for="pin">পিন</label><input id="pin" name="password" type="password" inputmode="numeric" autocomplete="current-password" required>
-    <div class="err" id="err"></div><button class="primary" id="go">ঢুকুন</button></form></div>`;
+    <div class="err" id="err"></div><button class="primary" id="go">ঢুকুন</button></form>
+    ${isAndroid ? `<p class="mute" style="margin-top:20px">অ্যান্ড্রয়েড ফোনে অ্যাপটি ভালো চলে — <a href="${APK_URL}" download>অ্যাপ ডাউনলোড করুন</a></p>` : ''}</div>`;
   $('#f').onsubmit = async ev => {
     ev.preventDefault();
     const b = $('#go'); b.disabled = true; b.textContent = 'অপেক্ষা করুন…'; $('#err').textContent = '';
     try {
       await signIn($('#id').value, $('#pin').value);
-      if (!['guardian', 'student'].includes(S.me.role)) { signOut(true); $('#err').textContent = 'শিক্ষক ও অ্যাডমিনের জন্য অ্যান্ড্রয়েড অ্যাপ ব্যবহার করুন।'; b.disabled = false; b.textContent = 'ঢুকুন'; return; }
+      if (!['guardian', 'student'].includes(S.me.role)) { signOut(true); $('#err').innerHTML = isAndroid
+        ? `শিক্ষক ও অ্যাডমিনের অংশ এখন অ্যান্ড্রয়েড অ্যাপে। <a href="${APK_URL}" download>অ্যাপ ডাউনলোড করুন</a>`
+        : 'শিক্ষক ও অ্যাডমিনের অংশ ওয়েবে শীঘ্রই আসছে। ততদিন অফিসের সাথে যোগাযোগ করুন।'; b.disabled = false; b.textContent = 'ঢুকুন'; return; }
       go('home');
     } catch (e) {
       $('#err').textContent = e.status === 400 ? 'আইডি বা পিন ঠিক নয়।' : 'ইন্টারনেট সংযোগ দেখুন।';

@@ -40,4 +40,13 @@ nav button.on{color:var(--brand-d);font-weight:700;box-shadow:inset 0 -3px var(-
 @keyframes sk{to{background-position:-200% 0}}
 #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#2B2416;color:#fff;padding:8px 16px;border-radius:99px;opacity:0;pointer-events:none;transition:opacity .2s;font-size:14px}
 #toast.show{opacity:1}
+.card.apk{border-color:var(--brand)}
+.card.apk .primary{margin-top:10px}
+.sheet-bg{position:fixed;inset:0;z-index:20;background:#0008;display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:640px;background:var(--card);border-radius:20px 20px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));animation:up .2s ease-out}
+.sheet h2{margin:0 0 6px;font-size:18px}
+.small{font-size:13px}
+button.link{display:block;width:100%;margin-top:6px;padding:10px;border:0;background:none;color:var(--mute);font:inherit;cursor:pointer}
+a{color:var(--brand-d)}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
 .offline{background:var(--bad);color:#fff;text-align:center;padding:6px;font-size:13px}
