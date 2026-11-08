@@ -56,6 +56,17 @@ async function signIn(id, pin) {
   S.me = (await sel('profiles', `select=id,full_name,role,login_id,must_change_pin&id=eq.${S.uid}`))[0];
   store.set('me', S.me);
 }
+// Same as the Android app: new password = de-<pin>-<id>, then pin_changed() clears the flag.
+async function changePin(newPin) {
+  const [, password] = creds(S.me.login_id, newPin);
+  try { await raw('PUT', '/auth/v1/user', { password }); }
+  catch (e) { if (!(e.status === 422 && /same_password/.test(e.body || ''))) throw e; } // already saved on a retry
+  for (let i = 0; i < 3; i++) {
+    try { await rpc('pin_changed'); S.me.must_change_pin = false; store.set('me', S.me); return; }
+    catch (e) { await new Promise(r => setTimeout(r, 800 * (i + 1))); }
+  }
+  throw new Error('flag');
+}
 function signOut(silent) {
   if (S.access) fetch(CFG.url + '/auth/v1/logout', { method: 'POST', headers: { apikey: CFG.key, Authorization: 'Bearer ' + S.access } }).catch(() => {});
   S.access = S.refresh = S.uid = S.me = null;
@@ -111,6 +122,7 @@ async function render() {
   const myRoute = route;
   offlineFlag = false;
   if (route === 'login') return loginView();
+  if (S.me?.must_change_pin) return pinView();
   view.innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
   try {
     const kids = await D.kids();
@@ -222,6 +234,28 @@ function loginView() {
   };
 }
 
+function pinView() {
+  $('#tabs').hidden = true; $('#back').hidden = true;
+  view.innerHTML = `<div class="login"><h1>নতুন পিন দিন</h1><div class="mute">পরের বার থেকে এই পিন দিয়ে লগইন করবেন।</div>
+    <form id="pf"><label for="np">নতুন পিন (৪–৬ সংখ্যা)</label><input id="np" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" required>
+    <label for="np2">আবার লিখুন</label><input id="np2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" required>
+    <div class="err" id="perr"></div><button class="primary" id="pgo">পিন সংরক্ষণ করুন</button></form></div>`;
+  const digits = s => s.replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
+  $('#pf').onsubmit = async ev => {
+    ev.preventDefault();
+    const a = digits($('#np').value), b = digits($('#np2').value), err = $('#perr');
+    if (!/^\d{4,6}$/.test(a)) { err.textContent = 'পিন ৪ থেকে ৬ সংখ্যার হতে হবে।'; return; }
+    if (a !== b) { err.textContent = 'দুই জায়গায় পিন মেলেনি।'; return; }
+    if (a === '1234' || a === '2580') { err.textContent = 'এটা সহজ পিন। অন্য পিন বাছুন।'; return; }
+    const btn = $('#pgo'); btn.disabled = true; btn.textContent = 'সংরক্ষণ হচ্ছে…'; err.textContent = '';
+    try { await changePin(a); toast('নতুন পিন সংরক্ষিত ✓'); go('home'); }
+    catch (e) {
+      err.textContent = e.message === 'flag' ? 'নতুন পিন চালু হয়েছে, তবে পুরোপুরি জমা হয়নি। আবার একই পিন দিয়ে সংরক্ষণ চাপুন।' : 'সংরক্ষণ করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।';
+      btn.disabled = false; btn.textContent = 'পিন সংরক্ষণ করুন';
+    }
+  };
+}
+
 // ---------- boot ----------
 $('#back').onclick = () => go('more');
 $('#logout').onclick = () => signOut();
@@ -232,7 +266,7 @@ window.addEventListener('online', () => route !== 'login' && render());
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (S.refresh) {
     S.me = store.get('me');
-    if (!S.me) { try { await refresh(); S.me = (await sel('profiles', `select=id,full_name,role,login_id&id=eq.${S.uid}`))[0]; store.set('me', S.me); } catch {} }
+    if (!S.me) { try { await refresh(); S.me = (await sel('profiles', `select=id,full_name,role,login_id,must_change_pin&id=eq.${S.uid}`))[0]; store.set('me', S.me); } catch {} }
   }
   if (S.me) { const h = location.hash.slice(1); go(SCREENS[h] ? h : 'home'); } else go('login');
 })();
