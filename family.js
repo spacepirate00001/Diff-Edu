@@ -40,7 +40,7 @@
         fun('calendar', 'উপস্থিতি', 'att:' + c.id, { tint: 'sky' }), fun('chart', 'রেজাল্ট', 'results:' + c.id, { tint: 'sun' }),
         fun('card', 'ফি', 'fees:' + c.id, { tint: 'coral' }), fun('bell', 'নোটিশ', 'notices:guardians', { tint: 'grape' }),
         fun('book', 'শিক্ষা উপকরণ', 'materials:' + c.class_level, { tint: 'teal' }), fun('chat', 'শিক্ষকের সাথে যোগাযোগ', 'chat:' + c.id, { tint: 'white' }),
-        fun('star', 'রেটিং ও প্রশংসা', 'progress:' + c.id, { tint: 'sun' }), fun('headphones', 'ভয়েস মেসেজ', 'soon:ভয়েস মেসেজ', { tint: 'sky' }),
+        fun('star', 'রেটিং ও প্রশংসা', 'progress:' + c.id, { tint: 'sun' }), fun('headphones', 'ভয়েস মেসেজ', 'voicebox:' + c.id, { tint: 'sky' }),
         fun('mic', 'পরিচালকের বার্তা', 'director', { tint: 'sun' }), fun('lock', 'আমার তথ্য ও গোপনীয়তা', 'mydata', { tint: 'sky' }),
         fun('handshake', 'শিক্ষকের সাথে মিটিং', 'meetings', { tint: 'teal', sub: 'সময় বুক করুন' }),
       ])}
@@ -76,15 +76,15 @@
       ${grid2([
         fun('timer', 'ফোকাস টাইমার', 'focus', { tint: 'coral', sub: '২৫ মিনিট পড়ো, স্টার পাও' }), fun('swords', 'কুইজ ডুয়েল', 's.duel', { tint: 'sky', sub: 'বন্ধুকে চ্যালেঞ্জ করো' }),
         fun('target', 'সাপ্তাহিক চ্যালেঞ্জ', 's.challenges', { tint: 'sun' }), fun('shop_bag', 'পয়েন্টের দোকান', 's.shop', { tint: 'grape', sub: 'অবতার ও রং' }),
-        fun('letters', 'শব্দ ও বানান', 'soon:শব্দ ও বানান', { tint: 'teal' }), fun('gamepad', 'শিক্ষামূলক খেলা', 's.games', { tint: 'coral', sub: 'দ্রুত গণিত, নামতা' }),
-        fun('mic', 'মুখস্থ পড়া ও ভয়েস', 'soon:মুখস্থ পড়া ও ভয়েস', { tint: 'coral', sub: 'রেকর্ড করে স্যারকে শোনাও' }),
+        fun('letters', 'শব্দ ও বানান', 's.spelling', { tint: 'teal' }), fun('gamepad', 'শিক্ষামূলক খেলা', 's.games', { tint: 'coral', sub: 'দ্রুত গণিত, নামতা' }),
+        fun('mic', 'মুখস্থ পড়া ও ভয়েস', 'voicebox', { tint: 'coral', sub: 'রেকর্ড করে স্যারকে শোনাও' }),
         `<button class="fun t-${big ? 'sun' : 'sky'}" id="bigt">${chip('search')}<b>বড় লেখা</b><span class="small">${big ? 'চালু · বন্ধ করতে চাপো' : 'বন্ধ · চালু করতে চাপো'}</span></button>`,
         fun('star', 'আমার রেটিং ও কার্ড', 'progress:' + st.id, { tint: 'sun' }), fun('question', 'প্রশ্ন বক্স', 's.doubts', { tint: 'grape' }),
-        fun('target', 'আমার লক্ষ্য', 's.goals', { tint: 'teal' }), fun('trophy', 'সার্টিফিকেট', 'soon:সার্টিফিকেট', { tint: 'sun' }),
+        fun('target', 'আমার লক্ষ্য', 's.goals', { tint: 'teal' }), fun('trophy', 'সার্টিফিকেট', 'certs', { tint: 'sun' }),
         fun('notebook', 'ভুলের খাতা', 's.mistakes', { tint: 'coral' }), fun('flashcards', 'ফ্ল্যাশকার্ড', 'flash:' + st.class_level, { tint: 'grape' }),
         fun('book', 'সিলেবাস ও বইয়ের পৃষ্ঠা', 'syllabus:' + st.class_level, { tint: 'sky' }), fun('bell', 'নোটিশ', 'notices:students', { tint: 'teal' }),
         fun('book', 'শিক্ষা উপকরণ', 'materials:' + st.class_level, { tint: 'sky' }), fun('puzzle', 'দৈনিক ধাঁধা', 's.puzzle', { tint: 'coral' }),
-        fun('ai_spark', 'AI পড়ার সহায়ক', 'soon:AI পড়ার সহায়ক', { tint: 'grape' }), fun('trophy', 'কুইজ ও লিডারবোর্ড', 's.quiz', { tint: 'sun' }),
+        fun('ai_spark', 'AI পড়ার সহায়ক', 's.tutor', { tint: 'grape' }), fun('trophy', 'কুইজ ও লিডারবোর্ড', 's.quiz', { tint: 'sun' }),
       ])}
       ${apkBanner()}`;
     el.querySelectorAll('[data-logout]').forEach(b => b.onclick = confirmLogout);
