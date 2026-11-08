@@ -1,37 +1,36 @@
 'use strict';
-// Teacher & admin screens (PWA). Mirrors the APK: TeacherHomeScreen, TakeAttendanceScreen, RateClassScreen,
-// ShiftStudentsScreen. Writes go through writeOrQueue so they survive a lost connection.
+// Teacher & admin screens — mirror TeacherScreens.kt, ClassroomScreens.kt (RateClass), StudentListScreens.kt.
+// Class writes go through writeOrQueue so they survive a lost connection (same as the APK's Outbox).
 (function () {
   const RATING_DEFAULT = { behavior: 3, homework: 3, performance: 2 }; // 8/10, same as RatingScale.default
-  const rosterOf = s => cached('roster.' + s, async () => {
+  const T = window.T = {}; // shared helpers for the other teacher modules
+  T.rosterOf = s => cached('roster.' + s, async () => {
     const b = await sel('batches', `select=id&shift=eq.${s}`);
     if (!b.length) return [];
-    return sel('students', `select=id,class_level,roll,profile:profiles!students_profile_id_fkey(full_name)&batch_id=${inList(b.map(x => x.id))}&active=is.true&order=roll`);
+    return sel('students', `select=id,class_level,roll,batch_id,profile:profiles!students_profile_id_fkey(full_name)&batch_id=${inList(b.map(x => x.id))}&active=is.true&order=roll`);
   });
-  const nameOf = st => st.profile?.full_name || 'শিক্ষার্থী';
+  T.allStudents = () => cached('allstudents', () => sel('students', 'select=id,class_level,roll,batch:batches(shift),profile:profiles!students_profile_id_fkey(full_name)&active=is.true&limit=3000'));
+  const nameOf = T.nameOf = st => st?.profile?.full_name || 'শিক্ষার্থী';
   const rollNum = st => parseInt(ascii(st.roll), 10) || 999;
-  const sortRoster = l => l.slice().sort((a, b) => a.class_level - b.class_level || rollNum(a) - rollNum(b));
-  const fmtScore = v => bn(Number.isInteger(+v) ? +v : (+v).toFixed(1));
+  const sortRoster = T.sortRoster = l => l.slice().sort((a, b) => a.class_level - b.class_level || rollNum(a) - rollNum(b));
   const total = r => +r.behavior + +r.homework + +r.performance;
   const hwLabel = v => +v === 0 ? 'করেনি' : +v === 3 ? 'করেছে' : 'আধা';
-  const contactsP = () => cached('contacts', async () => {
-    const rows = await sel('guardian_students', 'select=student_id,relation,guardian:profiles!guardian_students_guardian_id_fkey(full_name,phone)&limit=5000');
+  T.contacts = () => cached('contacts', async () => {
+    const rows = await sel('guardian_students', 'select=student_id,guardian_id,relation,guardian:profiles!guardian_students_guardian_id_fkey(full_name,phone)&limit=5000');
     const m = {};
-    rows.forEach(o => { if (o.guardian?.phone) (m[o.student_id] ||= []).push({ name: o.guardian.full_name, relation: o.relation || '', phone: o.guardian.phone }); });
+    rows.forEach(o => { if (o.guardian?.phone) (m[o.student_id] ||= []).push({ id: o.guardian_id, name: o.guardian.full_name, relation: o.relation || '', phone: o.guardian.phone }); });
     return m;
   });
-  const telHref = p => 'tel:' + ascii(p).replace(/[^\d+]/g, '');
-  const callRow = g => `<div class="call"><span>${esc(g.relation ? g.relation + ' ' : '')}${esc(bn(g.phone))}</span><a class="pill coral" href="${telHref(g.phone)}">অভিভাবককে কল</a></div>`;
-
-  // writes run one at a time, in tap order
+  const telHref = T.telHref = p => 'tel:' + ascii(p).replace(/[^\d+]/g, '');
+  const callRow = g => `<div class="call"><span>অনুপস্থিত · ${esc(g.relation ? g.relation + ' ' : '')}${esc(bn(g.phone))}</span><a class="pill coral" href="${telHref(g.phone)}">অভিভাবককে কল</a></div>`;
   let chain = Promise.resolve();
-  const serial = fn => (chain = chain.then(fn, fn));
+  const serial = T.serial = job => (chain = chain.then(job, job));
 
   function pendingCard() {
     const n = outbox.mine().length;
     if (!n) return '';
-    return `<div class="card warn"><h2>${bn(n)}টি তথ্য ফোনে জমা আছে</h2><div class="mute">ইন্টারনেট ছিল না, তাই হাজিরা/রেটিং ফোনে রাখা হয়েছে। নেট এলে নিজে থেকেই চলে যাবে।</div>
-      <button class="primary" id="sync" style="margin-top:10px">এখন পাঠান</button></div>`;
+    return `<div class="card sun"><h3>${bn(n)}টি তথ্য ফোনে জমা আছে</h3><div class="mute">ইন্টারনেট ছিল না, তাই হাজিরা/রেটিং/নম্বর ফোনে রাখা হয়েছে। নেট এলে নিজে থেকেই চলে যাবে।</div>
+      <button class="btn" id="sync" style="margin-top:8px">এখন পাঠান</button></div>`;
   }
   function bindSync(el) {
     const b = el.querySelector('#sync');
@@ -42,47 +41,87 @@
       render();
     };
   }
-  const shiftChips = (cur, extra = '') => `<div class="seg">${SHIFTS.map(s => `<button data-shift="${s.id}" class="${s.id === cur ? 'on' : ''}"><b>${s.bn}</b><span>${s.time}</span></button>`).join('')}</div>${extra}`;
+  T.shiftSeg = (curShift, attr = 'data-shift') => `<div class="seg">${SHIFTS.map(s => `<button ${attr}="${s.id}" class="${s.id === curShift ? 'on' : ''}"><b>${s.bn}</b><span>${s.time}</span></button>`).join('')}</div>`;
+  T.soon = t => 'soon:' + t;
+  // A screen registered later (by a later module) replaces the "soon" link automatically.
+  const link = (route, fallback) => SCREENS[route.split(':')[0]] ? route : T.soon(fallback);
 
   // ---------- home ----------
-  async function home(el) {
+  SCREENS['t.home'] = { home: true, title: () => 'স্বাগতম, ' + S.me.full_name, sub: () => isAdmin() ? 'অ্যাডমিন' : 'শিক্ষক', hdr: 'var(--teal-dark)',
+    trail: () => '<button class="pill white" data-logout>লগআউট</button>', render: async (el) => {
     flushOutbox().catch(() => {});
-    const counts = await Promise.all(SHIFTS.map(s => rosterOf(s.id).then(l => l.length).catch(() => null)));
-    const isAdmin = S.me.role === 'admin';
+    const counts = await Promise.all(SHIFTS.map(s => T.rosterOf(s.id).then(l => l.length).catch(() => null)));
+    const sections = [
+      ['প্রতিদিনের ক্লাস', [['question', 'প্রশ্ন বক্স', 't.doubts'], ['signal', 'শিক্ষার্থীদের সংকেত', 't.signals'], ['mic', 'ভয়েস ও মুখস্থ পড়া', 't.voice'], ['camera', 'CCTV যাচাই', 't.gate']]],
+      ['অগ্রগতি', [['alert', 'ঝুঁকিতে থাকা শিক্ষার্থী', 't.risk'], ['chart', 'ব্যাচ তুলনা', 't.compare'], ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 't.challenges'], ['book', 'সিলেবাস ট্র্যাকার', 't.syllabus']]],
+      ['পরীক্ষা ও প্রশ্ন', [['numbers', 'নম্বর এন্ট্রি', 't.marks'], ['calendar', 'পরীক্ষার পরিকল্পনা', 't.exams'], ['archive', 'প্রশ্ন ব্যাংক', 't.qbank'], ['ai_spark', 'AI প্রশ্নপত্র তৈরি', 't.aipaper'],
+        ['note_edit', 'AI খাতা মূল্যায়ন', 't.grading'], ['seat', 'সিট প্ল্যান', 't.seat'], ['flashcards', 'ফ্ল্যাশকার্ড', 't.flash'], ['book', 'শিক্ষা উপকরণ', 'materials:5']]],
+      ['যোগাযোগ', [['chat', 'অভিভাবকদের বার্তা', 't.chats'], ['handshake', 'অভিভাবক মিটিং', 't.meetings'], ['megaphone', 'নোটিশ পাঠান', 't.notice'], ['bell', 'সকল নোটিশ', 'notices'], ['mic', 'পরিচালকের বার্তা', 'director']]],
+      ['অফিস', [['palm', 'ছুটি ও বদলি', 't.leave'], ['lock', 'পিন বদলান', 'pin'], ['money', isAdmin() ? 'শিক্ষকদের সম্মানী' : 'আমার সম্মানী', 't.honorarium'],
+        ...(isAdmin() ? [['users', 'অ্যাকাউন্ট ব্যবস্থাপনা', 'a.users'], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['phone', 'নম্বর সংশোধন', 'a.phones']] : [])]],
+    ];
     el.innerHTML = `${pendingCard()}
-      <div class="card"><h2>আজকের শিক্ষার্থী</h2><div class="mute">শিফটে চাপলে তালিকা ও অভিভাবকের নম্বর দেখবেন</div>
-        <div class="seg" style="margin-top:10px">${SHIFTS.map((s, i) => `<button data-go="shift:${s.id}"><span>${s.bn}</span><b>${counts[i] == null ? '…' : bn(counts[i]) + ' জন'}</b></button>`).join('')}</div></div>
-      <div class="quick"><button data-go="att"><b>উপস্থিতি</b><span>ক্লাস বা পরীক্ষা</span></button><button data-go="rate"><b>ক্লাস রেটিং</b><span>আজকের স্কোর</span></button></div>
-      <div class="card"><h2>${isAdmin ? 'অ্যাডমিন' : 'শিক্ষক'} · ${esc(S.me.full_name)}</h2>
-        <div class="mute">নম্বর এন্ট্রি, ক্লাস লগ, ফি, নোটিশসহ বাকি অংশ ধাপে ধাপে ওয়েবে আসছে। ততদিন ${isAndroid ? 'অ্যান্ড্রয়েড অ্যাপে' : 'অফিসের কম্পিউটার বা অ্যান্ড্রয়েড অ্যাপে'} করুন।</div></div>
+      <div class="card"><h2>আজকের শিক্ষার্থী</h2><div class="mute small">শিফটে চাপলে তালিকা ও অভিভাবকের নম্বর দেখবেন</div>
+        <div class="seg soft" style="margin-top:10px">${SHIFTS.map((s, i) => `<button data-go="t.shift:${s.id}"><span class="lic">${I(s.icon)}</span><span>${s.bn}</span><b>${counts[i] == null ? '…' : bn(counts[i]) + ' জন'}</b></button>`).join('')}</div></div>
+      <div class="grid2">${action('attendance', 'উপস্থিতি', 'ক্লাস বা পরীক্ষা', 't.att')}${action('star', 'ক্লাস রেটিং', 'আজকের স্কোর', 't.rate')}</div>
+      ${sections.map(([h, tiles]) => section(h) + grid3(tiles.map(([ic, t, r]) => compact(ic, t, link(r, t))))).join('')}
+      <div class="card cream"><h3>CCTV-ভিত্তিক উপস্থিতি</h3><div class="mute">কোচিং-এর কম্পিউটারে Diff Gate চালু হলে গেটের ক্যামেরা স্বয়ংক্রিয়ভাবে উপস্থিতি গ্রহণ করবে। অনিশ্চিত শনাক্তকরণ "CCTV যাচাই" অংশে দেখা যাবে।</div></div>
       ${apkBanner()}`;
     bindSync(el);
-    setTimeout(apkPopup, 1200);
+    setTimeout(apkPopup, 1500);
+  } };
+
+  // ---------- shift list (ShiftStudentsScreen) ----------
+  SCREENS['t.shift'] = { title: p => shiftBn(p) + ' শিফট', sub: 'শিক্ষার্থী ও অভিভাবকের নম্বর', render: async (el, shift) => {
+    const [list, contacts] = await Promise.all([T.rosterOf(shift), T.contacts().catch(() => ({}))]);
+    if (!list.length) { el.innerHTML = empty('school', 'এই শিফটে কোনো শিক্ষার্থী নেই।'); return; }
+    let cls = null;
+    const draw = () => {
+      const classes = [...new Set(list.map(s => s.class_level))].sort((a, b) => a - b);
+      const shown = sortRoster(list).filter(s => cls == null || s.class_level === cls);
+      el.innerHTML = `${classes.length > 1 ? chipRow([['', 'সব ক্লাস'], ...classes.map(c => [c, 'ক্লাস ' + bn(c)])], cls ?? '') : ''}
+        ${shown.map(st => `<div class="card"><div style="display:flex;gap:12px;align-items:center">${avatar(nameOf(st))}<div style="flex:1"><h3>${esc(nameOf(st))}</h3><div class="mute small">ক্লাস ${bn(st.class_level)} · রোল ${esc(bn(st.roll || '—'))}</div></div></div>
+          <div class="stack" style="margin-top:8px">${(contacts[st.id] || []).map(g => `<div class="call"><span>${esc(g.relation || 'অভিভাবক')} · ${esc(bn(g.phone))}</span><span class="chips"><a class="pill coral" href="${telHref(g.phone)}">কল</a><button class="pill" data-report="${st.id}|${g.id}|${esc(g.phone)}">ভুল নম্বর</button></span></div>`).join('') || '<div class="mute small">অভিভাবকের নম্বর যোগ করা নেই</div>'}</div></div>`).join('')}`;
+      el.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => { cls = b.dataset.chip === '' ? null : +b.dataset.chip; draw(); });
+      el.querySelectorAll('[data-report]').forEach(b => b.onclick = () => reportPhone(...b.dataset.report.split('|')));
+    };
+    draw();
+  } };
+  function reportPhone(studentId, guardianId, oldPhone) {
+    sheet(`<h2>ভুল নম্বর জানান</h2><div class="mute">${esc(bn(oldPhone))} — এই নম্বরে সমস্যা কী?</div>
+      <div class="seg"><button data-owner="wrong" class="on"><b>অন্য কারো নম্বর</b></button><button data-owner="off"><b>বন্ধ/চলে না</b></button></div>
+      <label>সঠিক নম্বর (জানা থাকলে)</label><input id="np" inputmode="tel" maxlength="14" placeholder="01XXXXXXXXX">
+      <label>মন্তব্য</label><input id="nn" maxlength="200">
+      <button class="btn" id="rs">অ্যাডমিনকে পাঠান</button><button class="link" data-close>বাতিল</button>`, (s, close) => {
+      let owner = 'wrong';
+      s.querySelectorAll('[data-owner]').forEach(b => b.onclick = () => { owner = b.dataset.owner; s.querySelectorAll('[data-owner]').forEach(x => x.classList.toggle('on', x === b)); });
+      s.querySelector('#rs').onclick = async () => {
+        const np = ascii(s.querySelector('#np').value).replace(/\D/g, '');
+        if (np && !/^01\d{9}$/.test(np)) return toast('সঠিক নম্বর দিন (০১ দিয়ে শুরু, ১১ সংখ্যা)');
+        try {
+          await ins('phone_change_requests', { coaching_id: S.me.coaching_id, student_id: studentId, guardian_id: guardianId, old_phone: oldPhone, new_phone: np || null, owner, note: s.querySelector('#nn').value.trim(), reported_by: S.uid }, 'select=id');
+          toast('অ্যাডমিনকে জানানো হয়েছে'); close();
+        } catch (e) { if (/23505|duplicate/.test(e.body || '')) { toast('আগেই জানানো হয়েছে'); close(); } else toast('পাঠানো যায়নি'); }
+      };
+    });
   }
 
-  // ---------- shift list ----------
-  async function shiftList(el, shift) {
-    const s = SHIFTS.find(x => x.id === shift) || SHIFTS[1];
-    const [list, contacts] = await Promise.all([rosterOf(s.id), contactsP().catch(() => ({}))]);
-    const byClass = {};
-    sortRoster(list).forEach(st => (byClass[st.class_level] ||= []).push(st));
-    el.innerHTML = Object.keys(byClass).map(c => `<div class="card"><h2>ক্লাস ${bn(c)} <span class="mute">(${bn(byClass[c].length)} জন)</span></h2>${byClass[c].map(st => `
-        <div class="row col"><div><b>${esc(nameOf(st))}</b> <span class="mute">রোল ${esc(bn(st.roll || '—'))}</span></div>
-        ${(contacts[st.id] || []).map(callRow).join('') || '<div class="mute small">অভিভাবকের নম্বর যোগ করা নেই</div>'}</div>`).join('')}</div>`).join('')
-      || '<div class="card mute">এই শিফটে কোনো শিক্ষার্থী নেই।</div>';
-  }
+  // ---------- take attendance (TakeAttendanceScreen) ----------
+  const A = { session: null, examTitle: '', shift: 'afternoon', cls: null, present: {}, ratings: {}, marked: false, error: null, day: null };
+  const choice = (label, key, values, selected, labels) =>
+    `<div class="choice"><span>${label}</span><div>${values.map((v, i) => `<button data-k="${key}" data-v="${v}" class="${+selected === v ? 'on' : ''}">${labels ? labels[i] : num(v)}</button>`).join('')}</div></div>`;
+  const ratingChoices = r => choice('আচরণ', 'behavior', [0, 1, 2, 3], r.behavior) + choice('হোমওয়ার্ক', 'homework', [0, 1.5, 3], r.homework, ['করেনি', 'আধা', 'করেছে']) + choice('পারফরম্যান্স', 'performance', [0, 1, 2, 3, 4], r.performance);
 
-  // ---------- take attendance ----------
-  const A = { session: null, examTitle: '', shift: 'afternoon', cls: null, present: {}, ratings: {}, marked: false, error: null, savedFor: null };
-  async function attendance(el) {
+  SCREENS['t.att'] = { title: 'উপস্থিতি গ্রহণ', sub: () => A.session === 'exam' ? 'পরীক্ষা' + (A.examTitle.trim() ? ': ' + A.examTitle.trim() : '') : A.session === 'class' ? 'নিয়মিত ক্লাস' : 'আজ ক্লাস না পরীক্ষা, আগে বেছে নিন', render: async (el) => {
     const today = dhakaToday();
-    if (A.day !== today) Object.assign(A, { day: today, session: null, examTitle: '', present: {}, ratings: {}, marked: false, savedFor: null });
-    let list = null, loadFailed = false, savedRatings = null;
-    const contacts = contactsP().catch(() => null);
+    if (A.day !== today) Object.assign(A, { day: today, session: null, examTitle: '', present: {}, ratings: {}, marked: false });
+    let list = null, loadFailed = false, savedRatings = null, contacts = null;
+    T.contacts().then(c => { contacts = c; }).catch(() => { contacts = {}; });
+    const subNow = () => setSub(SCREENS['t.att'].sub());
 
     async function load() {
       try {
-        list = sortRoster(await rosterOf(A.shift));
+        list = sortRoster(await T.rosterOf(A.shift));
         const ids = list.map(s => s.id);
         if (ids.length) {
           const [att, rts] = await Promise.all([
@@ -91,21 +130,19 @@
           ]);
           att.forEach(a => { if (a.check_in && !(a.student_id in A.present)) A.present[a.student_id] = true; });
           savedRatings = rts;
-          (rts || []).forEach(r => { if (!A.ratings[r.student_id]) A.ratings[r.student_id] = r; });
+          (rts || []).forEach(r => { if (!A.ratings[r.student_id]) A.ratings[r.student_id] = { behavior: +r.behavior, homework: +r.homework, performance: +r.performance }; });
         }
-      } catch (e) { loadFailed = true; list = []; }
+      } catch { loadFailed = true; list = []; }
     }
-
     function saveRating(id, r) {
       A.ratings[id] = r;
-      const row = { coaching_id: S.me.coaching_id, student_id: id, day: today, behavior: r.behavior, homework: r.homework, performance: r.performance, rated_by: S.uid };
+      const row = { coaching_id: S.me.coaching_id, student_id: id, day: today, ...r, rated_by: S.uid };
       serial(() => writeOrQueue('POST', '/rest/v1/class_ratings?on_conflict=student_id,day', [row], 'return=minimal,resolution=merge-duplicates')
         .catch(() => { A.error = 'রেটিং সংরক্ষণ হয়নি। আবার চাপুন।'; draw(); }));
     }
     function mark(id, value) {
       A.present[id] = value; A.marked = true;
       const session = A.session || 'class';
-      // present in a class: start at 8/10, but only once today's saved ratings are known (never overwrite one)
       if (value && session === 'class' && savedRatings !== null && !A.ratings[id]) saveRating(id, { ...RATING_DEFAULT });
       if (!value && A.ratings[id]) {
         delete A.ratings[id];
@@ -116,114 +153,99 @@
         .catch(() => { A.error = 'হাজিরা সংরক্ষণ হয়নি। আবার চাপুন।'; draw(); }));
     }
 
-    const ratingBox = (id, r) => `<div class="rating" data-id="${id}"><div class="rhead"><span>আজকের রেটিং</span><b>${fmtScore(total(r))}/১০</b></div>
-      ${choice('আচরণ', 'behavior', [0, 1, 2, 3], r.behavior)}
-      ${choice('হোমওয়ার্ক', 'homework', [0, 1.5, 3], r.homework, ['করেনি', 'আধা', 'করেছে'])}
-      ${choice('পারফরম্যান্স', 'performance', [0, 1, 2, 3, 4], r.performance)}</div>`;
-
-    async function draw() {
+    function draw() {
       const online = navigator.onLine, pending = outbox.mine().length;
-      let h = `<div class="card ${online && !pending ? 'okbg' : 'warn'}"><div>${!online ? `অফলাইন মোড: হাজিরা ফোনে জমা হচ্ছে${pending ? ` (${bn(pending)}টি)` : ''}। নেট এলে নিজে থেকেই চলে যাবে।`
-        : pending ? `অনলাইন: জমা থাকা ${bn(pending)}টি তথ্য পাঠানো হচ্ছে…` : 'অনলাইন: প্রতিটি চাপ সাথে সাথে সংরক্ষণ হচ্ছে, অভিভাবক বার্তা পাচ্ছেন।'}</div>
-        ${A.error ? `<div class="err">${A.error}</div>` : ''}</div>
-        <div class="card"><h2>আজ কী হচ্ছে?</h2><div class="seg">
+      let h = `<div class="card ${online && !pending ? 'teal' : 'sun'}"><div>${!online ? `অফলাইন মোড: হাজিরা ফোনে জমা হচ্ছে${pending ? ` (${bn(pending)}টি)` : ''}। নেট এলে নিজে থেকেই চলে যাবে।`
+          : pending ? `অনলাইন: জমা থাকা ${bn(pending)}টি তথ্য পাঠানো হচ্ছে…` : 'অনলাইন: প্রতিটি চাপ সাথে সাথে সংরক্ষণ হচ্ছে, অভিভাবক বার্তা পাচ্ছেন।'}</div>
+          ${A.error ? `<div class="err">${A.error}</div>` : ''}</div>
+        <div class="card"><h3>আজ কী হচ্ছে?</h3><div class="seg" style="margin-top:8px">
           <button data-session="class" class="${A.session === 'class' ? 'on' : ''}"><b>নিয়মিত ক্লাস</b><span>হাজিরা + ক্লাস স্কোর</span></button>
           <button data-session="exam" class="${A.session === 'exam' ? 'on' : ''}"><b>পরীক্ষা</b><span>শুধু হাজিরা</span></button></div>
-          ${A.session === 'exam' ? (A.marked ? `<p>পরীক্ষা: ${esc(A.examTitle || 'নাম দেওয়া হয়নি')}</p>` : `<input id="examTitle" maxlength="60" placeholder="কোন পরীক্ষা (যেমন: মডেল টেস্ট · ইংরেজি ২য়)" value="${esc(A.examTitle)}">`) : ''}
+          ${A.session === 'exam' ? (A.marked ? `<div style="margin-top:8px">পরীক্ষা: ${esc(A.examTitle || 'নাম দেওয়া হয়নি')}</div>` : `<input id="examTitle" maxlength="60" placeholder="কোন পরীক্ষা (যেমন: মডেল টেস্ট · ইংরেজি ২য়)" value="${esc(A.examTitle)}" style="margin-top:8px">`) : ''}
           ${A.marked ? '<div class="mute small">হাজিরা শুরু হয়ে গেছে, তাই আজকের ধরন আর বদলানো যাবে না।</div>' : ''}</div>`;
       if (A.session) {
-        h += shiftChips(A.shift);
-        if (list === null) h += '<div class="skel"></div><div class="skel"></div>';
-        else if (loadFailed) h += '<div class="card">শিক্ষার্থীর তালিকা আনতে ইন্টারনেট লাগে। একবার তালিকা খোলার পর নেট গেলেও হাজিরা নেওয়া যাবে।<button class="primary" id="reload" style="margin-top:10px">আবার চেষ্টা করুন</button></div>';
-        else if (!list.length) h += '<div class="card mute">এই শিফটে কোনো শিক্ষার্থী নেই।</div>';
+        h += T.shiftSeg(A.shift);
+        if (list === null) h += skel(3);
+        else if (loadFailed) h += `${empty('wifi_off', 'শিক্ষার্থীর তালিকা আনতে ইন্টারনেট লাগে। একবার তালিকা খোলার পর নেট গেলেও হাজিরা নেওয়া যাবে।')}<button class="btn" id="reload">আবার চেষ্টা করুন</button>`;
+        else if (!list.length) h += empty('school', 'এই শিফটে কোনো শিক্ষার্থী নেই।');
         else {
           const classes = [...new Set(list.map(s => s.class_level))].sort((a, b) => a - b);
-          if (classes.length > 1) h += `<div class="kids"><button data-cls="" class="${A.cls == null ? 'on' : ''}">সব ক্লাস</button>${classes.map(c => `<button data-cls="${c}" class="${A.cls === c ? 'on' : ''}">ক্লাস ${bn(c)}</button>`).join('')}</div>`;
+          if (classes.length > 1) h += chipRow([['', 'সব ক্লাস'], ...classes.map(c => [c, 'ক্লাস ' + bn(c)])], A.cls ?? '');
           const shown = list.filter(s => A.cls == null || s.class_level === A.cls);
           const presentN = shown.filter(s => A.present[s.id] === true).length;
           const unmarked = shown.filter(s => !(s.id in A.present));
-          h += `<div class="card"><b>উপস্থিত: ${bn(presentN)} / ${bn(shown.length)}</b><div class="bar"><i style="width:${shown.length ? presentN / shown.length * 100 : 0}%"></i></div>
+          h += `<div class="card"><h3>উপস্থিত: ${bn(presentN)} / ${bn(shown.length)}</h3><div style="margin:8px 0">${bar(shown.length ? presentN / shown.length : 0)}</div>
             ${unmarked.length ? `<div class="mute small">${bn(unmarked.length)} জনের হাজিরা এখনো দেওয়া হয়নি</div>` : ''}</div>`;
-          const cs = await contacts;
           h += shown.map(st => {
             const p = A.present[st.id];
-            let x = `<div class="att ${p === true ? 'p' : p === false ? 'a' : ''}" data-toggle="${st.id}"><div><b>${esc(nameOf(st))}</b><div class="mute small">ক্লাস ${bn(st.class_level)} · রোল ${esc(bn(st.roll || '—'))}</div></div>
-              <span class="chip ${p === true ? 'ok' : p === false ? 'bad' : ''}">${p === true ? 'উপস্থিত' : p === false ? 'অনুপস্থিত' : 'চাপ দিন'}</span></div>`;
-            if (p === true && A.session === 'class' && A.ratings[st.id]) x += ratingBox(st.id, A.ratings[st.id]);
-            if (p === false) x += `<div class="absent">${cs == null ? '<span class="mute small">অভিভাবকের নম্বর আনা হচ্ছে…</span>' : (cs[st.id] || []).map(callRow).join('') || '<span class="mute small">অভিভাবকের নম্বর যোগ করা নেই</span>'}</div>`;
-            return x;
+            let x = `<div class="stack"><div class="att ${p === true ? 'p' : p === false ? 'a' : ''}" data-toggle="${st.id}">${avatar(nameOf(st))}<div class="nm"><h3>${esc(nameOf(st))}</h3><div class="mute small">ক্লাস ${bn(st.class_level)} · রোল ${esc(bn(st.roll || '—'))}</div></div><span class="mark">${p === true ? '✓' : p === false ? '✕' : ''}</span></div>`;
+            if (p === true && A.session === 'class' && A.ratings[st.id]) x += `<div class="rating" data-id="${st.id}"><div class="rhead"><span>আজকের রেটিং</span><b>${num(total(A.ratings[st.id]))}/১০</b></div>${ratingChoices(A.ratings[st.id])}</div>`;
+            if (p === false) x += `<div class="absent">${contacts == null ? '<span class="mute small">অভিভাবকের নম্বর আনা হচ্ছে…</span>' : (contacts[st.id] || []).map(callRow).join('') || '<span class="mute small">অভিভাবকের নম্বর যোগ করা নেই</span>'}</div>`;
+            return x + '</div>';
           }).join('');
-          h += `<button class="primary" id="allP" style="margin-top:12px">সবাইকে উপস্থিত চিহ্নিত করুন</button>
-            ${unmarked.length ? `<button class="primary coral" id="restA" style="margin-top:8px">বাকি ${bn(unmarked.length)} জনকে অনুপস্থিত হিসেবে সংরক্ষণ করুন</button>` : ''}
-            <p class="mute small">${A.session === 'class' ? 'উপস্থিত শিক্ষার্থীর নিচেই রেটিং দিন (শুরুতে ৮/১০ বসানো থাকে)। অভিভাবক হাজিরার সাথে আজকের স্কোরও পান।' : 'পরীক্ষার দিনে শুধু হাজিরা যায়; কোনো ক্লাস স্কোর পাঠানো হয় না।'}</p>`;
+          h += `<button class="btn" id="allP">সবাইকে উপস্থিত চিহ্নিত করুন</button>
+            ${unmarked.length ? `<button class="btn coral" id="restA">বাকি ${bn(unmarked.length)} জনকে অনুপস্থিত হিসেবে সংরক্ষণ করুন</button>` : ''}
+            <div class="mute small">${A.session === 'class' ? 'উপস্থিত শিক্ষার্থীর নিচেই রেটিং দিন (শুরুতে ৮/১০ বসানো থাকে)। অভিভাবক হাজিরার সাথে আজকের স্কোরও পান।' : 'পরীক্ষার দিনে শুধু হাজিরা যায়; কোনো ক্লাস স্কোর পাঠানো হয় না।'}</div>`;
           el._shown = shown; el._unmarked = unmarked;
         }
       }
+      const y = window.scrollY;
       el.innerHTML = h;
+      window.scrollTo(0, y);
       bind();
     }
-
     function bind() {
       el.querySelectorAll('[data-session]').forEach(b => b.onclick = async () => {
         if (A.marked) return;
-        A.session = b.dataset.session; await draw();
+        A.session = b.dataset.session; subNow(); draw();
         if (list === null) { await load(); draw(); }
       });
-      const t = el.querySelector('#examTitle'); if (t) t.oninput = () => { A.examTitle = t.value.slice(0, 60); };
+      const t = el.querySelector('#examTitle'); if (t) t.oninput = () => { A.examTitle = t.value.slice(0, 60); subNow(); };
       el.querySelectorAll('[data-shift]').forEach(b => b.onclick = async () => { A.shift = b.dataset.shift; A.cls = null; list = null; loadFailed = false; draw(); await load(); draw(); });
-      el.querySelectorAll('[data-cls]').forEach(b => b.onclick = () => { A.cls = b.dataset.cls === '' ? null : +b.dataset.cls; draw(); });
+      el.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => { A.cls = b.dataset.chip === '' ? null : +b.dataset.chip; draw(); });
       el.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => { const id = b.dataset.toggle; mark(id, A.present[id] !== true); draw(); });
-      el.querySelectorAll('.rating [data-k]').forEach(b => b.onclick = () => {
-        const id = b.closest('.rating').dataset.id;
-        saveRating(id, { ...A.ratings[id], [b.dataset.k]: +b.dataset.v }); draw();
-      });
+      el.querySelectorAll('.rating [data-k]').forEach(b => b.onclick = () => { const id = b.closest('.rating').dataset.id; saveRating(id, { ...A.ratings[id], [b.dataset.k]: +b.dataset.v }); draw(); });
       const r = el.querySelector('#reload'); if (r) r.onclick = async () => { list = null; loadFailed = false; draw(); await load(); draw(); };
       const all = el.querySelector('#allP'); if (all) all.onclick = () => { el._shown.forEach(s => mark(s.id, true)); draw(); };
       const rest = el.querySelector('#restA'); if (rest) rest.onclick = () => { el._unmarked.forEach(s => mark(s.id, false)); toast('অনুপস্থিতদের অভিভাবকও বার্তা পাবেন।'); draw(); };
     }
-
     if (A.session) await load();
-    await draw();
-    // keep the online/offline badge fresh (re-draw only when something changed)
-    let last = `${navigator.onLine}|${outbox.mine().length}`;
+    draw();
+    let last = `${navigator.onLine}|${outbox.mine().length}|${contacts != null}`;
     const tick = setInterval(() => {
-      if (route !== 'att') return clearInterval(tick);
-      const now = `${navigator.onLine}|${outbox.mine().length}`;
-      if (now !== last && route === 'att') { last = now; draw(); }
-    }, 4000);
-  }
-  function choice(label, key, values, selected, labels) {
-    return `<div class="choice"><span>${label}</span><div>${values.map((v, i) => `<button data-k="${key}" data-v="${v}" class="${+selected === v ? 'on' : ''}">${labels ? labels[i] : fmtScore(v)}</button>`).join('')}</div></div>`;
-  }
+      if (cur().r !== 't.att') return clearInterval(tick);
+      const now = `${navigator.onLine}|${outbox.mine().length}|${contacts != null}`;
+      if (now !== last) { last = now; draw(); }
+    }, 2000);
+  } };
 
-  // ---------- rate class ----------
+  // ---------- rate class (RateClassScreen) ----------
   const R = { shift: 'afternoon', open: null, ratings: {}, dirty: false, day: null };
-  async function rate(el) {
+  SCREENS['t.rate'] = { title: 'ক্লাস রেটিং', sub: () => fmtDateY(dhakaToday()) + ' · ১০-এর মধ্যে', render: async (el) => {
     const today = dhakaToday();
     if (R.day !== today) Object.assign(R, { day: today, ratings: {}, dirty: false, open: null });
     let list = null, saved = null, busy = false, msg = '';
     async function load() {
-      list = sortRoster(await rosterOf(R.shift));
+      list = sortRoster(await T.rosterOf(R.shift));
       saved = list.length ? await sel('class_ratings', `select=student_id,behavior,homework,performance&day=eq.${today}&student_id=${inList(list.map(s => s.id))}`) : [];
       const m = Object.fromEntries(saved.map(r => [r.student_id, r]));
       list.forEach(s => { if (!R.ratings[s.id]) R.ratings[s.id] = m[s.id] ? { behavior: +m[s.id].behavior, homework: +m[s.id].homework, performance: +m[s.id].performance } : { ...RATING_DEFAULT }; });
     }
     function draw() {
-      let h = shiftChips(R.shift) + `<div class="card cream mute">সবার জন্য ৮ বসানো আছে (আচরণ ৩ + হোমওয়ার্ক ৩ + পারফরম্যান্স ২)। যাদের আলাদা, শুধু তাদের নামে চাপ দিয়ে বদলান, তারপর সংরক্ষণ করুন।</div>`;
-      if (list === null) h += '<div class="skel"></div><div class="skel"></div>';
-      else if (!list.length) h += '<div class="card mute">এই ব্যাচে কোনো শিক্ষার্থী নেই।</div>';
+      let h = T.shiftSeg(R.shift) + '<div class="card cream mute">সবার জন্য ৮ বসানো আছে (আচরণ ৩ + হোমওয়ার্ক ৩ + পারফরম্যান্স ২)। যাদের আলাদা, শুধু তাদের নামে চাপ দিয়ে বদলান, তারপর সংরক্ষণ করুন।</div>';
+      if (list === null) h += skel(3);
+      else if (!list.length) h += empty('school', 'এই ব্যাচে কোনো শিক্ষার্থী নেই।');
       else {
-        if (saved.length && !R.dirty) h += '<div class="chip ok" style="margin-bottom:10px">আজকের রেটিং আগেই সংরক্ষিত হয়েছে, চাইলে বদলাতে পারেন</div>';
+        if (saved.length && !R.dirty) h += '<div>' + pill('আজকের রেটিং আগেই সংরক্ষিত হয়েছে, চাইলে বদলাতে পারেন', 'teal') + '</div>';
         h += list.map(st => {
           const r = R.ratings[st.id], t = total(r), open = R.open === st.id;
-          return `<div class="card rrow ${open ? 'open' : ''}"><div class="rtop" data-open="${st.id}"><div><b>${esc(nameOf(st))}</b>
-            <div class="mute small">রোল ${esc(bn(st.roll || '—'))} · আচরণ ${fmtScore(r.behavior)} · কাজ ${hwLabel(r.homework)} · পারফ. ${fmtScore(r.performance)}</div></div>
-            <span class="score ${t >= 8 ? 'ok' : t >= 5 ? '' : 'bad'}">${fmtScore(t)}</span></div>
-            ${open ? `<div class="rating" data-id="${st.id}">${choice('আচরণ', 'behavior', [0, 1, 2, 3], r.behavior)}${choice('হোমওয়ার্ক', 'homework', [0, 1.5, 3], r.homework, ['করেনি', 'আধা', 'করেছে'])}${choice('পারফরম্যান্স', 'performance', [0, 1, 2, 3, 4], r.performance)}</div>` : ''}</div>`;
+          return `<div class="card rrow ${open ? 'open' : ''}"><div class="rtop" data-open="${st.id}">${avatar(nameOf(st))}<div class="nm"><h3>${esc(nameOf(st))}</h3>
+            <div class="mute small">রোল ${esc(bn(st.roll || '—'))} · আচরণ ${num(r.behavior)} · কাজ ${hwLabel(r.homework)} · পারফ. ${num(r.performance)}</div></div><span class="score ${scoreClass(t)}">${num(t)}</span></div>
+            ${open ? `<div class="rating" data-id="${st.id}">${ratingChoices(r)}</div>` : ''}</div>`;
         }).join('');
-        h += `<button class="primary" id="saveR" ${busy ? 'disabled' : ''}>${busy ? 'সংরক্ষণ হচ্ছে…' : `সংরক্ষণ করুন (${bn(list.length)} জন)`}</button>${msg ? `<p class="center">${msg}</p>` : ''}`;
+        h += `<button class="btn" id="saveR" ${busy ? 'disabled' : ''}>${busy ? 'সংরক্ষণ হচ্ছে…' : `সংরক্ষণ করুন (${bn(list.length)} জন)`}</button>${msg ? `<div class="center" style="color:var(--teal-dark)">${msg}</div>` : ''}`;
       }
-      el.innerHTML = h;
+      const y = window.scrollY; el.innerHTML = h; window.scrollTo(0, y);
       el.querySelectorAll('[data-shift]').forEach(b => b.onclick = async () => { if (b.dataset.shift === R.shift) return; R.shift = b.dataset.shift; R.open = null; R.dirty = false; msg = ''; list = null; draw(); await load(); draw(); });
       el.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { R.open = R.open === b.dataset.open ? null : b.dataset.open; draw(); });
       el.querySelectorAll('.rating [data-k]').forEach(b => b.onclick = () => { const id = b.closest('.rating').dataset.id; R.ratings[id] = { ...R.ratings[id], [b.dataset.k]: +b.dataset.v }; R.dirty = true; msg = ''; draw(); });
@@ -239,28 +261,27 @@
       };
     }
     await load(); draw();
-  }
+  } };
 
-  // ---------- more ----------
-  async function more(el) {
-    el.innerHTML = `${pendingCard()}
-      <div class="card" data-go="notices"><h2>সকল নোটিশ</h2><div class="mute">কোচিংয়ের নোটিশ ›</div></div>
-      <div class="card" data-go="pin"><h2>পিন বদলান</h2><div class="mute">নিজের পিন ঠিক করুন ›</div></div>
-      <div class="card"><h2>${esc(S.me.full_name)}</h2><div class="mute">${S.me.role === 'admin' ? 'অ্যাডমিন' : 'শিক্ষক'} · লগইন আইডি: ${esc(bn(S.me.login_id))}</div></div>`;
-    bindSync(el);
-  }
-  async function notices(el) {
-    const ns = await cached('notices', () => sel('notices', 'select=id,title,body,audience,created_at&order=created_at.desc&limit=50'));
-    el.innerHTML = ns.map(n => `<div class="card"><h2>${esc(n.title)}</h2><div class="mute">${fmtDate(n.created_at)}</div><p style="white-space:pre-wrap">${esc(n.body)}</p></div>`).join('') || '<div class="card mute">কোনো নোটিশ নেই</div>';
-  }
-
-  Object.assign(SCREENS, {
-    home: { title: () => 'স্বাগতম, ' + (S.me?.full_name || ''), render: home },
-    att: { title: 'উপস্থিতি গ্রহণ', render: attendance },
-    rate: { title: 'ক্লাস রেটিং', render: rate },
-    shift: { title: p => (SHIFTS.find(s => s.id === p)?.bn || '') + ' শিফট', tab: 'home', back: 'home', render: shiftList },
-    more: { title: 'আরও', render: more },
-    notices: { title: 'সকল নোটিশ', tab: 'more', back: 'more', render: notices },
-  });
-  setTabs([{ id: 'home', label: 'হোম' }, { id: 'att', label: 'উপস্থিতি' }, { id: 'rate', label: 'রেটিং' }, { id: 'more', label: 'আরও' }]);
+  // ---------- shared read screens (same as family) ----------
+  SCREENS.notices = { title: 'সকল নোটিশ', render: async (el) => {
+    const ns = await cached('notices', () => sel('notices', 'select=id,title,body,audience,class_level,created_at&order=created_at.desc&limit=60'));
+    const AUD = { all: 'সবাই', guardians: 'অভিভাবক', students: 'শিক্ষার্থী', teachers: 'শিক্ষক' };
+    el.innerHTML = ns.map(n => `<div class="card"><div class="mute small">${fmtDateY(n.created_at)} · ${AUD[n.audience] || ''}${n.class_level ? ' · ক্লাস ' + bn(n.class_level) : ''}</div><h3>${esc(n.title)}</h3><div style="white-space:pre-wrap;margin-top:4px">${esc(n.body)}</div></div>`).join('') || empty('bell', 'এখনো কোনো নোটিশ নেই।');
+  } };
+  SCREENS.director = { title: 'পরিচালকের বার্তা', render: async (el) => {
+    const ms = await cached('director', () => sel('director_messages', 'select=id,title,body,video_url,published_on&order=published_on.desc'));
+    el.innerHTML = ms.map(m => `<div class="card"><div class="mute small">${fmtDateY(m.published_on)}</div><h3>${esc(m.title)}</h3><div style="white-space:pre-wrap;margin-top:4px">${esc(m.body)}</div>${m.video_url ? `<a class="pill sun" style="margin-top:8px" href="${esc(m.video_url)}" target="_blank" rel="noopener">ভিডিও দেখুন</a>` : ''}</div>`).join('') || empty('mic', 'এখনো কোনো বার্তা নেই।');
+  } };
+  SCREENS.materials = { title: 'শিক্ষা উপকরণ', sub: c => 'ক্লাস ' + bn(c), render: async (el, cls) => {
+    cls = +cls || 5;
+    const ms = await cached('mat' + cls, () => sel('materials', `select=id,chapter,title,kind,url,storage_path,subject:subjects(name)&class_level=eq.${cls}&order=created_at.desc`));
+    el.innerHTML = chipRow([1, 2, 3, 4, 5, 6, 7, 8].map(c => [c, 'ক্লাস ' + bn(c)]), cls) +
+      (ms.map(m => `<div class="card tap" data-url="${esc(m.url || '')}" style="display:flex;gap:12px;align-items:center">${chip(m.kind === 'pdf' ? 'document' : 'book', 40)}<div><h3>${esc(m.title)}</h3><div class="mute small">${esc(m.subject?.name || '')}${m.chapter ? ' · ' + esc(m.chapter) : ''}</div></div></div>`).join('') || empty('book', 'এই ক্লাসের জন্য এখনো কোনো উপকরণ নেই।'));
+    el.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => nav.replace('materials', b.dataset.chip));
+    el.querySelectorAll('[data-url]').forEach(b => b.onclick = () => b.dataset.url ? window.open(b.dataset.url, '_blank', 'noopener') : toast('লিংক নেই'));
+  } };
+  SCREENS.soon = { title: p => p || 'শীঘ্রই', render: async (el) => {
+    el.innerHTML = `<div class="card">${empty('ai_spark', 'এই অংশটি শীঘ্রই ওয়েবে আসছে।' + (isAndroid ? ' ততদিন অ্যান্ড্রয়েড অ্যাপে ব্যবহার করুন।' : ''))}</div>${apkBanner()}`;
+  } };
 })();

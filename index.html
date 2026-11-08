@@ -4,25 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ডিফ এডু</title>
-<meta name="theme-color" content="#F2A900">
-<meta name="description" content="ডিফ এডু — অভিভাবক ও শিক্ষার্থীর অ্যাপ">
+<meta name="theme-color" content="#3B1F42">
+<meta name="description" content="ডিফ এডু — Different Academic & Exam Care">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ডিফ এডু">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header id="bar" hidden>
-  <button id="back" aria-label="পেছনে" hidden>‹</button>
-  <h1 id="title">ডিফ এডু</h1>
-  <button id="logout" aria-label="বের হও">বের হও</button>
+  <button id="back" aria-label="ফিরে যান" hidden><svg viewBox="0 0 24 24"><path d="M15 5L8 12L15 19" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <div class="ttl"><h1 id="title">ডিফ এডু</h1><div class="sub" id="sub" hidden></div></div>
+  <div id="trail"></div>
 </header>
 <main id="view" aria-live="polite"></main>
-<nav id="tabs" hidden></nav>
 <div id="toast" role="status"></div>
+<script src="icons.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
