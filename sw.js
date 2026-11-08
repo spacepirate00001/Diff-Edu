@@ -1,7 +1,7 @@
 // Offline shell: app files are cached; data (Supabase) is never cached by the service worker,
 // the app keeps its own last-seen copy in localStorage instead.
-const V = 'diffedu-pwa-v3';
-const SHELL = ['./', 'index.html', 'app.js', 'style.css', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
+const V = 'diffedu-pwa-v4';
+const SHELL = ['./', 'index.html', 'app.js', 'family.js', 'teacher.js', 'style.css', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

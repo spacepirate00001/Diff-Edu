@@ -1,5 +1,7 @@
 'use strict';
-// Diff Edu PWA — guardian & student view. Same Supabase backend as the Android app; RLS decides what each user sees.
+// Diff Edu PWA — core: config, Supabase client, offline outbox, router, login, PIN.
+// Role screens live in family.js (guardian/student) and teacher.js (teacher/admin), loaded after login.
+// Same Supabase backend as the Android app; RLS decides what each user sees. Keep copy/look in step with the APK.
 const CFG = {
   url: 'https://uwbyxwxfhrffrrqvheft.supabase.co',
   key: 'sb_publishable_fXPLUYRqvrz9d6i9xL2IAQ_tmtZ194t', // publishable key: safe to ship, RLS protects data
@@ -8,9 +10,24 @@ const CFG = {
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const bn = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+const ascii = s => String(s ?? '').replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
 const MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
 const fmtDate = d => { const x = new Date(d); return `${bn(x.getDate())} ${MONTHS[x.getMonth()]}`; };
-const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2200); };
+const taka = n => '৳' + bn(Math.round(n));
+const dhakaToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
+const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2400); };
+const SHIFTS = [
+  { id: 'morning', bn: 'সকাল', time: '৭:০০ – ৯:০০' },
+  { id: 'afternoon', bn: 'বিকেল', time: '৩:০০ – ৫:০০' },
+  { id: 'night', bn: 'রাত', time: '৭:০০ – ৯:০০' },
+];
+
+// ---------- storage (try/catch: private windows may block it) ----------
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem('de.' + k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem('de.' + k, JSON.stringify(v)); return true; } catch { return false; } },
+  del(k) { try { localStorage.removeItem('de.' + k); } catch {} },
+};
 
 // ---------- APK nudge (Android only: iPhone can't install an APK) ----------
 const APK_URL = CFG.url + '/storage/v1/object/public/app-updates/DiffEdu.apk';
@@ -39,34 +56,33 @@ function apkPopup() {
   d.onclick = e => { if (e.target === d) close(); };
 }
 
-// ---------- storage (try/catch: private windows may block it) ----------
-const store = {
-  get(k) { try { return JSON.parse(localStorage.getItem('de.' + k)); } catch { return null; } },
-  set(k, v) { try { localStorage.setItem('de.' + k, JSON.stringify(v)); } catch {} },
-  del(k) { try { localStorage.removeItem('de.' + k); } catch {} },
-};
-
 // ---------- Supabase ----------
 const S = { access: null, refresh: store.get('rt'), uid: store.get('uid'), me: null };
+const isOfflineErr = e => !e.status; // fetch threw: no internet / DNS / timeout
 
 async function raw(method, path, body, { auth = true, prefer, retried } = {}) {
   if (auth && !S.access && S.refresh) await refresh();
   const h = { apikey: CFG.key, Accept: 'application/json' };
   if (auth && S.access) h.Authorization = 'Bearer ' + S.access;
-  if (body !== undefined) h['Content-Type'] = 'application/json';
+  if (body !== undefined && body !== null) h['Content-Type'] = 'application/json';
   if (prefer) h.Prefer = prefer;
-  const r = await fetch(CFG.url + path, { method, headers: h, body: body === undefined ? undefined : JSON.stringify(body) });
+  const r = await fetch(CFG.url + path, { method, headers: h, body: body == null ? undefined : (typeof body === 'string' ? body : JSON.stringify(body)) });
   if (r.status === 401 && auth && !retried && await refresh()) return raw(method, path, body, { auth, prefer, retried: true });
   const t = await r.text();
   if (!r.ok) { const e = new Error(`HTTP ${r.status}`); e.status = r.status; e.body = t; throw e; }
   return t ? JSON.parse(t) : null;
 }
-async function refresh() {
-  if (!S.refresh) return false;
-  try {
-    const o = await raw('POST', '/auth/v1/token?grant_type=refresh_token', { refresh_token: S.refresh }, { auth: false });
-    saveSession(o); return true;
-  } catch (e) { if (e.status) signOut(true); return false; }
+let refreshing = null;
+function refresh() {
+  if (!S.refresh) return Promise.resolve(false);
+  // One refresh at a time: Supabase refresh tokens are single-use.
+  return refreshing ||= (async () => {
+    try {
+      const o = await raw('POST', '/auth/v1/token?grant_type=refresh_token', { refresh_token: S.refresh }, { auth: false });
+      saveSession(o); return true;
+    } catch (e) { if (e.status === 400 || e.status === 401) signOut(true); return false; }
+    finally { refreshing = null; }
+  })();
 }
 function saveSession(o) {
   S.access = o.access_token; S.refresh = o.refresh_token; S.uid = o.user.id;
@@ -74,16 +90,50 @@ function saveSession(o) {
 }
 const sel = (table, q) => raw('GET', `/rest/v1/${table}?${q}`);
 const rpc = (fn, args = {}) => raw('POST', `/rest/v1/rpc/${fn}`, args);
+const inList = ids => `in.(${ids.join(',')})`;
+const PROFILE_COLS = 'id,full_name,role,login_id,phone,coaching_id,must_change_pin';
 
-// Same mapping as the Android app (SupabaseHttp.credentials).
-function creds(id, pin) { id = id.trim().toLowerCase(); return [`${id}@${CFG.slug}.diffedu.app`, `de-${pin}-${id}`]; }
+// ---------- offline outbox (same rules as the APK's Outbox) ----------
+// Class writes (attendance, ratings, marks, class logs) are kept in order and sent when the internet is back.
+const outbox = {
+  all: () => store.get('outbox') || [],
+  mine: () => outbox.all().filter(i => i.uid === S.uid),
+  save: list => store.set('outbox', list.slice(-2000)),
+  add(item) { const l = outbox.all(); l.push({ ...item, uid: S.uid, at: Date.now() }); outbox.save(l); },
+};
+async function writeOrQueue(method, path, body, prefer = 'return=minimal') {
+  if (outbox.mine().length) { await flushOutbox(); if (outbox.mine().length) { outbox.add({ method, path, body, prefer }); return false; } }
+  try { await raw(method, path, body, { prefer }); return true; }
+  catch (e) { if (!isOfflineErr(e)) throw e; outbox.add({ method, path, body, prefer }); return false; }
+}
+let flushing = false;
+async function flushOutbox() {
+  if (flushing || !S.uid) return 0;
+  flushing = true; let sent = 0;
+  try {
+    for (const item of outbox.mine()) {
+      try { await raw(item.method, item.path, item.body, { prefer: item.prefer }); }
+      catch (e) {
+        // keep when offline, signed out, rate-limited or server down; drop data the server will never accept
+        if (isOfflineErr(e) || e.status === 401 || e.status === 408 || e.status === 429 || e.status >= 500) break;
+        console.warn('outbox dropped', item.path, e.status);
+      }
+      outbox.save(outbox.all().filter(x => !(x.at === item.at && x.path === item.path && x.uid === item.uid)));
+      sent++;
+    }
+  } finally { flushing = false; }
+  return sent;
+}
+setInterval(() => { if (navigator.onLine && outbox.mine().length) flushOutbox().then(n => n && toast(`${bn(n)}টি জমা তথ্য পাঠানো হয়েছে`)); }, 15000);
+
+// ---------- auth ----------
+function creds(id, pin) { id = ascii(id).trim().toLowerCase(); return [`${id}@${CFG.slug}.diffedu.app`, `de-${pin}-${id}`]; }
 async function signIn(id, pin) {
   const [email, password] = creds(id, pin);
   saveSession(await raw('POST', '/auth/v1/token?grant_type=password', { email, password }, { auth: false }));
-  S.me = (await sel('profiles', `select=id,full_name,role,login_id,must_change_pin&id=eq.${S.uid}`))[0];
+  S.me = (await sel('profiles', `select=${PROFILE_COLS}&id=eq.${S.uid}`))[0];
   store.set('me', S.me);
 }
-// Same as the Android app: new password = de-<pin>-<id>, then pin_changed() clears the flag.
 async function changePin(newPin) {
   const [, password] = creds(S.me.login_id, newPin);
   try { await raw('PUT', '/auth/v1/user', { password }); }
@@ -97,153 +147,88 @@ async function changePin(newPin) {
 function signOut(silent) {
   if (S.access) fetch(CFG.url + '/auth/v1/logout', { method: 'POST', headers: { apikey: CFG.key, Authorization: 'Bearer ' + S.access } }).catch(() => {});
   S.access = S.refresh = S.uid = S.me = null;
-  ['rt', 'uid', 'me'].forEach(store.del);
+  ['rt', 'uid', 'me', 'kid'].forEach(store.del);
+  // drop cached data of the previous user (the outbox stays: it is per user and sent on their next login)
+  try { Object.keys(localStorage).filter(k => k.startsWith('de.c.')).forEach(k => localStorage.removeItem(k)); } catch {}
   if (!silent) toast('বের হয়েছেন');
   go('login');
 }
+const isStaff = () => S.me && (S.me.role === 'teacher' || S.me.role === 'admin');
 
-// ---------- data (with last-seen offline copy) ----------
+// ---------- cached reads (last-seen copy when offline) ----------
+let offlineFlag = false;
 async function cached(key, fn) {
   try { const v = await fn(); store.set('c.' + key, v); return v; }
   catch (e) {
     const old = store.get('c.' + key);
-    if (old && !e.status) { offlineFlag = true; return old; }
+    if (old && isOfflineErr(e)) { offlineFlag = true; return old; }
     throw e;
   }
 }
-let offlineFlag = false;
-const D = {
-  kids: () => cached('kids', async () => {
-    const sel1 = 'id,class_level,roll,batch:batches(shift),profile:profiles!students_profile_id_fkey(full_name)';
-    if (S.me.role === 'student') return sel('students', `select=${sel1}&profile_id=eq.${S.uid}`);
-    const l = await sel('guardian_students', `select=student_id&guardian_id=eq.${S.uid}`);
-    if (!l.length) return [];
-    return sel('students', `select=${sel1}&id=in.(${l.map(x => x.student_id).join(',')})`);
-  }),
-  att: id => cached('att' + id, () => sel('attendance', `select=date,check_in,check_out&student_id=eq.${id}&order=date.desc&limit=60`)),
-  marks: id => cached('marks' + id, () => sel('marks', `select=obtained,exam:exams(title,exam_date,full_marks,subject:subjects(name))&student_id=eq.${id}`)),
-  fees: id => cached('fees' + id, () => sel('fees', `select=month,amount,paid_amount,status,method&student_id=eq.${id}&order=month.desc`)),
-  notices: () => cached('notices', () => sel('notices', 'select=id,title,body,created_at&order=created_at.desc&limit=30')),
-  notes: () => cached('notes', () => sel('guardian_notes', 'select=id,student_id,day,title,body,read_at&order=updated_at.desc&limit=40')),
-  hw: cls => cached('hw' + cls, () => sel('homework', `select=title,due_date,subject:subjects(name)&class_level=eq.${cls}&order=due_date.asc`)),
-};
 
-// ---------- UI ----------
+// ---------- router ----------
+// Each screen: { title, tab, back?, render(el, param) } — render fills el and binds its own events.
+const SCREENS = {};
+let TABS = [];          // [{ id, label }], set by the role module
 const view = $('#view');
-let route = 'home', kid = store.get('kid');
-const TITLES = { home: 'ডিফ এডু', att: 'হাজিরা', marks: 'নম্বর', fees: 'ফি', more: 'আরও', notices: 'নোটিশ', notes: 'বার্তা', hw: 'বাড়ির কাজ' };
+let route = 'login', param = null, renderSeq = 0;
 
-function go(r) {
-  route = r;
+function go(r, p = null) {
+  route = r; param = p;
   const logged = r !== 'login';
-  $('#bar').hidden = !logged; $('#tabs').hidden = !logged;
-  $('#title').textContent = TITLES[r] || 'ডিফ এডু';
-  const sub = ['notices', 'notes', 'hw'].includes(r);
-  $('#back').hidden = !sub;
-  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === (sub ? 'more' : r)));
-  history.replaceState(null, '', '#' + r);
+  const sc = SCREENS[r];
+  $('#bar').hidden = !logged; $('#tabs').hidden = !logged || !TABS.length;
+  $('#title').textContent = sc?.title ? (typeof sc.title === 'function' ? sc.title(p) : sc.title) : 'ডিফ এডু';
+  $('#back').hidden = !sc?.back;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === (sc?.tab || r)));
+  history.replaceState(null, '', '#' + r + (p != null ? ':' + encodeURIComponent(p) : ''));
+  window.scrollTo(0, 0);
   render();
 }
+function back() { const sc = SCREENS[route]; go(typeof sc?.back === 'function' ? sc.back(param) : (sc?.back || TABS[0]?.id || 'home')); }
 
 async function render() {
-  const myRoute = route;
+  const seq = ++renderSeq;
   offlineFlag = false;
   if (route === 'login') return loginView();
-  if (S.me?.must_change_pin) return pinView();
+  if (S.me?.must_change_pin) return pinView(true);
+  const sc = SCREENS[route];
+  if (!sc) return go(TABS[0]?.id || 'login');
   view.innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  const el = document.createElement('div');
   try {
-    const kids = await D.kids();
-    if (!kids.length && !['notices', 'more'].includes(route)) { view.innerHTML = '<div class="card">কোনো শিক্ষার্থী যুক্ত নেই। অফিসে যোগাযোগ করুন।</div>'; return; }
-    if (!kid || !kids.find(k => k.id === kid)) kid = kids[0]?.id;
-    const k = kids.find(x => x.id === kid);
-    const html = await SCREENS[route](k, kids);
-    if (myRoute !== route) return; // user navigated away while loading
-    view.innerHTML = (offlineFlag ? '<div class="offline">অফলাইন — শেষ দেখা তথ্য</div>' : '') + kidPicker(kids) + html;
-    view.querySelectorAll('.kids button').forEach(b => b.onclick = () => { kid = b.dataset.id; store.set('kid', kid); render(); });
-    view.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+    await sc.render(el, param);
+    if (seq !== renderSeq) return; // user navigated away while loading
+    if (offlineFlag) el.insertAdjacentHTML('afterbegin', '<div class="offline">অফলাইন — শেষ দেখা তথ্য</div>');
+    view.replaceChildren(el);
+    el.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { const [r, p] = b.dataset.go.split(':'); go(r, p ?? null); }));
   } catch (e) {
-    view.innerHTML = `<div class="card"><p>তথ্য আনা যায়নি${e.status ? '' : ' (ইন্টারনেট নেই?)'}।</p><button class="primary" id="retry">আবার চেষ্টা</button></div>`;
+    if (seq !== renderSeq) return;
+    console.error(e);
+    view.innerHTML = `<div class="card"><p>তথ্য আনা যায়নি${isOfflineErr(e) ? ' (ইন্টারনেট নেই?)' : ''}।</p><button class="primary" id="retry">আবার চেষ্টা</button></div>`;
     $('#retry').onclick = render;
   }
 }
 
-const kidName = k => k.profile?.full_name || 'শিক্ষার্থী';
-const kidPicker = kids => kids.length > 1 ? `<div class="kids">${kids.map(k => `<button data-id="${k.id}" class="${k.id === kid ? 'on' : ''}">${esc(kidName(k))}</button>`).join('')}</div>` : '';
-const taka = n => '৳' + bn(Math.round(n));
-const dhakaToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
+function setTabs(tabs) {
+  TABS = tabs;
+  $('#tabs').innerHTML = tabs.map(t => `<button data-tab="${t.id}">${t.label}</button>`).join('');
+  $('#tabs').querySelectorAll('button').forEach(b => b.onclick = () => go(b.dataset.tab));
+}
+const loaded = {};
+function loadScript(src) {
+  return loaded[src] ||= new Promise((ok, fail) => {
+    const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => { delete loaded[src]; fail(new Error('load ' + src)); };
+    document.head.appendChild(s);
+  });
+}
+async function enterApp(startRoute) {
+  await loadScript(isStaff() ? 'teacher.js' : 'family.js');
+  const [r, p] = (startRoute || '').split(':');
+  go(SCREENS[r] ? r : TABS[0].id, p ? decodeURIComponent(p) : null);
+}
 
-const SCREENS = {
-  async home(k) {
-    setTimeout(apkPopup, 1200);
-    const [att, fees, notes] = await Promise.all([D.att(k.id), D.fees(k.id), D.notes().catch(() => [])]);
-    const today = att.find(a => a.date === dhakaToday());
-    const month = dhakaToday().slice(0, 7);
-    const present = att.filter(a => a.date.startsWith(month) && a.check_in).length;
-    const due = fees.filter(f => f.status !== 'paid').reduce((s, f) => s + (f.amount - f.paid_amount), 0);
-    const unread = notes.filter(n => !n.read_at).length;
-    return `<div class="card"><h2>${esc(kidName(k))}</h2><div class="mute">শ্রেণি ${bn(k.class_level)}${k.roll ? ' · রোল ' + esc(bn(k.roll)) : ''}</div>
-      <div class="row"><span>আজ</span><span class="chip ${today?.check_in ? 'ok' : ''}">${today?.check_in ? 'উপস্থিত' : 'এখনো আসেনি'}</span></div>
-      <div class="row"><span>এ মাসে উপস্থিতি</span><b>${bn(present)} দিন</b></div></div>
-      ${due > 0 ? `<div class="card" data-go="fees"><h2>বকেয়া ফি</h2><div class="big bad">${taka(due)}</div><div class="mute">বিস্তারিত দেখুন ›</div></div>` : ''}
-      ${unread ? `<div class="card" data-go="notes"><h2>নতুন বার্তা</h2><div class="big">${bn(unread)}টি</div></div>` : ''}
-      ${apkBanner()}`;
-  },
-  async att(k) {
-    const att = await D.att(k.id);
-    const by = Object.fromEntries(att.map(a => [a.date, a]));
-    const now = new Date(); const y = now.getFullYear(), m = now.getMonth();
-    const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate(), td = dhakaToday();
-    let cells = '<div class="mute">র</div><div class="mute">সো</div><div class="mute">ম</div><div class="mute">বু</div><div class="mute">বৃ</div><div class="mute">শু</div><div class="mute">শ</div>';
-    for (let i = 0; i < first; i++) cells += '<div></div>';
-    for (let d = 1; d <= days; d++) {
-      const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const a = by[ds]; const fri = new Date(y, m, d).getDay() === 5;
-      cells += `<div class="${a?.check_in ? 'p' : ds < td && !fri ? 'a' : 'h'}">${bn(d)}</div>`;
-    }
-    const time = t => t ? new Date(t).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dhaka' }) : '—';
-    return `<div class="card"><h2>${MONTHS[m]}</h2><div class="cal">${cells}</div><p class="mute">সবুজ = উপস্থিত · লাল = অনুপস্থিত</p></div>
-      <div class="card"><h2>সাম্প্রতিক</h2>${att.slice(0, 10).map(a => `<div class="row"><span>${fmtDate(a.date)}</span><span class="mute">${time(a.check_in)}${a.check_out ? ' – ' + time(a.check_out) : ''}</span></div>`).join('') || '<div class="mute">এখনো কিছু নেই</div>'}</div>`;
-  },
-  async marks(k) {
-    const ms = (await D.marks(k.id)).filter(m => m.exam);
-    ms.sort((a, b) => (b.exam.exam_date || '').localeCompare(a.exam.exam_date || ''));
-    return `<div class="card"><h2>পরীক্ষার ফল</h2>${ms.map(m => {
-      const pct = m.obtained == null ? null : Math.round(m.obtained / m.exam.full_marks * 100);
-      return `<div class="row"><div>${esc(m.exam.subject?.name || '')} <span class="mute">${esc(m.exam.title)}${m.exam.exam_date ? ' · ' + fmtDate(m.exam.exam_date) : ''}</span></div><b class="${pct != null && pct < 40 ? 'bad' : ''}">${m.obtained == null ? '—' : bn(m.obtained) + '/' + bn(m.exam.full_marks)}</b></div>`;
-    }).join('') || '<div class="mute">এখনো কোনো ফল নেই</div>'}</div>`;
-  },
-  async fees(k) {
-    const fs = await D.fees(k.id);
-    return `<div class="card"><h2>মাসিক ফি</h2>${fs.map(f => {
-      const d = new Date(f.month);
-      const st = f.status === 'paid' ? '<span class="chip ok">পরিশোধিত</span>' : f.status === 'partial' ? `<span class="chip bad">বাকি ${taka(f.amount - f.paid_amount)}</span>` : '<span class="chip bad">বাকি</span>';
-      return `<div class="row"><div>${MONTHS[d.getMonth()]} ${bn(d.getFullYear())}<div class="mute">${taka(f.amount)}</div></div>${st}</div>`;
-    }).join('') || '<div class="mute">কোনো ফি নেই</div>'}</div>
-    <p class="mute">ফি অফিসে জমা দিন; জমা হলে এখানে দেখা যাবে।</p>`;
-  },
-  async more() {
-    return `<div class="card" data-go="notices"><h2>নোটিশ বোর্ড</h2><div class="mute">কোচিংয়ের নোটিশ ›</div></div>
-      <div class="card" data-go="notes"><h2>বার্তা</h2><div class="mute">হাজিরা ও ক্লাস স্কোরের বার্তা ›</div></div>
-      <div class="card" data-go="hw"><h2>বাড়ির কাজ</h2><div class="mute">শ্রেণি অনুযায়ী ›</div></div>
-      <div class="card"><h2>${esc(S.me.full_name)}</h2><div class="mute">লগইন আইডি: ${esc(S.me.login_id)}</div></div>`;
-  },
-  async notices() {
-    const ns = await D.notices();
-    return ns.map(n => `<div class="card"><h2>${esc(n.title)}</h2><div class="mute">${fmtDate(n.created_at)}</div><p style="white-space:pre-wrap">${esc(n.body)}</p></div>`).join('') || '<div class="card mute">কোনো নোটিশ নেই</div>';
-  },
-  async notes(k, kids) {
-    const ns = await D.notes();
-    const unread = ns.filter(n => !n.read_at).map(n => n.id);
-    if (unread.length && !offlineFlag) rpc('mark_notes_read', { p_ids: unread }).catch(() => {});
-    const name = id => kidName(kids.find(x => x.id === id) || {});
-    return ns.map(n => `<div class="card"><h2>${esc(n.title)} ${n.read_at ? '' : '<span class="chip bad">নতুন</span>'}</h2><div class="mute">${esc(name(n.student_id))} · ${fmtDate(n.day)}</div><p>${esc(n.body)}</p></div>`).join('') || '<div class="card mute">কোনো বার্তা নেই</div>';
-  },
-  async hw(k) {
-    const hs = await D.hw(k.class_level);
-    return `<div class="card"><h2>শ্রেণি ${bn(k.class_level)}</h2>${hs.map(h => `<div class="row"><div>${esc(h.title)}<div class="mute">${esc(h.subject?.name || '')}</div></div><span class="mute">${h.due_date ? fmtDate(h.due_date) : ''}</span></div>`).join('') || '<div class="mute">কোনো কাজ নেই</div>'}</div>`;
-  },
-};
-
+// ---------- login & PIN ----------
 function loginView() {
   view.innerHTML = `<div class="login"><img class="logo" src="icon.svg" alt=""><h1>ডিফ এডু</h1><div class="mute">লগইন আইডি ও পিন দিন</div>
     <form id="f" autocomplete="on"><label for="id">লগইন আইডি (মোবাইল নম্বর বা রোল)</label><input id="id" name="username" inputmode="text" autocomplete="username" required>
@@ -254,11 +239,8 @@ function loginView() {
     ev.preventDefault();
     const b = $('#go'); b.disabled = true; b.textContent = 'অপেক্ষা করুন…'; $('#err').textContent = '';
     try {
-      await signIn($('#id').value, $('#pin').value);
-      if (!['guardian', 'student'].includes(S.me.role)) { signOut(true); $('#err').innerHTML = isAndroid
-        ? `শিক্ষক ও অ্যাডমিনের অংশ এখন অ্যান্ড্রয়েড অ্যাপে। <a href="${APK_URL}" download>অ্যাপ ডাউনলোড করুন</a>`
-        : 'শিক্ষক ও অ্যাডমিনের অংশ ওয়েবে শীঘ্রই আসছে। ততদিন অফিসের সাথে যোগাযোগ করুন।'; b.disabled = false; b.textContent = 'ঢুকুন'; return; }
-      go('home');
+      await signIn($('#id').value, ascii($('#pin').value));
+      await enterApp();
     } catch (e) {
       $('#err').textContent = e.status === 400 ? 'আইডি বা পিন ঠিক নয়।' : 'ইন্টারনেট সংযোগ দেখুন।';
       b.disabled = false; b.textContent = 'ঢুকুন';
@@ -266,39 +248,46 @@ function loginView() {
   };
 }
 
-function pinView() {
-  $('#tabs').hidden = true; $('#back').hidden = true;
-  view.innerHTML = `<div class="login"><h1>নতুন পিন দিন</h1><div class="mute">পরের বার থেকে এই পিন দিয়ে লগইন করবেন।</div>
+function pinView(forced) {
+  $('#tabs').hidden = !!forced || !TABS.length; $('#back').hidden = !!forced;
+  if (forced) $('#title').textContent = 'নতুন পিন';
+  view.innerHTML = `<div class="login"><h1>${forced ? 'নতুন পিন দিন' : 'পিন বদলান'}</h1><div class="mute">পরের বার থেকে এই পিন দিয়ে লগইন করবেন।</div>
     <form id="pf"><label for="np">নতুন পিন (৪–৬ সংখ্যা)</label><input id="np" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" required>
     <label for="np2">আবার লিখুন</label><input id="np2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" required>
     <div class="err" id="perr"></div><button class="primary" id="pgo">পিন সংরক্ষণ করুন</button></form></div>`;
-  const digits = s => s.replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
   $('#pf').onsubmit = async ev => {
     ev.preventDefault();
-    const a = digits($('#np').value), b = digits($('#np2').value), err = $('#perr');
+    const a = ascii($('#np').value), b = ascii($('#np2').value), err = $('#perr');
     if (!/^\d{4,6}$/.test(a)) { err.textContent = 'পিন ৪ থেকে ৬ সংখ্যার হতে হবে।'; return; }
     if (a !== b) { err.textContent = 'দুই জায়গায় পিন মেলেনি।'; return; }
     if (a === '1234' || a === '2580') { err.textContent = 'এটা সহজ পিন। অন্য পিন বাছুন।'; return; }
     const btn = $('#pgo'); btn.disabled = true; btn.textContent = 'সংরক্ষণ হচ্ছে…'; err.textContent = '';
-    try { await changePin(a); toast('নতুন পিন সংরক্ষিত ✓'); go('home'); }
+    try { await changePin(a); toast('নতুন পিন সংরক্ষিত ✓'); go(TABS[0]?.id || 'home'); }
     catch (e) {
       err.textContent = e.message === 'flag' ? 'নতুন পিন চালু হয়েছে, তবে পুরোপুরি জমা হয়নি। আবার একই পিন দিয়ে সংরক্ষণ চাপুন।' : 'সংরক্ষণ করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।';
       btn.disabled = false; btn.textContent = 'পিন সংরক্ষণ করুন';
     }
   };
 }
+SCREENS.pin = { title: 'পিন বদলান', tab: 'more', back: 'more', render: async () => { setTimeout(() => pinView(false)); } };
 
 // ---------- boot ----------
-$('#back').onclick = () => go('more');
-$('#logout').onclick = () => signOut();
-document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => go(b.dataset.tab));
-window.addEventListener('online', () => route !== 'login' && render());
+$('#back').onclick = back;
+$('#logout').onclick = () => {
+  const n = outbox.mine().length;
+  if (n && !confirm(`${bn(n)}টি তথ্য এখনো সার্ভারে যায়নি। আবার এই আইডিতে লগইন না করা পর্যন্ত পাঠানো হবে না। তবুও বের হবেন?`)) return;
+  signOut();
+};
+window.addEventListener('online', () => { if (route !== 'login') { flushOutbox(); render(); } });
 
 (async function boot() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (S.refresh) {
     S.me = store.get('me');
-    if (!S.me) { try { await refresh(); S.me = (await sel('profiles', `select=id,full_name,role,login_id,must_change_pin&id=eq.${S.uid}`))[0]; store.set('me', S.me); } catch {} }
+    if (!S.me || !S.me.coaching_id) {
+      try { await refresh(); S.me = (await sel('profiles', `select=${PROFILE_COLS}&id=eq.${S.uid}`))[0]; store.set('me', S.me); } catch {}
+    }
   }
-  if (S.me) { const h = location.hash.slice(1); go(SCREENS[h] ? h : 'home'); } else go('login');
+  if (S.me) { try { await enterApp(location.hash.slice(1)); } catch { view.innerHTML = '<div class="card">অ্যাপ খোলা যায়নি। ইন্টারনেট দেখে আবার খুলুন।</div>'; } }
+  else go('login');
 })();
