@@ -293,6 +293,8 @@ async function render() {
 }
 const rerender = () => render();
 
+const FAMILY_SCRIPTS = ['family.js'];
+const STAFF_SCRIPTS = ['teacher.js', 'office.js'];
 const loaded = {};
 function loadScript(src) {
   return loaded[src] ||= new Promise((ok, fail) => {
@@ -301,7 +303,7 @@ function loadScript(src) {
   });
 }
 async function enterApp(restore) {
-  await loadScript(isStaff() ? 'teacher.js' : 'family.js');
+  for (const f of (isStaff() ? STAFF_SCRIPTS : FAMILY_SCRIPTS)) await loadScript(f);
   if (S.me.role === 'guardian' && !store.get('consent')) {
     // Guardians confirm consent once before using the app (same as the APK).
     try {
