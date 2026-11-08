@@ -11,14 +11,48 @@
   const staffList = () => cached('staff', () => sel('profiles', 'select=id,full_name,role&role=in.(admin,teacher)&order=full_name'));
 
   // ---------- marks entry ----------
+  // New exam(s) for a class, one exam per picked subject (MarksRepository.createExams). Past dates are fine.
+  const lastFriday = () => { const d = new Date(dhakaToday() + 'T00:00:00'); d.setDate(d.getDate() - ((d.getDay() + 2) % 7)); return d.toLocaleDateString('en-CA'); };
+  async function newExams(cls, done) {
+    let subs = [];
+    try {
+      const seen = new Set();
+      subs = (await sel('subjects', `select=name,name_bn&class_level=eq.${cls}&order=created_at`))
+        .filter(r => (r.name || '').trim() && !seen.has(r.name) && seen.add(r.name)).map(r => ({ name: r.name, label: r.name_bn || r.name }));
+    } catch { /* empty list below */ }
+    sheet(`<h2>নতুন পরীক্ষা · ক্লাস ${bn(cls)}</h2>
+      <label>তারিখ</label><input id="xd" type="date" value="${lastFriday()}" max="${dhakaToday()}">
+      <label>পরীক্ষার নাম</label><input id="xt" maxlength="80" value="সাপ্তাহিক মডেল টেস্ট">
+      <label>প্রতি বিষয়ের পূর্ণমান</label><input id="xf" inputmode="numeric" value="২০">
+      <label>বিষয় (একাধিক বাছা যায়, প্রতিটি আলাদা পরীক্ষা হবে)</label><div class="chips" id="xs">${subs.map((x, i) => `<button class="chip-btn" data-i="${i}">${esc(x.label)}</button>`).join('') || '<span class="mute small">এই ক্লাসের কোনো বিষয় পাওয়া যায়নি।</span>'}</div>
+      <div class="err" id="xerr"></div><button class="btn" id="xgo">তৈরি করুন (০ টি)</button><button class="link" data-close>বাতিল</button>`, (s, close) => {
+      const on = new Set(), go = s.querySelector('#xgo');
+      const label = () => { go.textContent = `তৈরি করুন (${bn(on.size)} টি)`; };
+      s.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { const i = +b.dataset.i; on.has(i) ? on.delete(i) : on.add(i); b.classList.toggle('on', on.has(i)); label(); });
+      go.onclick = async () => {
+        const f = +ascii(s.querySelector('#xf').value), t = s.querySelector('#xt').value.trim(), d = s.querySelector('#xd').value || null;
+        if (!on.size || !t || !(f >= 1 && f <= 1000)) return;
+        go.disabled = true; go.textContent = 'তৈরি হচ্ছে…';
+        try {
+          for (const i of [...on].sort((a, b) => a - b)) {
+            const name = subs[i].name;
+            let sid = (await sel('subjects', `select=id&class_level=eq.${cls}&name=eq.${encodeURIComponent(name)}&limit=1`))[0]?.id;
+            if (!sid) sid = (await ins('subjects', { coaching_id: S.me.coaching_id, class_level: cls, name }, 'select=id'))?.[0]?.id;
+            await ins('exams', { coaching_id: S.me.coaching_id, title: t, subject_id: sid || null, class_level: cls, exam_date: d, full_marks: f, chapter_ids: [], created_by: S.uid }, 'select=id');
+          }
+          close(); done();
+        } catch { s.querySelector('#xerr').textContent = 'পরীক্ষা তৈরি হয়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।'; go.disabled = false; label(); }
+      };
+    });
+  }
   const M = { cls: 6, exam: null };
   SCREENS['t.marks'] = { title: 'নম্বর এন্ট্রি', sub: 'পরীক্ষা বেছে নম্বর লিখুন', render: async (el) => {
     const draw = async () => {
-      const exams = await sel('exams', `select=id,title,exam_date,class_level,full_marks,subject:subjects(name)&class_level=eq.${M.cls}&or=(exam_date.is.null,exam_date.gte.${daysAgo(90)})&order=exam_date.desc.nullsfirst&limit=40`);
-      let h = chipRow([1, 2, 3, 4, 5, 6, 7, 8].map(c => [c, 'ক্লাস ' + bn(c)]), M.cls);
-      if (!exams.length) { el.innerHTML = h + empty('numbers', 'এই ক্লাসে কোনো পরীক্ষা নেই। "পরীক্ষার পরিকল্পনা" থেকে পরীক্ষা যোগ করুন।'); bindTop(); return; }
+      const exams = await sel('exams', `select=id,title,exam_date,class_level,full_marks,subject:subjects(name,name_bn)&class_level=eq.${M.cls}&or=(exam_date.is.null,exam_date.gte.${daysAgo(400)})&order=exam_date.desc.nullsfirst&limit=300`);
+      let h = chipRow(CLASSES.map(c => [c, 'ক্লাস ' + bn(c)]), M.cls) + '<button class="btn ghost" id="newEx">+ নতুন পরীক্ষা যোগ করুন (আগের তারিখও চলবে)</button>';
+      if (!exams.length) { el.innerHTML = h + empty('numbers', 'এই ক্লাসের কোনো পরীক্ষা নেই। উপরে "নতুন পরীক্ষা যোগ করুন" চাপুন।'); bindTop(); return; }
       const ex = exams.find(e => e.id === M.exam) || null;
-      h += exams.map(e => `<div class="card tap ${ex?.id === e.id ? 'teal' : ''}" data-exam="${e.id}"><div style="display:flex;justify-content:space-between;gap:8px"><div>${pill(e.subject?.name || 'বিষয়', 'teal')}<h3 style="margin-top:4px">${esc(e.title)}</h3><div class="mute small">${e.exam_date ? fmtDate(e.exam_date) : 'তারিখ নেই'} · পূর্ণমান ${num(e.full_marks)}</div></div></div></div>`).join('');
+      h += exams.map(e => `<div class="card tap ${ex?.id === e.id ? 'teal' : ''}" data-exam="${e.id}"><div style="display:flex;justify-content:space-between;gap:8px"><div>${pill(e.subject?.name_bn || e.subject?.name || 'বিষয়', 'teal')}<h3 style="margin-top:4px">${esc(e.title)}</h3><div class="mute small">${e.exam_date ? fmtDate(e.exam_date) : 'তারিখ নেই'} · পূর্ণমান ${num(e.full_marks)}</div></div></div></div>`).join('');
       if (ex) {
         const [studs, marks] = await Promise.all([
           T.allStudents().then(l => T.sortRoster(l.filter(s => s.class_level === M.cls))),
@@ -45,7 +79,10 @@
         sv.disabled = false; sv.textContent = 'সংরক্ষণ করুন';
       };
     };
-    const bindTop = () => el.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => { M.cls = +b.dataset.chip; M.exam = null; draw(); });
+    const bindTop = () => {
+      el.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => { M.cls = +b.dataset.chip; M.exam = null; draw(); });
+      const n = el.querySelector('#newEx'); if (n) n.onclick = () => newExams(M.cls, draw);
+    };
     await draw();
   } };
 
@@ -56,7 +93,7 @@
       cached('subjects', () => sel('subjects', 'select=id,name,class_level&order=class_level,name')),
     ]);
     el.innerHTML = `<div class="card"><h3>নতুন পরীক্ষা</h3>
-      <label>ক্লাস</label><select id="ec">${[1, 2, 3, 4, 5, 6, 7, 8].map(c => `<option value="${c}" ${c === 6 ? 'selected' : ''}>ক্লাস ${bn(c)}</option>`).join('')}</select>
+      <label>ক্লাস</label><select id="ec">${CLASSES.map(c => `<option value="${c}" ${c === 6 ? 'selected' : ''}>ক্লাস ${bn(c)}</option>`).join('')}</select>
       <label>বিষয়</label><select id="es"></select>
       <label>পরীক্ষার নাম</label><input id="et" maxlength="80" placeholder="যেমন: মাসিক পরীক্ষা">
       <div class="formrow"><div><label>তারিখ</label><input id="ed" type="date"></div><div><label>পূর্ণমান</label><input id="ef" inputmode="numeric" value="100"></div></div>
@@ -199,7 +236,7 @@
     const shown = rows.filter(r => (F.cls == null || r.student?.class_level === F.cls) && (F.filter === 'all' || (F.filter === 'due' ? +r.paid_amount < +r.amount : +r.paid_amount >= +r.amount)));
     el.innerHTML = monthSwitch(F.month) + `<div class="card"><div class="stats"><div><b>${taka(total)}</b><span class="mute small">মোট</span></div><div><b class="ok">${taka(got)}</b><span class="mute small">আদায়</span></div><div><b class="bad">${taka(total - got)}</b><span class="mute small">বাকি</span></div></div><div style="margin-top:8px">${bar(total ? got / total : 0)}</div></div>
       ${!rows.length ? `<div class="card sun"><h3>${monthLabel(F.month)}-এর ফি এখনো তৈরি হয়নি</h3>` : '<div class="card"><h3>নতুন শিক্ষার্থীর ফি যোগ</h3>'}
-        <div class="formrow"><div><label>ক্লাস</label><select id="gc"><option value="">সব ক্লাস</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(c => `<option value="${c}">ক্লাস ${bn(c)}</option>`).join('')}</select></div><div><label>টাকা</label><input id="ga" inputmode="numeric" placeholder="৮০০"></div></div>
+        <div class="formrow"><div><label>ক্লাস</label><select id="gc"><option value="">সব ক্লাস</option>${CLASSES.map(c => `<option value="${c}">ক্লাস ${bn(c)}</option>`).join('')}</select></div><div><label>টাকা</label><input id="ga" inputmode="numeric" placeholder="৮০০"></div></div>
         <button class="btn" id="gen">মাসের ফি তৈরি করুন</button><div class="mute small">যাদের এই মাসের ফি আগে থেকে আছে, তাদের বাদ রাখা হয়।</div></div>
       ${rows.length ? `${chipRow([['due', 'বাকি'], ['paid', 'পরিশোধিত'], ['all', 'সব']], F.filter, 'data-f')}${classes.length > 1 ? chipRow([['', 'সব ক্লাস'], ...classes.map(c => [c, 'ক্লাস ' + bn(c)])], F.cls ?? '', 'data-fc') : ''}` : ''}
       ${shown.map(r => { const due = +r.amount - +r.paid_amount; return `<div class="card" style="display:flex;align-items:center;gap:10px"><div style="flex:1"><h3>${esc(r.student?.profile?.full_name || r.student?.roll)}</h3><div class="mute small">ক্লাস ${bn(r.student?.class_level)} · রোল ${esc(bn(r.student?.roll || '—'))} · ${taka(r.amount)}${+r.paid_amount ? ' · জমা ' + taka(r.paid_amount) : ''}</div></div>
@@ -250,7 +287,7 @@
         <div class="card"><h3>নতুন ${role === 'student' ? 'শিক্ষার্থী' : role === 'guardian' ? 'অভিভাবক' : 'শিক্ষক'}</h3>
           <label>পূর্ণ নাম</label><input id="un" maxlength="80">
           <label>${role === 'student' ? 'লগইন আইডি (যেমন s43)' : 'মোবাইল নম্বর (এটাই লগইন আইডি)'}</label><input id="ul" maxlength="20" ${role === 'student' ? '' : 'inputmode="tel"'}>
-          ${role === 'student' ? `<div class="formrow"><div><label>ক্লাস</label><select id="uc">${[1, 2, 3, 4, 5, 6, 7, 8].map(c => `<option value="${c}">ক্লাস ${bn(c)}</option>`).join('')}</select></div><div><label>রোল</label><input id="ur" maxlength="6"></div></div>
+          ${role === 'student' ? `<div class="formrow"><div><label>ক্লাস</label><select id="uc">${CLASSES.map(c => `<option value="${c}">ক্লাস ${bn(c)}</option>`).join('')}</select></div><div><label>রোল</label><input id="ur" maxlength="6"></div></div>
             <label>শিফট</label><select id="us">${SHIFTS.map(s => `<option value="${s.id}" ${s.id === 'afternoon' ? 'selected' : ''}>${s.bn}</option>`).join('')}</select>` : ''}
           ${role === 'guardian' ? `<label>সন্তান</label><select id="ug" multiple size="5">${T.sortRoster(studs).map(s => `<option value="${s.id}">${esc(T.nameOf(s))} · ক্লাস ${bn(s.class_level)} · রোল ${esc(bn(s.roll || ''))}</option>`).join('')}</select><label>সম্পর্ক</label><input id="urel" maxlength="20" placeholder="মা / বাবা">` : ''}
           <label>শুরুর পিন</label><input id="up" inputmode="numeric" maxlength="6" value="${role === 'teacher' ? '2580' : '1234'}">

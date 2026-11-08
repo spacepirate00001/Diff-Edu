@@ -36,13 +36,20 @@
       <div class="card"><h2>আজকের তথ্য</h2>${today ? `<div class="ok" style="font-weight:700;font-size:16px">${esc(nm(c))} আজ ${fmtTime(today.check_in)}-এ উপস্থিত হয়েছে।</div>` : '<div class="mute">আজকের উপস্থিতির তথ্য এখনো পাওয়া যায়নি।</div>'}</div>
       ${due > 0 ? `<div class="card coral tap" data-go="fees:${c.id}"><h3>বকেয়া ফি ${taka(due)}</h3><div class="mute">${bn(fees.length)} মাসের ফি বাকি · বিস্তারিত দেখুন ›</div></div>` : ''}
       <div class="card"><div class="stats"><div><b>${bn(rw(c).stars || 0)}</b><span class="mute small">স্টার</span></div><div><b>${bn(rw(c).streak_days || 0)} দিন</b><span class="mute small">টানা উপস্থিতি</span></div></div></div>
-      ${grid2([
-        fun('calendar', 'উপস্থিতি', 'att:' + c.id, { tint: 'sky' }), fun('chart', 'রেজাল্ট', 'results:' + c.id, { tint: 'sun' }),
-        fun('card', 'ফি', 'fees:' + c.id, { tint: 'coral' }), fun('bell', 'নোটিশ', 'notices:guardians', { tint: 'grape' }),
-        fun('book', 'শিক্ষা উপকরণ', 'materials:' + c.class_level, { tint: 'teal' }), fun('chat', 'শিক্ষকের সাথে যোগাযোগ', 'chat:' + c.id, { tint: 'white' }),
-        fun('star', 'রেটিং ও প্রশংসা', 'progress:' + c.id, { tint: 'sun' }), fun('headphones', 'ভয়েস মেসেজ', 'voicebox:' + c.id, { tint: 'sky' }),
-        fun('mic', 'পরিচালকের বার্তা', 'director', { tint: 'sun' }), fun('lock', 'আমার তথ্য ও গোপনীয়তা', 'mydata', { tint: 'sky' }),
-        fun('handshake', 'শিক্ষকের সাথে মিটিং', 'meetings', { tint: 'teal', sub: 'সময় বুক করুন' }),
+      ${grid2([fun('document', 'রিপোর্ট কার্ড', 'myreports:' + c.id, { tint: 'sun', sub: 'সাপ্তাহিক ফল' }), fun('calendar', 'উপস্থিতি', 'att:' + c.id, { tint: 'sky', sub: 'মাসের হিসাব' })])}
+      ${section('পড়ালেখা ও অগ্রগতি')}${grid2([
+        fun('chart', 'পরীক্ষার ফল', 'results:' + c.id, { tint: 'sun' }), fun('star', 'রেটিং ও প্রশংসা', 'progress:' + c.id, { tint: 'sun' }),
+        fun('book', 'শিক্ষা উপকরণ', 'materials:' + c.class_level, { tint: 'teal' }), fun('headphones', 'ভয়েস মেসেজ', 'voicebox:' + c.id, { tint: 'sky' }),
+        fun('target', 'লক্ষ্য', 'g.goals:' + c.id, { tint: 'teal' }), fun('trophy', 'সার্টিফিকেট', 'certs:' + c.id, { tint: 'sun' }),
+      ])}
+      ${section('যোগাযোগ ও নোটিশ')}${grid2([
+        fun('chat', 'শিক্ষকের সাথে যোগাযোগ', 'chat:' + c.id, { tint: 'white' }), fun('handshake', 'শিক্ষকের সাথে মিটিং', 'meetings', { tint: 'teal', sub: 'সময় বুক করুন' }),
+        fun('bell', 'সব নোটিশ', 'notices:guardians', { tint: 'grape' }), fun('notebook', 'দৈনিক বার্তা', 'notes', { tint: 'sky' }),
+        fun('mic', 'পরিচালকের বার্তা', 'director', { tint: 'sun' }),
+      ])}
+      ${section('ফি ও অ্যাকাউন্ট')}${grid2([
+        fun('card', 'ফি ও পরিশোধ', 'fees:' + c.id, { tint: 'coral' }), fun('lock', 'পিন বদলান', 'pin', { tint: 'sky' }),
+        fun('lock', 'আমার তথ্য ও গোপনীয়তা', 'mydata', { tint: 'sky' }),
       ])}
       ${apkBanner()}`;
     el.querySelectorAll('[data-kid]').forEach(b => b.onclick = () => { selIdx = +b.dataset.kid; store.set('kid', selIdx); render(); });
@@ -72,19 +79,24 @@
       ${!hw.length ? empty('inbox', 'আজ কোনো বাড়ির কাজ নেই।') : `<div class="card ${fin === hw.length ? 'teal' : ''}"><h3>${fin === hw.length ? 'সব কাজ শেষ!' : `${bn(fin)} / ${bn(hw.length)} কাজ শেষ`}</h3><div style="margin-top:8px">${bar(fin / hw.length)}</div></div>
         ${hw.map(h => `<div class="card" style="display:flex;gap:12px;align-items:center"><button class="mark-btn ${done.has(h.id) ? 'on' : ''}" data-hw="${h.id}" aria-label="শেষ">${done.has(h.id) ? '✓' : ''}</button>
           <div style="flex:1">${pill(h.subject?.name || 'বিষয়', 'teal')}<h3 style="margin-top:4px;${done.has(h.id) ? 'color:var(--ink-soft)' : ''}">${esc(h.title)}</h3><div class="mute small">জমা দেওয়ার শেষ দিন: ${h.due_date ? fmtDate(h.due_date) : '—'}</div></div></div>`).join('')}`}
-      ${section('খেলা ও অভ্যাস')}
-      ${grid2([
+      ${section('পড়া ও ফলাফল')}${grid2([
+        fun('document', 'রিপোর্ট কার্ড', 'myreports:' + st.id, { tint: 'sun' }), fun('star', 'আমার রেটিং ও কার্ড', 'progress:' + st.id, { tint: 'sun' }),
+        fun('trophy', 'কুইজ ও লিডারবোর্ড', 's.quiz', { tint: 'sun' }), fun('book', 'সিলেবাস ও বইয়ের পৃষ্ঠা', 'syllabus:' + st.class_level, { tint: 'sky' }),
+        fun('book', 'শিক্ষা উপকরণ', 'materials:' + st.class_level, { tint: 'sky' }), fun('ai_spark', 'AI পড়ার সহায়ক', 's.tutor', { tint: 'grape' }),
+        fun('question', 'প্রশ্ন বক্স', 's.doubts', { tint: 'grape' }), fun('notebook', 'ভুলের খাতা', 's.mistakes', { tint: 'coral' }),
+        fun('flashcards', 'ফ্ল্যাশকার্ড', 'flash:' + st.class_level, { tint: 'grape' }),
+      ])}
+      ${section('খেলা ও অভ্যাস')}${grid2([
         fun('timer', 'ফোকাস টাইমার', 'focus', { tint: 'coral', sub: '২৫ মিনিট পড়ো, স্টার পাও' }), fun('swords', 'কুইজ ডুয়েল', 's.duel', { tint: 'sky', sub: 'বন্ধুকে চ্যালেঞ্জ করো' }),
-        fun('target', 'সাপ্তাহিক চ্যালেঞ্জ', 's.challenges', { tint: 'sun' }), fun('shop_bag', 'পয়েন্টের দোকান', 's.shop', { tint: 'grape', sub: 'অবতার ও রং' }),
-        fun('letters', 'শব্দ ও বানান', 's.spelling', { tint: 'teal' }), fun('gamepad', 'শিক্ষামূলক খেলা', 's.games', { tint: 'coral', sub: 'দ্রুত গণিত, নামতা' }),
-        fun('mic', 'মুখস্থ পড়া ও ভয়েস', 'voicebox', { tint: 'coral', sub: 'রেকর্ড করে স্যারকে শোনাও' }),
-        `<button class="fun t-${big ? 'sun' : 'sky'}" id="bigt">${chip('search')}<b>বড় লেখা</b><span class="small">${big ? 'চালু · বন্ধ করতে চাপো' : 'বন্ধ · চালু করতে চাপো'}</span></button>`,
-        fun('star', 'আমার রেটিং ও কার্ড', 'progress:' + st.id, { tint: 'sun' }), fun('question', 'প্রশ্ন বক্স', 's.doubts', { tint: 'grape' }),
+        fun('target', 'সাপ্তাহিক চ্যালেঞ্জ', 's.challenges', { tint: 'sun' }), fun('letters', 'শব্দ ও বানান', 's.spelling', { tint: 'teal' }),
+        fun('gamepad', 'শিক্ষামূলক খেলা', 's.games', { tint: 'coral', sub: 'দ্রুত গণিত, নামতা' }), fun('puzzle', 'দৈনিক ধাঁধা', 's.puzzle', { tint: 'coral' }),
+        fun('shop_bag', 'পয়েন্টের দোকান', 's.shop', { tint: 'grape', sub: 'অবতার ও রং' }),
+      ])}
+      ${section('আমার জিনিস')}${grid2([
         fun('target', 'আমার লক্ষ্য', 's.goals', { tint: 'teal' }), fun('trophy', 'সার্টিফিকেট', 'certs', { tint: 'sun' }),
-        fun('notebook', 'ভুলের খাতা', 's.mistakes', { tint: 'coral' }), fun('flashcards', 'ফ্ল্যাশকার্ড', 'flash:' + st.class_level, { tint: 'grape' }),
-        fun('book', 'সিলেবাস ও বইয়ের পৃষ্ঠা', 'syllabus:' + st.class_level, { tint: 'sky' }), fun('bell', 'নোটিশ', 'notices:students', { tint: 'teal' }),
-        fun('book', 'শিক্ষা উপকরণ', 'materials:' + st.class_level, { tint: 'sky' }), fun('puzzle', 'দৈনিক ধাঁধা', 's.puzzle', { tint: 'coral' }),
-        fun('ai_spark', 'AI পড়ার সহায়ক', 's.tutor', { tint: 'grape' }), fun('trophy', 'কুইজ ও লিডারবোর্ড', 's.quiz', { tint: 'sun' }),
+        fun('mic', 'মুখস্থ পড়া ও ভয়েস', 'voicebox', { tint: 'coral', sub: 'রেকর্ড করে স্যারকে শোনাও' }), fun('bell', 'সব নোটিশ', 'notices:students', { tint: 'teal' }),
+        `<button class="fun t-${big ? 'sun' : 'sky'}" id="bigt">${chip('search')}<b>${big ? 'বড় লেখা: চালু' : 'বড় লেখা: বন্ধ'}</b><span class="small">${big ? 'বন্ধ করতে চাপো' : 'চালু করতে চাপো'}</span></button>`,
+        fun('lock', 'পিন বদলাও', 'pin', { tint: 'sky' }),
       ])}
       ${apkBanner()}`;
     el.querySelectorAll('[data-logout]').forEach(b => b.onclick = confirmLogout);
@@ -101,6 +113,13 @@
       } catch { toast('সংরক্ষণ হয়নি। আবার চাপো।'); }
     });
     setTimeout(apkPopup, 1500);
+  } };
+
+  // ---------- guardian: the child's goals (read-only; the student sets them) ----------
+  SCREENS['g.goals'] = { title: 'লক্ষ্য', render: async (el, id) => {
+    const k = await kidOf(id); setSub(nm(k));
+    const goals = await sel('student_goals', `select=id,subject,target_percent,achieved_at&student_id=eq.${k.id}&order=created_at`);
+    el.innerHTML = goals.map(g => `<div class="card" style="display:flex;justify-content:space-between;align-items:center"><h3>${esc(g.subject)}</h3>${g.achieved_at ? pill('অর্জিত!', 'good') : pill('লক্ষ্য ' + bn(g.target_percent) + '%', 'teal')}</div>`).join('') || empty('target', 'এখনো কোনো লক্ষ্য ঠিক করা হয়নি।');
   } };
 
   // ---------- attendance history ----------

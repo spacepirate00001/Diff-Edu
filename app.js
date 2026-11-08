@@ -27,6 +27,7 @@ const dhakaToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asi
 const daysAgo = n => { const d = new Date(dhakaToday() + 'T00:00:00'); d.setDate(d.getDate() - n); return d.toLocaleDateString('en-CA'); };
 const monthStart = () => dhakaToday().slice(0, 7) + '-01';
 const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); };
+const CLASSES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // ক্লাস ১–১০ (APK: ContentScreens.CLASSES)
 const SHIFTS = [
   { id: 'morning', bn: 'সকাল', time: '৭:০০ – ৯:০০', icon: 'sunrise' },
   { id: 'afternoon', bn: 'বিকেল', time: '৩:০০ – ৫:০০', icon: 'sun' },
@@ -293,8 +294,8 @@ async function render() {
 }
 const rerender = () => render();
 
-const FAMILY_SCRIPTS = ['family.js', 'play.js', 'comms.js', 'extras.js'];
-const STAFF_SCRIPTS = ['teacher.js', 'office.js', 'play.js', 'comms.js', 'classroom.js', 'extras.js'];
+const FAMILY_SCRIPTS = ['family.js', 'play.js', 'comms.js', 'extras.js', 'reports.js'];
+const STAFF_SCRIPTS = ['teacher.js', 'office.js', 'play.js', 'comms.js', 'classroom.js', 'extras.js', 'reports.js', 'people.js'];
 const loaded = {};
 function loadScript(src) {
   return loaded[src] ||= new Promise((ok, fail) => {
@@ -355,11 +356,11 @@ SCREENS.login = { dark: true, render: async (el, role) => {
 } };
 
 SCREENS.admission = { title: 'ভর্তি তথ্য', sub: 'Diff Edu · কুষ্টিয়া', render: async (el) => {
-  el.innerHTML = `<div class="card"><h2>আমাদের সম্পর্কে</h2><div class="mute">শ্রেণি ১–৮ এর শিক্ষার্থীদের জন্য যত্নশীল পাঠদান, নিয়মিত পরীক্ষা ও অভিভাবকের সাথে প্রতিদিনের যোগাযোগ।</div>
+  el.innerHTML = `<div class="card"><h2>আমাদের সম্পর্কে</h2><div class="mute">শ্রেণি ১–১০ এর শিক্ষার্থীদের জন্য যত্নশীল পাঠদান, নিয়মিত পরীক্ষা ও অভিভাবকের সাথে প্রতিদিনের যোগাযোগ।</div>
       <div class="row"><span>শিফট</span><b>সকাল · বিকেল · রাত</b></div><div class="row"><span>অফিস</span><a href="tel:01711678818">${bn('01711-678818')}</a></div></div>
     <div class="card"><h2>ভর্তির আগ্রহ জানান</h2><div class="mute">ফর্ম পূরণ করলে অফিস থেকে আপনাকে ফোন করা হবে।</div>
       <form id="af"><label>শিক্ষার্থীর নাম</label><input id="an" required maxlength="80">
-      <label>শ্রেণি</label><select id="ac">${[1, 2, 3, 4, 5, 6, 7, 8].map(c => `<option value="${c}">শ্রেণি ${bn(c)}</option>`).join('')}</select>
+      <label>শ্রেণি</label><select id="ac">${CLASSES.map(c => `<option value="${c}">শ্রেণি ${bn(c)}</option>`).join('')}</select>
       <label>অভিভাবকের মোবাইল নম্বর</label><input id="ap" inputmode="tel" required maxlength="14" placeholder="01XXXXXXXXX">
       <label>বার্তা (ঐচ্ছিক)</label><textarea id="am" maxlength="500"></textarea>
       <div class="err" id="aerr"></div><button class="btn" id="asend">পাঠান</button></form></div>`;

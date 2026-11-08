@@ -96,7 +96,7 @@
 
   // ---------- AI question paper (staff) → print or save to question bank ----------
   SCREENS['t.aipaper'] = { title: 'AI প্রশ্নপত্র তৈরি', render: async (el) => {
-    el.innerHTML = `<div class="card"><div class="formrow"><div><label>ক্লাস</label><select id="pc">${[1, 2, 3, 4, 5, 6, 7, 8].map(c => `<option value="${c}" ${c === 6 ? 'selected' : ''}>ক্লাস ${bn(c)}</option>`).join('')}</select></div><div><label>বিষয়</label><input id="ps" maxlength="60" placeholder="গণিত"></div></div>
+    el.innerHTML = `<div class="card"><div class="formrow"><div><label>ক্লাস</label><select id="pc">${CLASSES.map(c => `<option value="${c}" ${c === 6 ? 'selected' : ''}>ক্লাস ${bn(c)}</option>`).join('')}</select></div><div><label>বিষয়</label><input id="ps" maxlength="60" placeholder="গণিত"></div></div>
       <label>অধ্যায় / বিষয়বস্তু</label><input id="ph" maxlength="300" placeholder="যেমন: ভগ্নাংশ ও দশমিক">
       <div class="formrow"><div><label>বহুনির্বাচনী</label><input id="pm" inputmode="numeric" value="10"></div><div><label>সংক্ষিপ্ত</label><input id="pq" inputmode="numeric" value="5"></div><div><label>সৃজনশীল</label><input id="pr" inputmode="numeric" value="2"></div></div>
       <button class="btn" id="pgo">প্রশ্নপত্র তৈরি করুন</button><div class="mute small">AI-এর প্রশ্ন ব্যবহারের আগে পড়ে দেখুন।</div></div><div id="pout"></div>`;

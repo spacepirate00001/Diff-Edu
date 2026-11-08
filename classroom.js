@@ -5,7 +5,7 @@
   const STU = 'id,class_level,roll,batch:batches(shift),profile:profiles!students_profile_id_fkey(full_name)';
   const nm = s => s?.profile?.full_name || s?.roll || 'শিক্ষার্থী';
   const pct = v => v == null ? '—' : bn(Math.round(+v)) + '%';
-  const classChips = (cur, all = true) => chipRow([...(all ? [['', 'সব ক্লাস']] : []), ...[1, 2, 3, 4, 5, 6, 7, 8].map(c => [c, 'ক্লাস ' + bn(c)])], cur ?? '');
+  const classChips = (cur, all = true) => chipRow([...(all ? [['', 'সব ক্লাস']] : []), ...CLASSES.map(c => [c, 'ক্লাস ' + bn(c)])], cur ?? '');
 
   // ---------- doubt box (teacher answers) ----------
   let dcls = null;
@@ -57,7 +57,7 @@
   SCREENS['t.challenges'] = { title: 'সাপ্তাহিক চ্যালেঞ্জ', sub: 'দিন ও যাচাই করুন', render: async (el) => {
     const list = await sel('weekly_challenges', `select=id,class_level,week_start,title,body,stars&week_start=gte.${daysAgo(28)}&order=week_start.desc,created_at.desc`);
     const wk = () => { const d = new Date(dhakaToday() + 'T00:00:00'); d.setDate(d.getDate() - ((d.getDay() + 1) % 7)); return d.toLocaleDateString('en-CA'); }; // week starts Saturday
-    el.innerHTML = `<div class="card"><h3>নতুন চ্যালেঞ্জ</h3><label>ক্লাস</label><select id="cc"><option value="">সব ক্লাস</option>${[1, 2, 3, 4, 5, 6, 7, 8].map(c => `<option value="${c}">ক্লাস ${bn(c)}</option>`).join('')}</select>
+    el.innerHTML = `<div class="card"><h3>নতুন চ্যালেঞ্জ</h3><label>ক্লাস</label><select id="cc"><option value="">সব ক্লাস</option>${CLASSES.map(c => `<option value="${c}">ক্লাস ${bn(c)}</option>`).join('')}</select>
       <label>শিরোনাম</label><input id="ct" maxlength="120"><label>বিস্তারিত</label><textarea id="cb" maxlength="1000"></textarea><label>স্টার</label><input id="cs" inputmode="numeric" value="3"><button class="btn" id="cadd">চ্যালেঞ্জ দিন</button></div>` +
       list.map(c => `<div class="card tap" data-entries="${c.id}"><div class="mute small">${c.class_level ? 'ক্লাস ' + bn(c.class_level) : 'সব ক্লাস'} · ${fmtDate(c.week_start)} · ${bn(c.stars)} স্টার</div><h3>${esc(c.title)}</h3><div class="mute small">চাপলে জমা দেখুন ›</div></div>`).join('');
     el.querySelector('#cadd').onclick = async () => {
@@ -101,7 +101,7 @@
   // ---------- seat plan (computed on the phone, like the APK) ----------
   SCREENS['t.seat'] = { title: 'সিট প্ল্যান', sub: 'পরীক্ষার আসন বিন্যাস', render: async (el) => {
     const studs = await T.allStudents();
-    el.innerHTML = `<div class="card"><label>ক্লাস (একাধিক বাছুন — পাশাপাশি আলাদা ক্লাস বসবে)</label><div class="chips" id="cl">${[1, 2, 3, 4, 5, 6, 7, 8].map(c => `<button class="chip-btn" data-c="${c}">ক্লাস ${bn(c)}</button>`).join('')}</div>
+    el.innerHTML = `<div class="card"><label>ক্লাস (একাধিক বাছুন — পাশাপাশি আলাদা ক্লাস বসবে)</label><div class="chips" id="cl">${CLASSES.map(c => `<button class="chip-btn" data-c="${c}">ক্লাস ${bn(c)}</button>`).join('')}</div>
       <div class="formrow"><div><label>প্রতি বেঞ্চে</label><input id="pb" inputmode="numeric" value="2"></div><div><label>রুমে বেঞ্চ</label><input id="rb" inputmode="numeric" value="15"></div></div><button class="btn" id="mk">সিট প্ল্যান তৈরি করুন</button></div><div id="out"></div>`;
     const on = new Set();
     el.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const c = +b.dataset.c; on.has(c) ? on.delete(c) : on.add(c); b.classList.toggle('on', on.has(c)); });
