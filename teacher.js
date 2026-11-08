@@ -56,7 +56,7 @@
       ['অগ্রগতি', [['alert', 'ঝুঁকিতে থাকা শিক্ষার্থী', 't.risk'], ['chart', 'ব্যাচ তুলনা', 't.compare'], ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 't.challenges'], ['book', 'সিলেবাস ট্র্যাকার', 'syllabus:6']]],
       ['পরীক্ষা ও প্রশ্ন', [['numbers', 'নম্বর এন্ট্রি', 't.marks'], ['calendar', 'পরীক্ষার পরিকল্পনা', 't.exams'], ['archive', 'প্রশ্ন ব্যাংক', 't.qbank'], ['ai_spark', 'AI প্রশ্নপত্র তৈরি', 't.aipaper'],
         ['note_edit', 'AI খাতা মূল্যায়ন', 't.grading'], ['seat', 'সিট প্ল্যান', 't.seat'], ['flashcards', 'ফ্ল্যাশকার্ড', 'flash:6'], ['book', 'শিক্ষা উপকরণ', 'materials:5']]],
-      ['যোগাযোগ', [['chat', 'অভিভাবকদের বার্তা', 't.chats'], ['handshake', 'অভিভাবক মিটিং', 't.meetings'], ['megaphone', 'নোটিশ পাঠান', 't.notice'], ['bell', 'সকল নোটিশ', 'notices'], ['mic', 'পরিচালকের বার্তা', 'director']]],
+      ['যোগাযোগ', [['chat', 'অভিভাবকদের বার্তা', 'chats'], ['handshake', 'অভিভাবক মিটিং', 'meetings'], ['megaphone', 'নোটিশ পাঠান', 't.notice'], ['bell', 'সকল নোটিশ', 'notices'], ['mic', 'পরিচালকের বার্তা', 'director']]],
       ['অফিস', [['palm', 'ছুটি ও বদলি', 't.leave'], ['lock', 'পিন বদলান', 'pin'], ['money', isAdmin() ? 'শিক্ষকদের সম্মানী' : 'আমার সম্মানী', 't.honorarium'],
         ...(isAdmin() ? [['users', 'অ্যাকাউন্ট ব্যবস্থাপনা', 'a.users'], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['phone', 'নম্বর সংশোধন', 'a.phones']] : [])]],
     ];

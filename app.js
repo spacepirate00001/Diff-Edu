@@ -293,8 +293,8 @@ async function render() {
 }
 const rerender = () => render();
 
-const FAMILY_SCRIPTS = ['family.js', 'play.js'];
-const STAFF_SCRIPTS = ['teacher.js', 'office.js', 'play.js'];
+const FAMILY_SCRIPTS = ['family.js', 'play.js', 'comms.js'];
+const STAFF_SCRIPTS = ['teacher.js', 'office.js', 'play.js', 'comms.js', 'classroom.js'];
 const loaded = {};
 function loadScript(src) {
   return loaded[src] ||= new Promise((ok, fail) => {

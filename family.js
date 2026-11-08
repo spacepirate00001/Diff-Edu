@@ -39,10 +39,10 @@
       ${grid2([
         fun('calendar', 'উপস্থিতি', 'att:' + c.id, { tint: 'sky' }), fun('chart', 'রেজাল্ট', 'results:' + c.id, { tint: 'sun' }),
         fun('card', 'ফি', 'fees:' + c.id, { tint: 'coral' }), fun('bell', 'নোটিশ', 'notices:guardians', { tint: 'grape' }),
-        fun('book', 'শিক্ষা উপকরণ', 'materials:' + c.class_level, { tint: 'teal' }), fun('chat', 'শিক্ষকের সাথে যোগাযোগ', 'soon:শিক্ষকের সাথে যোগাযোগ', { tint: 'white' }),
+        fun('book', 'শিক্ষা উপকরণ', 'materials:' + c.class_level, { tint: 'teal' }), fun('chat', 'শিক্ষকের সাথে যোগাযোগ', 'chat:' + c.id, { tint: 'white' }),
         fun('star', 'রেটিং ও প্রশংসা', 'progress:' + c.id, { tint: 'sun' }), fun('headphones', 'ভয়েস মেসেজ', 'soon:ভয়েস মেসেজ', { tint: 'sky' }),
         fun('mic', 'পরিচালকের বার্তা', 'director', { tint: 'sun' }), fun('lock', 'আমার তথ্য ও গোপনীয়তা', 'mydata', { tint: 'sky' }),
-        fun('handshake', 'শিক্ষকের সাথে মিটিং', 'soon:শিক্ষকের সাথে মিটিং', { tint: 'teal', sub: 'সময় বুক করুন' }),
+        fun('handshake', 'শিক্ষকের সাথে মিটিং', 'meetings', { tint: 'teal', sub: 'সময় বুক করুন' }),
       ])}
       ${apkBanner()}`;
     el.querySelectorAll('[data-kid]').forEach(b => b.onclick = () => { selIdx = +b.dataset.kid; store.set('kid', selIdx); render(); });
