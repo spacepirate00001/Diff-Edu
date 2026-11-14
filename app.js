@@ -140,7 +140,7 @@ const sizeText = () => apkSize ? ` (${bn((apkSize / 1048576).toFixed(1))} MB)` :
 const apkBanner = () => isAndroid
   ? `<div class="card apk"><h3>অ্যান্ড্রয়েড অ্যাপটি নিন</h3><div class="mute">ছোট অ্যাপ, দ্রুত চলে, নেট ছাড়াও কাজ করে, নোটিফিকেশন আসে।</div><a class="btn" style="margin-top:10px" href="${APK_URL}" download>অ্যাপ ডাউনলোড${sizeText()}</a></div>` : '';
 function apkPopup() {
-  if (!isAndroid || document.querySelector('.sheet')) return;
+  if (!isAndroid || installShown || document.querySelector('.sheet')) return; // install sheet already took this visit
   if (Date.now() - (store.get('apkAsked') || 0) < 3 * 864e5) return; // at most once every 3 days
   store.set('apkAsked', Date.now());
   sheet(`<h2>অ্যান্ড্রয়েড অ্যাপ ব্যবহার করুন</h2>
@@ -148,6 +148,77 @@ function apkPopup() {
     <a class="btn" href="${APK_URL}" download>অ্যাপ ডাউনলোড${sizeText()}</a>
     <div class="mute small">ডাউনলোডের পর ফাইলটি খুলুন। "অজানা উৎস" জিজ্ঞেস করলে অনুমতি দিন।</div>
     <button class="link" data-close>এখন না, ওয়েবেই চালাই</button>`);
+}
+
+// ---------- install the app (QR ?install=1, first visit on a phone, or 7 days after "পরে") ----------
+// Chrome/Edge/Samsung Internet fire beforeinstallprompt; iPhone Safari has no such event, so it gets manual steps.
+let deferredInstall = null, installEl = null, installClose = null, installShown = false;
+const INSTALL_QS = (() => { try { return new URLSearchParams(location.search).get('install') === '1'; } catch { return false; } })();
+const isStandalone = () => { try { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch { return false; } };
+const isPhone = /Android|iPhone|iPod/i.test(navigator.userAgent);
+const isIphone = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+const isIosSafari = isIphone && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(navigator.userAgent);
+const SHARE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M8 11H6.5A1.5 1.5 0 0 0 5 12.5v7A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 17.5 11H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
+/** Decided once per page load: does the install sheet open this visit? */
+function installWanted() {
+  if (isStandalone()) return false;             // already installed: never show
+  if (INSTALL_QS) return true;                  // the QR code always opens it
+  if (!isPhone) return false;
+  if (!store.get('installSeen')) return true;   // first visit ever on a phone
+  const later = +store.get('installLater') || 0;
+  return later > 0 && Date.now() - later >= 7 * 864e5; // "পরে" was pressed 7+ days ago
+}
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();                           // keep the event; the button calls prompt() later
+  deferredInstall = e;
+  if (installEl) paintInstall();
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstall = null;
+  store.set('installSeen', true);
+  closeInstall(false);
+  toast('অ্যাপটি হোম স্ক্রিনে যোগ হয়েছে।');
+});
+function installBody() {
+  if (deferredInstall) return '<button class="btn" id="ins-go">ইনস্টল করুন</button>';
+  if (isIphone) return isIosSafari
+    ? `<ol class="inst-steps"><li>নিচের শেয়ার বোতামে চাপুন <span class="inst-ic">${SHARE_ICON}</span></li><li>‘হোম স্ক্রিনে যোগ করুন’ বেছে নিন।</li><li>‘যোগ করুন’ চাপুন।</li></ol>`
+    : '<div class="mute">এই পাতাটি Safari-তে খুললে হোম স্ক্রিনে রাখা যাবে।</div>';
+  return '<div class="mute">ব্রাউজারের মেনু (⋮) থেকে ‘হোম স্ক্রিনে যোগ করুন’ বা ‘ইনস্টল’ বেছে নিন।</div>';
+}
+function paintInstall() {
+  if (!installEl) return;
+  const body = installEl.querySelector('#ins-body');
+  body.innerHTML = installBody();
+  body.querySelector('#ins-go')?.addEventListener('click', doInstall);
+}
+async function doInstall() {
+  const ev = deferredInstall;
+  if (!ev) return;
+  deferredInstall = null;
+  try { ev.prompt(); const choice = await ev.userChoice; closeInstall(choice?.outcome !== 'accepted'); }
+  catch { closeInstall(true); }
+}
+function closeInstall(later) {
+  const c = installClose;
+  installEl = installClose = null;
+  if (later) store.set('installLater', Date.now());
+  c?.();
+}
+function showInstall() {
+  if (installEl) return;
+  store.set('installSeen', true);
+  sheet(`<h2>অ্যাপ হিসেবে রাখুন</h2>
+    <div class="mute">হোম স্ক্রিনে রাখলে এক ছোঁয়ায় খুলতে পারবেন। নেট কম থাকলেও চলবে।</div>
+    <div id="ins-body"></div>
+    <button class="link" data-close>পরে</button>`, (el, close) => {
+    installEl = el; installClose = close;
+    // any close without installing (পরে, or tapping outside) starts the 7-day quiet period
+    el.parentNode.addEventListener('click', e => {
+      if (e.target === el.parentNode || e.target.closest?.('[data-close]')) { installEl = installClose = null; store.set('installLater', Date.now()); }
+    });
+    paintInstall();
+  });
 }
 
 // ---------- Supabase ----------
@@ -469,6 +540,9 @@ window.addEventListener('online', () => { if (S.me) { flushOutbox(); render(); }
 window.addEventListener('popstate', () => {});
 
 (async function boot() {
+  const wantInstall = installWanted();
+  installShown = wantInstall; // read by apkPopup: no APK popup in a visit that shows the install sheet
+  if (wantInstall) setTimeout(showInstall, 600);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (S.refresh) {
     S.me = store.get('me');

@@ -265,3 +265,9 @@ textarea{resize:none}
 .callb svg{width:22px;height:22px}.callb.off{background:var(--line);color:var(--n400);cursor:default}
 .nonum{display:flex;flex-direction:column;align-items:center;gap:2px}.nonum small{font-size:10px;color:var(--ink-soft)}
 .sums{align-items:center}
+/* install sheet (app.js: showInstall) */
+.inst-steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;counter-reset:ins}
+.inst-steps li{counter-increment:ins;display:flex;align-items:center;gap:10px;font-size:15px;line-height:22px;color:var(--ink)}
+.inst-steps li::before{content:counter(ins);flex:none;width:26px;height:26px;border-radius:50%;background:var(--teal);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.inst-ic{display:inline-flex;vertical-align:middle;width:24px;height:24px;color:var(--teal)}
+.inst-ic svg{width:24px;height:24px}
