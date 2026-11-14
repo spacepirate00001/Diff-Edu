@@ -54,8 +54,10 @@
   }
   SCREENS['g.home'] = { home: true, title: () => 'স্বাগতম, ' + S.me.full_name, sub: () => 'অভিভাবক · ' + todayBnLong(), trail: () => avatarBtn() + logoutPill('sun'), render: async (el) => {
     const nh = noticeHighlight('guardians'); // notices first: guardians must not miss holidays, exam dates and fee news
+    const hcP = loadHomeConfig('guardian');  // server control (app.js): tiles, names, banner
     await loadKids();
-    if (!kids.length) { el.innerHTML = (await nh) + empty('child', 'কোনো শিক্ষার্থী যুক্ত হয়নি। কোচিং অফিসে যোগাযোগ করুন।'); return; }
+    HOME_CFG = await hcP;
+    if (!kids.length) { el.innerHTML = homeBanner(HOME_CFG) + (await nh) + empty('child', 'কোনো শিক্ষার্থী যুক্ত হয়নি। কোচিং অফিসে যোগাযোগ করুন।'); return; }
     selIdx = Math.min(selIdx, kids.length - 1);
     const c = kids[selIdx];
     const [att, fees, notes] = await Promise.all([
@@ -66,7 +68,7 @@
     const today = att.find(a => a.date === dhakaToday() && a.check_in);
     const due = fees.reduce((s, f) => s + (+f.amount - +f.paid_amount), 0);
     const note = notes.find(n => n.student_id === c.id);
-    el.innerHTML = `${todayShell(c)}${await nh}
+    el.innerHTML = `${homeBanner(HOME_CFG)}${todayShell(c)}${await nh}
       ${kids.length > 1 ? chipRow(kids.map((k, i) => [i, nm(k)]), selIdx, 'data-kid') : ''}
       ${note ? `<div class="stack"><div style="color:var(--teal-dark);font-weight:600;font-size:14px">সর্বশেষ বার্তা</div>${noteCard(note, 'notes')}</div>` : ''}
       <div class="card"><h2>আজকের তথ্য</h2>${today ? `<div class="ok" style="font-weight:700;font-size:16px">${esc(nm(c))} আজ ${fmtTime(today.check_in)}-এ উপস্থিত হয়েছে।</div>` : '<div class="mute">আজকের উপস্থিতির খবর এখনো আসেনি।</div>'}</div>
@@ -112,9 +114,11 @@
     extra: () => '<span class="hx-mascot" id="hxm"><img src="logo.svg" alt=""></span><span class="pill white" id="hxs">স্টার …</span><span class="pill white" id="hxd">টানা উপস্থিতি … দিন</span>',
     render: async (el) => {
     const nh = noticeHighlight('students'); // notices first, so nobody misses holidays or exam dates
+    const hcP = loadHomeConfig('student');  // server control (app.js): tiles, names, banner
     await loadKids();
+    HOME_CFG = await hcP;
     const st = kids[0];
-    if (!st) { el.innerHTML = (await nh) + '<div class="card sun mute">একটু অপেক্ষা করো…</div>'; return; }
+    if (!st) { el.innerHTML = homeBanner(HOME_CFG) + (await nh) +'<div class="card sun mute">একটু অপেক্ষা করো…</div>'; return; }
     const r = rw(st), av = r.avatar && window.SHOP_EMOJI ? SHOP_EMOJI(r.avatar) : null;
     const hs = $('#hxs'), hd = $('#hxd'), hm = $('#hxm');
     if (hs) hs.textContent = 'স্টার ' + bn(r.stars || 0);
@@ -141,7 +145,7 @@
     const big = document.body.classList.contains('big');
     const fin = hw.filter(h => done.has(h.id)).length;
     const W = window.WORDS_EN ? WORDS_EN(st.class_level) : null;
-    el.innerHTML = `${await nh}
+    el.innerHTML = `${homeBanner(HOME_CFG)}${await nh}
       <div class="card sun" style="display:flex;gap:12px;align-items:center">${chip(sh.icon, 48)}<div><div class="mute small">আজকের ক্লাস</div><div class="h2">${sh.bn} ব্যাচ</div><div class="mute">${sh.time}</div></div></div>
       ${countdown}
       <div class="card sky" id="mood">${mood == null ? `<h3>আজ তোমার মন কেমন?</h3><div class="moods">${MOOD_E.map((e, i) => `<button data-mood="${i + 1}"><span>${e}</span><small>${MOOD_BN[i]}</small></button>`).join('')}</div>` : moodDone(mood)}</div>

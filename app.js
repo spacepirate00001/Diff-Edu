@@ -128,8 +128,69 @@ async function noticeHighlight(aud) {
   h += rest.slice(0, 2).map(n => `<div class="nb-row"><i></i><span>${esc(bn(n.title))}</span><small>${noticeDate(n.created_at)}</small></div>`).join('');
   return h + '</div>';
 }
+// ---------- server-controlled home (app_config key home.<role>, see control-spec.md) ----------
+// A home sets HOME_CFG (its cleaned config, or null = the default home) before it draws its sections.
+let HOME_CFG = null;
+/** Keeps only what the client understands; anything odd is dropped so a bad row can never break a home. */
+function homeCfgClean(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const list = a => Array.isArray(a) ? a.filter(x => typeof x === 'string' && x.trim()).slice(0, 200) : [];
+  const rename = {};
+  if (v.rename && typeof v.rename === 'object' && !Array.isArray(v.rename)) {
+    for (const [from, to] of Object.entries(v.rename)) if (typeof to === 'string' && to.trim()) rename[from] = to.trim().slice(0, 80);
+  }
+  const b = v.banner && typeof v.banner === 'object' && !Array.isArray(v.banner) ? v.banner : null;
+  const text = b && typeof b.text === 'string' ? b.text.trim().slice(0, 300) : '';
+  const until = b && typeof b.until === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.until) ? b.until : '';
+  return { hide: list(v.hide), order: list(v.order), rename, banner: text ? { text, tone: b.tone === 'warn' ? 'warn' : 'info', until } : null };
+}
+/** The config of one role: the copy this phone has, at once; the server copy is refreshed for the next open. Never throws; null = defaults. */
+async function loadHomeConfig(role) {
+  const ck = 'homeconfig.' + role;
+  try {
+    const fresh = (async () => {
+      try {
+        const rows = await sel('app_config', `select=value&key=eq.home.${role}`);
+        const v = rows?.[0]?.value;
+        if (v == null) store.del(ck); else store.set(ck, v);
+        return v ?? null;
+      } catch { return undefined; }     // offline or table missing: keep the copy we have
+    })();
+    const old = store.get(ck);
+    if (old != null) { fresh.catch(() => {}); return homeCfgClean(old); }
+    const v = await fresh;
+    return v === undefined ? null : homeCfgClean(v);
+  } catch { return null; }
+}
+/** One folding section under the config: the title and tiles to draw, or null when the section is hidden. */
+function applyHomeConfig(cfg, title, tiles) {
+  try {
+    if (!cfg) return { title, tiles };
+    if (cfg.hide.includes(title)) return null;
+    const rank = t => { const i = cfg.order.indexOf(t[1]); return i < 0 ? 1e9 : i; };
+    const list = tiles.map((t, i) => ({ t, i }))
+      .filter(x => !cfg.hide.includes(x.t[1]))
+      .sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i)
+      .map(x => { const nt = cfg.rename[x.t[1]]; return nt ? [x.t[0], nt, x.t[2], x.t[3]] : x.t; });
+    if (!list.length) return null;
+    return { title: cfg.rename[title] || title, tiles: list };
+  } catch { return { title, tiles }; }
+}
+/** The banner card on top of a home: soft plum (info) or soft amber (warn). Gone after its last Dhaka day. */
+function homeBanner(cfg) {
+  try {
+    const b = cfg?.banner;
+    if (!b || !b.text) return '';
+    if (b.until && b.until < dhakaToday()) return '';
+    return `<div class="hbanner ${b.tone === 'warn' ? 'warn' : 'info'}" role="note">${esc(b.text)}</div>`;
+  } catch { return ''; }
+}
+
 /** A folding category of tiles (3 per row); the phone remembers which are open. tiles: [icon, title, go, badge?] */
 function dashSection(screen, key, icon, title, tiles, defaultOpen) {
+  const shown = applyHomeConfig(HOME_CFG, title, tiles);
+  if (!shown) return '';
+  title = shown.title; tiles = shown.tiles;
   if (!tiles.length) return '';
   const saved = store.get(`dash.${screen}.${key}`), open = saved == null ? defaultOpen : saved;
   const waiting = tiles.filter(t => t[3]).length;
@@ -482,7 +543,7 @@ function bindGo(b) { b.addEventListener('click', () => { const s = b.dataset.go;
 function setSub(t) { $('#sub').textContent = t || ''; $('#sub').hidden = !t; }
 function setTitle(t) { $('#title').textContent = t; }
 
-const ADMIN_ONLY = new Set(['a.fees', 'a.users', 'a.phones', 'a.admit', 'a.history', 'a.people', 'a.editstudent', 'a.editperson', 'a.requests']);
+const ADMIN_ONLY = new Set(['a.fees', 'a.users', 'a.phones', 'a.admit', 'a.history', 'a.people', 'a.editstudent', 'a.editperson', 'a.requests', 'a.control']);
 async function render() {
   const seq = ++renderSeq;
   offlineFlag = false;
@@ -513,7 +574,7 @@ async function render() {
 const rerender = () => render();
 
 const FAMILY_SCRIPTS = ['family.js', 'play.js', 'comms.js', 'extras.js', 'reports.js', 'profile.js'];
-const STAFF_SCRIPTS = ['search.js', 'teacher.js', 'board.js', 'office.js', 'play.js', 'comms.js', 'classroom.js', 'extras.js', 'reports.js', 'people.js', 'profile.js'];
+const STAFF_SCRIPTS = ['search.js', 'teacher.js', 'board.js', 'control.js', 'office.js', 'play.js', 'comms.js', 'classroom.js', 'extras.js', 'reports.js', 'people.js', 'profile.js'];
 const loaded = {};
 function loadScript(src) {
   return loaded[src] ||= new Promise((ok, fail) => {

@@ -83,6 +83,7 @@
     flushOutbox().catch(() => {});
     const admin = isAdmin(), today = dhakaToday(), now = shiftNow();
     // Same order as StaffHome.kt: notices, staff notes, offline, today per shift, work waiting, 4 big jobs, folding categories.
+    const hcP = loadHomeConfig(admin ? 'admin' : 'teacher'); // server control (app.js): tiles, names, banner
     const [nh, perShift, todo] = await Promise.all([
       noticeHighlight(null),
       Promise.all(SHIFTS.map(async s => {
@@ -100,9 +101,10 @@
         admin ? rpc('pending_profile_requests').then(n => +n || 0).catch(() => 0) : 0, // profile change requests (0 on error)
       ]),
     ]);
+    HOME_CFG = await hcP;
     const badge = n => n > 0 ? bn(n) : null;
     const manage = admin ? [['users', 'অ্যাকাউন্ট ব্যবস্থাপনা', 'a.users'], ['note_edit', 'প্রোফাইল সম্পাদনা', 'a.people'], ['calendar', 'ক্লাস রুটিন', 'a.routine'],
-      ['question', 'পরিবর্তনের অনুরোধ', 't.requests', badge(todo[0])], ['phone', 'নম্বর সংশোধন', 'a.phones', badge(todo[1])], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['money', 'শিক্ষকদের সম্মানী', 't.honorarium'], ['notebook', 'পরিবর্তনের ইতিহাস', 'a.history']] : [];
+      ['question', 'পরিবর্তনের অনুরোধ', 't.requests', badge(todo[0])], ['phone', 'নম্বর সংশোধন', 'a.phones', badge(todo[1])], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['money', 'শিক্ষকদের সম্মানী', 't.honorarium'], ['notebook', 'পরিবর্তনের ইতিহাস', 'a.history'], ['signal', 'সার্ভার থেকে নিয়ন্ত্রণ', 'a.control']] : [];
     const daily = [['attendance', 'উপস্থিতি গ্রহণ', 't.att'], ['check_list', 'আজ কার হাজিরা', 't.board'], ['star', 'ক্লাস রেটিং', 't.rate'], ['signal', 'শিক্ষার্থীদের সংকেত', 't.signals'], ['question', 'প্রশ্ন বক্স', 't.doubts'], ['mic', 'ভয়েস ও মুখস্থ পড়া', 't.voice'], ['camera', 'CCTV যাচাই', 't.gate']];
     const exams = [['numbers', 'নম্বর এন্ট্রি', 't.marks'], ['document', 'রিপোর্ট কার্ড ও টপার', 'a.reports'], ['calendar', 'পরীক্ষার রুটিন', 't.routine'], ['calendar', 'পরীক্ষার পরিকল্পনা', 't.exams'],
       ['archive', 'প্রশ্ন ব্যাংক', 't.qbank'], ['ai_spark', 'AI প্রশ্নপত্র তৈরি', 't.aipaper'], ['note_edit', 'AI খাতা মূল্যায়ন', 't.grading'], ['seat', 'সিট প্ল্যান', 't.seat']];
@@ -111,7 +113,7 @@
     const office = [['palm', 'ছুটি ও বদলি', 't.leave', admin ? badge(todo[2]) : null], ...(admin ? [] : [['money', 'আমার সম্মানী', 't.honorarium'], ['question', 'আমার অনুরোধ', 't.requests', badge(todo[0])]]), ['lock', 'পিন বদলান', 'pin']];
     const fix = l => l.map(([ic, t, r, b]) => [ic, t, link(r, t), b]);
     const scr = admin ? 'admin' : 'teacher';
-    el.innerHTML = `${nh}<div id="snotes"></div>${pendingCard()}
+    el.innerHTML = `${homeBanner(HOME_CFG)}${nh}<div id="snotes"></div>${pendingCard()}
       <div class="card"><div style="display:flex;align-items:center"><h3 style="flex:1">আজকের উপস্থিতি</h3><b class="tap" id="hreload" style="color:var(--teal-dark);font-size:14px">হালনাগাদ</b></div>
         <div class="mute small">শিফটে চাপলে তালিকা ও অভিভাবকের নম্বর</div>
         <div class="shifts3">${SHIFTS.map((s, i) => { const live = s.id === now, v = perShift[i]; return `<button class="${live ? 'live' : ''}" data-go="t.shift:${s.id}"><span class="lic">${I(s.icon)}</span><small>${s.bn}${live ? ' · এখন' : ''}</small><b>${v ? `${bn(v[1])}/${bn(v[0])}` : '…'}</b><small>উপস্থিত</small></button>`; }).join('')}</div></div>
