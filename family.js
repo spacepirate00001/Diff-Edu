@@ -76,7 +76,7 @@
       <div class="card"><div class="stats"><div><b>${bn(rw(c).stars || 0)}</b><span class="mute small">স্টার</span></div><div><b>${bn(rw(c).streak_days || 0)} দিন</b><span class="mute small">টানা উপস্থিতি</span></div></div></div>
       ${grid2([fun('document', 'রিপোর্ট কার্ড', 'myreports:' + c.id, { tint: 'sun', sub: 'সাপ্তাহিক ফল' }), fun('calendar', 'উপস্থিতি', 'att:' + c.id, { tint: 'sky', sub: 'মাসের হিসাব' })])}
       ${dashSection('guardian', 'study', 'chart', 'পড়ালেখা ও অগ্রগতি', [['chart', 'পরীক্ষার ফল', 'results:' + c.id], ['star', 'রেটিং ও প্রশংসা', 'progress:' + c.id],
-        ['book', 'শিক্ষা উপকরণ', 'materials:' + c.class_level], ['headphones', 'ভয়েস মেসেজ', 'voicebox:' + c.id], ['target', 'লক্ষ্য', 'g.goals:' + c.id], ['trophy', 'সার্টিফিকেট', 'certs:' + c.id]], true)}
+        ['camera', 'অনলাইন ক্লাস (ভিডিও)', 'online:' + c.class_level], ['book', 'শিক্ষা উপকরণ', 'materials:' + c.class_level], ['headphones', 'ভয়েস মেসেজ', 'voicebox:' + c.id], ['target', 'লক্ষ্য', 'g.goals:' + c.id], ['trophy', 'সার্টিফিকেট', 'certs:' + c.id]], true)}
       ${dashSection('guardian', 'talk', 'chat', 'যোগাযোগ ও নোটিশ', [['chat', 'শিক্ষকের সাথে যোগাযোগ', 'chat:' + c.id], ['handshake', 'শিক্ষকের সাথে মিটিং', 'meetings'],
         ['bell', 'সব নোটিশ', 'notices:guardians'], ['notebook', 'দৈনিক বার্তা', 'notes'], ['mic', 'পরিচালকের বার্তা', 'director']], true)}
       ${dashSection('guardian', 'account', 'card', 'ফি ও অ্যাকাউন্ট', [['card', 'ফি ও পরিশোধ', 'fees:' + c.id], ['lock', 'পিন বদলান', 'pin'], ['lock', 'আমার তথ্য ও গোপনীয়তা', 'mydata']], false)}
@@ -156,7 +156,7 @@
           <button class="pill warn" style="margin-top:8px;border:0;cursor:pointer" data-confused="${esc((h.subject?.name || '') + ': ' + h.title)}">বুঝিনি</button></div>`).join('')}`}
       ${W ? `<div class="card sky tap" data-go="s.spelling"><div class="mute small">আজকের ইংরেজি শব্দ</div><div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:24px;font-weight:600">${esc(W[0])}</span><b style="color:var(--teal)">${esc(W[1])}</b></div><div class="mute">${esc(W[2])}</div></div>` : ''}
       ${dashSection('student', 'study', 'book', 'পড়া ও ফলাফল', [['document', 'রিপোর্ট কার্ড', 'myreports:' + st.id], ['star', 'আমার রেটিং ও কার্ড', 'progress:' + st.id], ['trophy', 'কুইজ ও লিডারবোর্ড', 's.quiz'],
-        ['book', 'সিলেবাস ও বইয়ের পৃষ্ঠা', 'syllabus:' + st.class_level], ['book', 'শিক্ষা উপকরণ', 'materials:' + st.class_level], ['ai_spark', 'AI পড়ার সহায়ক', 's.tutor'],
+        ['camera', 'অনলাইন ক্লাস (ভিডিও)', 'online:' + st.class_level], ['book', 'সিলেবাস ও বইয়ের পৃষ্ঠা', 'syllabus:' + st.class_level], ['book', 'শিক্ষা উপকরণ', 'materials:' + st.class_level], ['ai_spark', 'AI পড়ার সহায়ক', 's.tutor'],
         ['question', 'প্রশ্ন বক্স', 's.doubts'], ['notebook', 'ভুলের খাতা', 's.mistakes'], ['flashcards', 'ফ্ল্যাশকার্ড', 'flash:' + st.class_level]], true)}
       ${dashSection('student', 'play', 'gamepad', 'খেলা ও অভ্যাস', [['timer', 'ফোকাস টাইমার', 'focus'], ['swords', 'কুইজ ডুয়েল', 's.duel'], ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 's.challenges'],
         ['letters', 'শব্দ ও বানান', 's.spelling'], ['gamepad', 'শিক্ষামূলক খেলা', 's.games'], ['puzzle', 'দৈনিক ধাঁধা', 's.puzzle'], ['shop_bag', 'পয়েন্টের দোকান', 's.shop']], true)}
@@ -181,6 +181,9 @@
       if (b.dataset.sent) return;
       b.dataset.sent = 1; b.textContent = 'শিক্ষককে জানানো হয়েছে ✓'; b.className = 'pill teal';
       ins('confusions', { coaching_id: S.me.coaching_id, student_id: st.id, topic: b.dataset.confused.slice(0, 200) }, 'select=id').catch(() => {});
+      // topic videos play right here in the app (subject: title)
+      const [subj, ...rest] = b.dataset.confused.split(':'), topic = rest.join(':').trim() || subj;
+      TopicVideos.videosOf(st.class_level).then(v => { const m = TopicVideos.matchVideos(v, rest.length ? subj : '', topic); if (m.length) { b.textContent = '▶ এই টপিকের ভিডিও দেখো'; b.className = 'pill good'; b.onclick = () => topicVideoSheet(m, topic); topicVideoSheet(m, topic); } }).catch(() => {});
     });
     el.querySelectorAll('[data-hw]').forEach(b => b.onclick = async () => {
       const id = b.dataset.hw, now = !done.has(id);
@@ -283,6 +286,7 @@
     el.innerHTML = ms.map(m => `<div class="card tap" data-mat="${m.id}" style="display:flex;gap:12px;align-items:center">${chip(K[m.kind]?.[0] || 'book', 40)}<div style="flex:1"><h3>${esc(m.title)}</h3><div class="mute small">${esc(m.subject?.name || '')}${m.chapter ? ' · ' + esc(m.chapter) : ''} · ${K[m.kind]?.[1] || ''}</div></div></div>`).join('') || empty('book', 'এই ক্লাসের জন্য এখনো কোনো উপকরণ নেই।');
     el.querySelectorAll('[data-mat]').forEach(b => b.onclick = async () => {
       const m = ms.find(x => x.id === b.dataset.mat);
+      if (ytId(m.url)) { const vs = ms.filter(x => ytId(x.url)); return playVideo(vs.map(x => ({ id: ytId(x.url), title: x.title, sub: [x.subject?.name, x.chapter].filter(Boolean).join(' · ') })), vs.findIndex(x => x.id === m.id)); }
       try { const u = safeUrl(m.url) || (m.storage_path ? await signedUrl('materials', m.storage_path) : null); if (u) window.open(u, '_blank', 'noopener'); else toast('ফাইল পাওয়া যায়নি'); }
       catch { toast('খোলা যায়নি'); }
     });

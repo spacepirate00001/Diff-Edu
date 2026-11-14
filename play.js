@@ -238,8 +238,11 @@
     cls = +cls || st?.class_level || 6;
     const chs = await cached('chap' + cls, () => sel('chapters', `select=id,subject,number,title,pages,status,done_on&class_level=eq.${cls}&order=subject,number`));
     const by = {}; chs.forEach(c => (by[c.subject] ||= []).push(c));
+    const vids = await TopicVideos.videosOf(cls).catch(() => []), VM = {};
+    chs.forEach(c => { const m = TopicVideos.matchVideos(vids, c.subject, c.title); if (m.length) VM[c.id] = m; });
     const ST = { todo: ['বাকি', ''], doing: ['চলছে', 'sun'], done: ['শেষ', 'good'] };
     el.innerHTML = Object.keys(by).map(s => { const d = by[s].filter(c => c.status === 'done').length; return `<div class="card"><div style="display:flex;justify-content:space-between"><h3>${esc(s)}</h3><span class="mute small">${bn(d)}/${bn(by[s].length)} শেষ</span></div>${bar(d / by[s].length)}
-      ${by[s].map(c => `<div class="row"><span>${bn(c.number)}. ${esc(c.title)}${c.pages ? ` <span class="mute small">পৃ. ${esc(c.pages)}</span>` : ''}</span>${pill(ST[c.status][0], ST[c.status][1])}</div>`).join('')}</div>`; }).join('') || empty('book', 'এই ক্লাসের সিলেবাস এখনো যোগ করা হয়নি।');
+      ${by[s].map(c => `<div class="row"><span>${bn(c.number)}. ${esc(c.title)}${c.pages ? ` <span class="mute small">পৃ. ${esc(c.pages)}</span>` : ''}</span>${(VM[c.id] || []).length ? `<button class="pill good" data-vc="${c.id}" style="border:0;cursor:pointer">▶ ভিডিও</button> ` : ''}${pill(ST[c.status][0], ST[c.status][1])}</div>`).join('')}</div>`; }).join('') || empty('book', 'এই ক্লাসের সিলেবাস এখনো যোগ করা হয়নি।');
+    el.querySelectorAll('[data-vc]').forEach(b => b.onclick = () => { const c = chs.find(x => x.id === b.dataset.vc); topicVideoSheet(VM[c.id], c.title); });
   } };
 })();
