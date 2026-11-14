@@ -752,7 +752,7 @@
     const load = async () => { try { list = await loadHistory(); } catch { list = undefined; } };
     const draw = () => {
       let h = chipRow([['', 'সব'], ['attendance', 'উপস্থিতি'], ['rating', 'রেটিং'], ['marks', 'নম্বর']], kind, 'data-kind');
-      if (list === undefined) h += '<button class="link hist-retry" data-retry>তালিকা আনা যায়নি। আবার চেষ্টা করতে এখানে চাপুন.</button>';
+      if (list === undefined) h += '<button class="link hist-retry" data-retry>তালিকা আনা যায়নি। আবার চেষ্টা করতে এখানে চাপুন।</button>';
       else {
         const shown = list.filter(e => !kind || e.kind === kind);
         h += shown.map(card).join('') || empty('inbox', 'এখনো কোনো পরিবর্তন নেই।');

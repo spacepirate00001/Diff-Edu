@@ -404,3 +404,13 @@ button.pill::after,a.pill::after{content:"";position:absolute;inset:-11px -4px}
 .todo{min-height:48px}
 /* reduced motion: turn off the app's own transitions and animations */
 @media (prefers-reduced-motion: reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* attendance board */
+.attinfo{background:linear-gradient(#EEE2F0e6,#EEE2F0a6)}
+.attinfo.warn{background:linear-gradient(#FBE3A6e6,#FBE3A6a6)}
+.attinfo h3{line-height:24px}
+.attinfo .mute{margin-top:4px}
+.attwarn{margin-top:8px;font-weight:600;color:var(--ink)}
+.brow{display:flex;flex-direction:column;gap:4px}
+.brow-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.brow-top h3{min-width:0}

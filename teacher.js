@@ -103,7 +103,7 @@
     const badge = n => n > 0 ? bn(n) : null;
     const manage = admin ? [['users', 'অ্যাকাউন্ট ব্যবস্থাপনা', 'a.users'], ['note_edit', 'প্রোফাইল সম্পাদনা', 'a.people'], ['calendar', 'ক্লাস রুটিন', 'a.routine'],
       ['question', 'পরিবর্তনের অনুরোধ', 't.requests', badge(todo[0])], ['phone', 'নম্বর সংশোধন', 'a.phones', badge(todo[1])], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['money', 'শিক্ষকদের সম্মানী', 't.honorarium'], ['notebook', 'পরিবর্তনের ইতিহাস', 'a.history']] : [];
-    const daily = [['attendance', 'উপস্থিতি গ্রহণ', 't.att'], ['star', 'ক্লাস রেটিং', 't.rate'], ['signal', 'শিক্ষার্থীদের সংকেত', 't.signals'], ['question', 'প্রশ্ন বক্স', 't.doubts'], ['mic', 'ভয়েস ও মুখস্থ পড়া', 't.voice'], ['camera', 'CCTV যাচাই', 't.gate']];
+    const daily = [['attendance', 'উপস্থিতি গ্রহণ', 't.att'], ['check_list', 'আজ কার হাজিরা', 't.board'], ['star', 'ক্লাস রেটিং', 't.rate'], ['signal', 'শিক্ষার্থীদের সংকেত', 't.signals'], ['question', 'প্রশ্ন বক্স', 't.doubts'], ['mic', 'ভয়েস ও মুখস্থ পড়া', 't.voice'], ['camera', 'CCTV যাচাই', 't.gate']];
     const exams = [['numbers', 'নম্বর এন্ট্রি', 't.marks'], ['document', 'রিপোর্ট কার্ড ও টপার', 'a.reports'], ['calendar', 'পরীক্ষার রুটিন', 't.routine'], ['calendar', 'পরীক্ষার পরিকল্পনা', 't.exams'],
       ['archive', 'প্রশ্ন ব্যাংক', 't.qbank'], ['ai_spark', 'AI প্রশ্নপত্র তৈরি', 't.aipaper'], ['note_edit', 'AI খাতা মূল্যায়ন', 't.grading'], ['seat', 'সিট প্ল্যান', 't.seat']];
     const progress = [['alert', 'ঝুঁকিতে থাকা শিক্ষার্থী', 't.risk'], ['chart', 'ব্যাচ তুলনা', 't.compare'], ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 't.challenges'], ['book', 'সিলেবাস ট্র্যাকার', 'syllabus:6'], ['flashcards', 'ফ্ল্যাশকার্ড', 'flash:6'], ['book', 'শিক্ষা উপকরণ', 'materials:5']];
@@ -281,6 +281,7 @@
           p.rrows.forEach(r => { b.savedR[r.student_id] = { behavior: +r.behavior, homework: +r.homework, performance: +r.performance }; delete b.lr[r.student_id]; });
         }
         A.error = null;
+        boardLoad().then(() => redrawNow()); // the info card shows who took it now
         popText(queued ? 'ফোনে জমা আছে, নেট এলে যাবে' : 'সংরক্ষিত', 3000);
       } catch (e) {
         A.error = attOk ? 'উপস্থিতি সংরক্ষণ হয়েছে, কিন্তু রেটিং যায়নি। রেটিং বদলে আবার দিন।' : 'সংরক্ষণ হয়নি। আবার চেষ্টা করুন।';
@@ -327,6 +328,35 @@
     });
   }
 
+  // "Who took attendance" (spec 2026-11-14): today's attendance_board rows for this coaching. null = not loaded yet.
+  // Any failure (404 = not live yet, offline) leaves rows empty, so the info card is simply not shown.
+  const BOARD = { rows: null };
+  async function boardLoad() {
+    let rows;
+    try { const r = await rpc('attendance_board', {}); rows = Array.isArray(r) ? r : []; }
+    catch { rows = []; }
+    const changed = JSON.stringify(rows) !== JSON.stringify(BOARD.rows);
+    BOARD.rows = rows;
+    return changed;
+  }
+  // Info card above the student list: who took this shift+slot today, per class (exam scope "all" = slot 0).
+  function attInfo(group) {
+    if (!group || !BOARD.rows?.length) return '';
+    const slot = A.session === 'exam' && A.examScope === 'all' ? 0 : A.slot;
+    const rows = BOARD.rows.filter(r => r.shift === A.shift && +r.slot === slot);
+    if (!rows.length) return '';
+    const newest = rows.reduce((a, b) => (new Date(b.marked_at) > new Date(a.marked_at) ? b : a));
+    const what = slot ? 'এই পিরিয়ডে আজ উপস্থিতি' : 'এই শিফটের আজকের উপস্থিতি';
+    const head = newest.last_teacher_id === S.uid
+      ? `${what} আপনি নিয়েছেন · ${fmtTime(newest.marked_at)}`
+      : `${what} নিয়েছেন: ${esc(newest.teacher_names || 'শিক্ষক')} · ${fmtTime(newest.marked_at)}`;
+    const lines = rows.map(r => `<div class="mute small">ক্লাস ${esc(bn(r.class_level))} · ${esc(bn(r.present_count))} জন উপস্থিত, ${esc(bn(r.absent_count))} জন অনুপস্থিত</div>`).join('');
+    // Amber when another teacher took a class the teacher is about to mark (the group on screen).
+    const other = rows.find(r => r.last_teacher_id !== S.uid && (!group.levels || group.levels.includes(+r.class_level)));
+    const warn = other ? `<div class="attwarn">এই ক্লাসের উপস্থিতি আগে ${esc((other.teacher_names || 'শিক্ষক').split(', ')[0])} নিয়েছেন, বদলাতে সারিতে চাপুন, কারণ লিখতে হবে।</div>` : '';
+    return `<div class="card attinfo ${other ? 'warn' : ''}"><h3>${head}</h3>${lines}${warn}</div>`;
+  }
+
   SCREENS['t.att'] = { title: 'উপস্থিতি গ্রহণ', sub: () => A.session === 'exam' ? 'পরীক্ষা' + (A.examTitle.trim() ? ': ' + A.examTitle.trim() : '') + (A.examScope === 'all' ? ' · সব স্লটে' : A.examScope === 'slot' ? ' · নির্দিষ্ট স্লটে' : '') : A.session === 'class' ? 'নিয়মিত ক্লাস' : 'আজ ক্লাস না পরীক্ষা, আগে বেছে নিন', render: async (el) => {
     const today = dhakaToday();
     if (A.day !== today) { if (PEND) commitPend(); Object.assign(A, { day: today, session: null, examTitle: '', examScope: null, slot: 1, group: null, q: '', bk: {}, marked: false, key: '', error: null }); }
@@ -350,6 +380,7 @@
     }
     let list = null, loadFailed = false, contacts = null, routine = [];
     T.contacts().then(c => { contacts = c; }).catch(() => { contacts = {}; });
+    BOARD.rows = null; boardLoad().then(changed => { if (changed) A.redraw(); });
     const subNow = () => setSub(SCREENS['t.att'].sub());
     const keyNow = () => A.shift + '|' + A.slot;
     const sessionNow = () => A.session || 'class';
@@ -529,6 +560,7 @@
         const groups = T.periodGroups(routine, list || [], A.shift, A.slot);
         const group = groups.find(g => g.key === A.group) || (groups.length === 1 ? groups[0] : null);
         if (groups.length > 1) h += `<div class="card"><h4>কোন ক্লাসের উপস্থিতি নিচ্ছেন?</h4><div class="stack" style="margin-top:8px">${groups.map(g => `<button class="pickrow ${g.key === group?.key ? 'on' : ''}" data-group="${g.key}"><b>${esc(g.title)}</b>${g.sub ? `<span class="mute small">${esc(g.sub)}</span>` : ''}</button>`).join('')}</div></div>`;
+        h += attInfo(group);
         if (list === null) h += skel(3);
         else if (loadFailed) h += `${empty('wifi_off', 'শিক্ষার্থীর তালিকা আনতে ইন্টারনেট লাগে। একবার তালিকা খোলার পর নেট গেলেও উপস্থিতি নেওয়া যাবে।')}<button class="btn" id="reload">আবার চেষ্টা করুন</button>`;
         else if (!list.length) h += empty('school', 'এই শিফটে কোনো শিক্ষার্থী নেই।');
