@@ -162,7 +162,8 @@ const SHARE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V
 /** Decided once per page load: does the install sheet open this visit? */
 function installWanted() {
   if (isStandalone()) return false;             // already installed: never show
-  if (INSTALL_QS) return true;                  // the QR code always opens it
+  if (window.DeGuide?.wanted()) return false;   // ?install=1 / ?guide=1: the full guide (guide.js) replaces this sheet
+  if (INSTALL_QS) return true;                  // the QR code always opens it (fallback if guide.js is missing)
   if (!isPhone) return false;
   if (!store.get('installSeen')) return true;   // first visit ever on a phone
   const later = +store.get('installLater') || 0;
@@ -540,10 +541,12 @@ window.addEventListener('online', () => { if (S.me) { flushOutbox(); render(); }
 window.addEventListener('popstate', () => {});
 
 (async function boot() {
+  const guideOn = !!window.DeGuide?.wanted();   // the printed QR (?install=1) opens the installation guide first
   const wantInstall = installWanted();
-  installShown = wantInstall; // read by apkPopup: no APK popup in a visit that shows the install sheet
+  installShown = guideOn || wantInstall; // read by apkPopup: no APK popup in a visit that shows the guide or the install sheet
   if (wantInstall) setTimeout(showInstall, 600);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (guideOn) { try { await window.DeGuide.show(); } catch { /* a broken guide must never block the login */ } } // resolves when the guide is closed; then normal login boot
   if (S.refresh) {
     S.me = store.get('me');
     if (!S.me || !S.me.coaching_id) {
