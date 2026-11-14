@@ -10,7 +10,7 @@
     const studs = await cached('chatstuds', () => sel('students', `select=${STU}&active=is.true&order=class_level,roll`));
     let q = '';
     const draw = () => {
-      const list = studs.filter(s => !q || nm(s).includes(q) || bn(s.roll || '').includes(bn(q)));
+      const list = window.Search ? Search.filter(studs, q, s => ({ name: nm(s), roll: s.roll })) : studs.filter(s => !q || nm(s).includes(q) || bn(s.roll || '').includes(bn(q)));
       el.innerHTML = `<input id="cq" placeholder="নাম বা রোল খুঁজুন" value="${esc(q)}">` + list.slice(0, 80).map(s => `<div class="card tap" data-go="chat:${s.id}" style="display:flex;gap:12px;align-items:center">${avatar(nm(s))}<div><h3>${esc(nm(s))}</h3><div class="mute small">ক্লাস ${bn(s.class_level)} · রোল ${esc(bn(s.roll || '—'))}</div></div></div>`).join('');
       el.querySelectorAll('[data-go]').forEach(bindGo);
       const i = el.querySelector('#cq'); i.oninput = () => { q = i.value.trim(); const pos = i.selectionStart; draw(); const j = el.querySelector('#cq'); j.focus(); j.setSelectionRange(pos, pos); };

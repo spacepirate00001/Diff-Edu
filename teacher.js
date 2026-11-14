@@ -4,7 +4,7 @@
 (function () {
   const RATING_DEFAULT = { behavior: 3, homework: 3, performance: 2 }; // 8/10, same as RatingScale.default
   const T = window.T = {}; // shared helpers for the other teacher modules
-  const ST_COLS = 'id,class_level,roll,batch_id,profile:profiles!students_profile_id_fkey(full_name)';
+  const ST_COLS = 'id,class_level,roll,batch_id,profile:profiles!students_profile_id_fkey(full_name,login_id)';
   T.rosterOf = s => cached('roster.' + s, async () => {
     const b = await sel('batches', `select=id&shift=eq.${s}`);
     if (!b.length) return [];
@@ -131,23 +131,72 @@
     setTimeout(apkPopup, 1500);
   } };
 
-  // ---------- shift list (ShiftStudentsScreen) ----------
-  SCREENS['t.shift'] = { title: p => shiftBn(p) + ' শিফট', sub: 'শিক্ষার্থী ও অভিভাবকের নম্বর', render: async (el, shift) => {
+  // ---------- shift list (ShiftStudentsScreen, N12) ----------
+  // Today's state per student: RPC attendance_today; same rules computed by hand while the RPC is not live yet.
+  T.todayStates = async (shift, ids) => {
+    try {
+      const m = {};
+      (await rpc('attendance_today', { p_shift: shift }) || []).forEach(r => { m[r.student_id] = r.state; });
+      return m;
+    } catch (e) { if (!(e.status === 404 || /PGRST202/.test(e.body || ''))) throw e; }
+    if (!ids.length) return {};
+    const today = dhakaToday();
+    const [pa, at] = await Promise.all([
+      sel('period_attendance', `select=student_id,present&day=eq.${today}&shift=eq.${shift}&student_id=${inList(ids)}`),
+      sel('attendance', `select=student_id,check_in&date=eq.${today}&student_id=${inList(ids)}`).catch(() => []),
+    ]);
+    const m = {};
+    pa.forEach(r => { if (r.present) m[r.student_id] = 'present'; else if (!m[r.student_id]) m[r.student_id] = 'absent'; });
+    at.forEach(r => { if (r.check_in) m[r.student_id] = 'present'; });
+    return m;
+  };
+  const stuFields = s => ({ name: nameOf(s), login: s.profile?.login_id, roll: s.roll });
+  const LIGHT = { present: 'g', absent: 'r' };
+  SCREENS['t.shift'] = { title: p => shiftBn(p) + ' শিফট', sub: () => 'আজকের উপস্থিতি', render: async (el, shift) => {
     const [list, contacts] = await Promise.all([T.rosterOf(shift), T.contacts().catch(() => ({}))]);
     if (!list.length) { el.innerHTML = empty('school', 'এই শিফটে কোনো শিক্ষার্থী নেই।'); return; }
-    let cls = null;
-    const draw = () => {
-      const classes = [...new Set(list.map(s => s.class_level))].sort((a, b) => a - b);
-      const shown = sortRoster(list).filter(s => cls == null || s.class_level === cls);
-      el.innerHTML = `${classes.length > 1 ? chipRow([['', 'সব ক্লাস'], ...classes.map(c => [c, 'ক্লাস ' + bn(c)])], cls ?? '') : ''}
-        ${shown.map(st => `<div class="card"><div style="display:flex;gap:12px;align-items:center">${avatar(nameOf(st))}<div style="flex:1"><h3>${esc(nameOf(st))}</h3><div class="mute small">ক্লাস ${bn(st.class_level)} · রোল ${esc(bn(st.roll || '—'))}</div></div><button class="pill" data-go="t.reqchange:${st.id}">ব্যাচ / ক্লাস বদলের অনুরোধ</button></div>
-          <div class="stack" style="margin-top:8px">${(contacts[st.id] || []).map(g => `<div class="call"><span>${esc(g.relation || 'অভিভাবক')} · ${esc(bn(g.phone))}</span><span class="chips"><a class="pill coral" href="${telHref(g.phone)}">কল</a><button class="pill" data-report="${st.id}|${g.id}|${esc(g.phone)}">ভুল নম্বর</button></span></div>`).join('') || '<div class="mute small">অভিভাবকের নম্বর যোগ করা নেই</div>'}</div></div>`).join('')}`;
-      el.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => { cls = b.dataset.chip === '' ? null : +b.dataset.chip; draw(); });
-      el.querySelectorAll('[data-report]').forEach(b => b.onclick = () => reportPhone(...b.dataset.report.split('|')));
-      if (drawn) el.querySelectorAll('[data-go]').forEach(bindGo); // the first draw is bound by render()
-      drawn = true;
+    let states = null; // null = could not be loaded (offline): lights stay grey, no summary
+    try { states = await T.todayStates(shift, list.map(s => s.id)); } catch { /* keep null */ }
+    let cls = null, q = '', byRoll = false;
+    const rank = s => states?.[s.id] === 'absent' ? 0 : states?.[s.id] === 'present' ? 2 : 1;
+    const callBtn = st => {
+      const gs = contacts[st.id] || [];
+      if (!gs.length) return '<span class="nonum"><span class="callb off">' + I('phone') + '</span><small>নম্বর নেই</small></span>';
+      if (gs.length === 1) return `<a class="callb" href="${esc(telHref(gs[0].phone))}" aria-label="কল করুন">${I('phone')}</a>`;
+      return `<button class="callb" data-call="${esc(st.id)}" aria-label="কল করুন">${I('phone')}</button>`;
     };
-    let drawn = false;
+    const route = id => isAdmin() ? 'a.editstudent' : 't.reqchange';
+    function callSheet(st) {
+      const gs = contacts[st.id] || [];
+      sheet(`<h2>${esc(nameOf(st))}</h2><div class="stack">${gs.map((g, i) => `<div class="card"><div class="call"><b>${esc(g.relation || 'অভিভাবক')} · ${esc(bn(g.phone))}</b><a class="callb" href="${esc(telHref(g.phone))}" aria-label="কল করুন">${I('phone')}</a></div>
+        ${g.name ? `<div class="mute small">${esc(g.name)}</div>` : ''}<button class="link" data-report="${i}">নম্বর ভুল? জানান</button></div>`).join('')}</div><button class="link" data-close>বন্ধ করুন</button>`, (s, close) => {
+        s.querySelectorAll('[data-report]').forEach(b => b.addEventListener('click', () => { const g = gs[+b.dataset.report]; close(); reportPhone(st.id, g.id, g.phone); }));
+      });
+    }
+    function drawRows() {
+      const base = list.filter(s => cls == null || s.class_level === cls);
+      const cnt = k => base.filter(s => states?.[s.id] === k).length;
+      let ordered = sortRoster(base);
+      if (!byRoll) ordered = ordered.map((s, i) => [rank(s), i, s]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(x => x[2]);
+      const shown = Search.filter(ordered, q, stuFields);
+      el.querySelector('#rows').innerHTML = `${states ? `<div class="chips sums"><span class="pill good">উপস্থিত ${bn(cnt('present'))}</span><span class="pill bad">অনুপস্থিত ${bn(cnt('absent'))}</span><span class="pill">বাকি ${bn(base.length - cnt('present') - cnt('absent'))}</span><button class="pill teal" id="ord">${byRoll ? 'আগে অনুপস্থিত' : 'রোল অনুযায়ী'}</button></div>` : '<div class="mute small">আজকের অবস্থা আনা যায়নি, নেট এলে আবার খুলুন।</div>'}
+        ${shown.map(st => `<div class="srow" data-st="${esc(st.id)}"><span class="lt ${LIGHT[states?.[st.id]] || 'n'}"></span><div class="nm"><h3>${esc(nameOf(st))}</h3><div class="mute small">ক্লাস ${bn(st.class_level)} · রোল ${esc(bn(st.roll || '—'))}</div></div>${callBtn(st)}</div>`).join('') || empty('search', 'কাউকে পাওয়া যায়নি।')}`;
+      el.querySelectorAll('.srow').forEach(r => r.addEventListener('click', e => {
+        if (e.target.closest('.callb')) return;
+        go(route(), r.dataset.st);
+      }));
+      el.querySelectorAll('.srow a.callb').forEach(a => a.addEventListener('click', e => e.stopPropagation()));
+      el.querySelectorAll('button[data-call]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); callSheet(list.find(s => s.id === b.dataset.call)); }));
+      const o = el.querySelector('#ord'); if (o) o.addEventListener('click', () => { byRoll = !byRoll; drawRows(); });
+    }
+    function draw() {
+      const classes = [...new Set(list.map(s => s.class_level))].sort((a, b) => a - b);
+      el.innerHTML = `${classes.length > 1 ? chipRow([['', 'সব ক্লাস'], ...classes.map(c => [c, 'ক্লাস ' + bn(c)])], cls ?? '') : ''}
+        <input id="sq" maxlength="40" placeholder="নাম, রোল বা আইডি দিয়ে খুঁজুন" value="${esc(q)}" autocomplete="off"><div id="rows" class="stack"></div>`;
+      el.querySelectorAll('[data-chip]').forEach(b => b.addEventListener('click', () => { cls = b.dataset.chip === '' ? null : +b.dataset.chip; draw(); }));
+      const qi = el.querySelector('#sq'); qi.addEventListener('input', () => { q = qi.value.slice(0, 40); drawRows(); });
+      drawRows();
+    }
     draw();
   } };
   function reportPhone(studentId, guardianId, oldPhone) {
@@ -169,23 +218,122 @@
     });
   }
 
-  // ---------- take attendance (TakeAttendanceScreen) ----------
+  // ---------- take attendance (TakeAttendanceScreen, N6) ----------
   // One row per student per (day, shift, period) in period_attendance; slot 0 = exam through the whole shift.
   // A trigger rolls it up into the daily attendance row the guardian sees (periods.sql, exam-slot.sql).
-  const A = { session: null, examTitle: '', examScope: null, shift: 'afternoon', slot: 1, group: null, cls: null, present: {}, ratings: {}, marked: false, error: null, day: null, key: '' };
+  // Marking is local until "সংরক্ষণ"; then a 5-second undo window; then ONE batch write. Saved rows are locked:
+  // changing them needs a reason and goes through the RPCs change_attendance / change_rating.
+  const A = { session: null, examTitle: '', examScope: null, shift: 'afternoon', slot: 1, group: null, cls: null, q: '', bk: {}, marked: false, error: null, day: null, key: '', redraw: null };
+  const bucket = (key = A.key) => (A.bk[key] ||= { local: {}, lr: {}, saved: {}, savedR: null });
   const choice = (label, key, values, selected, labels) =>
     `<div class="choice"><span>${label}</span><div>${values.map((v, i) => `<button data-k="${key}" data-v="${v}" class="${+selected === v ? 'on' : ''}">${labels ? labels[i] : num(v)}</button>`).join('')}</div></div>`;
   const ratingChoices = r => choice('আচরণ', 'behavior', [0, 1, 2, 3], r.behavior) + choice('হোমওয়ার্ক', 'homework', [0, 1.5, 3], r.homework, ['করেনি', 'আধা', 'করেছে']) + choice('পারফরম্যান্স', 'performance', [0, 1, 2, 3, 4], r.performance);
   const ratingRow = (id, day, shift, slot, r) => ({ coaching_id: S.me.coaching_id, student_id: id, day, behavior: r.behavior, homework: r.homework, performance: r.performance, comment: null, shift, slot: Math.min(3, Math.max(1, slot)), rated_by: S.uid });
+  const ratingText = r => `আচরণ ${num(r.behavior)} · হোমওয়ার্ক ${hwLabel(r.homework)} · পারফরম্যান্স ${num(r.performance)}`;
+  const WHY = ['ভুল চাপ পড়েছিল', 'দেরিতে এসেছে', 'আগে ভুল শুনেছিলাম', 'অন্য কারণ'];
+
+  // --- save popup with undo (lives on <body>, so it survives leaving the screen) ---
+  let PEND = null, popT = null;
+  const popEl = () => document.getElementById('attpop') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'attpop', className: 'attpop' }));
+  const popHide = () => { const p = document.getElementById('attpop'); if (p) p.remove(); clearTimeout(popT); };
+  const popText = (t, ms) => { clearTimeout(popT); popEl().innerHTML = `<span>${esc(t)}</span>`; if (ms) popT = setTimeout(popHide, ms); };
+  const redrawNow = () => { if (A.redraw && cur().r === 't.att') A.redraw(); };
+  function popCount() {
+    const left = Math.max(0, PEND.deadline - Date.now());
+    const p = popEl();
+    p.innerHTML = `<span>সংরক্ষণ হচ্ছে… <b>${bn(Math.ceil(left / 1000))}</b></span><button class="pill sun" id="undo">ফিরিয়ে নিন</button><div class="pbar"><i style="width:${(left / 50).toFixed(1)}%"></i></div>`;
+    p.querySelector('#undo').addEventListener('click', undoPend);
+  }
+  function tickPend() {
+    if (!PEND) return;
+    if (cur().r !== 't.att' || Date.now() >= PEND.deadline) return commitPend();
+    popCount();
+  }
+  function undoPend() {
+    if (!PEND || PEND.busy) return;
+    clearInterval(PEND.timer); PEND = null; popHide(); redrawNow();
+  }
+  function startSave(ctx) {
+    if (PEND) return;
+    PEND = { ...ctx, deadline: Date.now() + 5000, busy: false };
+    popCount();
+    PEND.timer = setInterval(tickPend, 250);
+    redrawNow();
+  }
+  function commitPend() {
+    const p = PEND;
+    if (!p || p.busy) return;
+    p.busy = true; clearInterval(p.timer);
+    popText('সংরক্ষণ হচ্ছে…');
+    serial(async () => {
+      let queued = false, attOk = false;
+      try {
+        const r1 = await writeOrQueue('POST', '/rest/v1/period_attendance?on_conflict=student_id,day,shift,slot', p.rows, 'return=minimal,resolution=merge-duplicates');
+        attOk = true; queued = !r1;
+        const b = bucket(p.key);
+        p.rows.forEach(r => { b.saved[r.student_id] = { present: r.present, session: r.session, exam_title: r.exam_title }; delete b.local[r.student_id]; });
+        A.marked = true;
+        if (p.rrows.length) {
+          const r2 = await writeOrQueue('POST', '/rest/v1/class_ratings?on_conflict=student_id,day,shift,slot', p.rrows, 'return=minimal,resolution=merge-duplicates');
+          queued = queued || !r2;
+          b.savedR ||= {};
+          p.rrows.forEach(r => { b.savedR[r.student_id] = { behavior: +r.behavior, homework: +r.homework, performance: +r.performance }; delete b.lr[r.student_id]; });
+        }
+        A.error = null;
+        popText(queued ? 'ফোনে জমা আছে, নেট এলে যাবে' : 'সংরক্ষিত', 3000);
+      } catch (e) {
+        A.error = attOk ? 'উপস্থিতি সংরক্ষণ হয়েছে, কিন্তু রেটিং যায়নি। রেটিং বদলে আবার দিন।' : 'সংরক্ষণ হয়নি। আবার চেষ্টা করুন।';
+        popText(attOk ? 'রেটিং সংরক্ষণ হয়নি' : 'সংরক্ষণ হয়নি, আবার চেষ্টা করুন', 4000);
+      }
+      PEND = null;
+      redrawNow();
+    });
+  }
+  // Never lose a save: leaving the tab/app during the 5 seconds sends it at once.
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') commitPend(); });
+  window.addEventListener('pagehide', commitPend);
+
+  // --- reason bottom sheet for locked rows ---
+  async function callRpc(name, args) {
+    try { await rpc(name, args); return true; }
+    catch (e) {
+      if (isOfflineErr(e)) toast('নেট নেই, পরে চেষ্টা করুন');
+      else if (e.status === 404 || /PGRST202/.test(e.body || '')) toast('এই সুবিধা এখনো চালু হয়নি।');
+      else if (/reason_required/.test(e.body || '')) toast('কারণ লিখুন, কমপক্ষে ৩ অক্ষর।');
+      else toast('বদলানো যায়নি। আবার চেষ্টা করুন।');
+      return false;
+    }
+  }
+  // body: html shown under the title; needReason: false when the value is new (no change to log)
+  function reasonSheet({ lead, body, needReason = true, ok = () => true, label = 'বদলে দিন', onOpen, run }) {
+    sheet(`<h2>${needReason ? 'পরিবর্তনের কারণ' : 'রেটিং দিন'}</h2>${lead ? `<div class="mute">${lead}</div>` : ''}${body || ''}
+      ${needReason ? `<div class="chips">${WHY.map(w => `<button class="chip-btn" data-why="${esc(w)}">${esc(w)}</button>`).join('')}</div>
+      <textarea id="rsn" maxlength="200" rows="2" placeholder="কারণ লিখুন"></textarea>` : ''}
+      <button class="btn" id="rgo" disabled>${esc(label)}</button><button class="link" data-close>বাতিল</button>`, (s, close) => {
+      const ta = s.querySelector('#rsn'), go_ = s.querySelector('#rgo');
+      const reason = () => (ta ? ta.value.trim() : '');
+      const upd_ = () => { go_.disabled = !(ok() && (!needReason || (reason().length >= 3 && reason().length <= 200))); };
+      s.querySelectorAll('[data-why]').forEach(b => b.addEventListener('click', () => {
+        const w = b.dataset.why; ta.value = w === 'অন্য কারণ' ? '' : w; if (w === 'অন্য কারণ') ta.focus(); upd_();
+      }));
+      if (ta) ta.addEventListener('input', upd_);
+      onOpen?.(s, upd_);
+      go_.addEventListener('click', async () => {
+        go_.disabled = true;
+        if (await run(reason())) close(); else upd_();
+      });
+      upd_();
+    });
+  }
 
   SCREENS['t.att'] = { title: 'উপস্থিতি গ্রহণ', sub: () => A.session === 'exam' ? 'পরীক্ষা' + (A.examTitle.trim() ? ': ' + A.examTitle.trim() : '') + (A.examScope === 'all' ? ' · সব স্লটে' : A.examScope === 'slot' ? ' · নির্দিষ্ট স্লটে' : '') : A.session === 'class' ? 'নিয়মিত ক্লাস' : 'আজ ক্লাস না পরীক্ষা, আগে বেছে নিন', render: async (el) => {
     const today = dhakaToday();
-    if (A.day !== today) Object.assign(A, { day: today, session: null, examTitle: '', examScope: null, slot: 1, group: null, present: {}, ratings: {}, marked: false, key: '' });
-    let list = null, loadFailed = false, savedRatings = null, contacts = null, routine = [], saved = '';
+    if (A.day !== today) { if (PEND) commitPend(); Object.assign(A, { day: today, session: null, examTitle: '', examScope: null, slot: 1, group: null, q: '', bk: {}, marked: false, key: '', error: null }); }
+    let list = null, loadFailed = false, contacts = null, routine = [];
     T.contacts().then(c => { contacts = c; }).catch(() => { contacts = {}; });
     const subNow = () => setSub(SCREENS['t.att'].sub());
-    // present/ratings belong to one (shift, slot): a new period starts from what the server has.
     const keyNow = () => A.shift + '|' + A.slot;
+    const sessionNow = () => A.session || 'class';
 
     async function load() {
       try {
@@ -193,52 +341,165 @@
         await loadPeriod();
       } catch { loadFailed = true; list = []; }
     }
+    // What the server already has for this (shift, slot): those rows are locked.
     async function loadPeriod() {
-      if (A.key !== keyNow()) { A.present = {}; A.ratings = {}; A.key = keyNow(); }
-      savedRatings = null;
+      A.key = keyNow();
+      const b = bucket();
       const ids = (list || []).map(s => s.id);
       if (!ids.length) return;
       const [att, rts] = await Promise.all([
-        sel('period_attendance', `select=student_id,present&day=eq.${today}&shift=eq.${A.shift}&slot=eq.${A.slot}&student_id=${inList(ids)}`).catch(() => []),
-        A.slot ? sel('class_ratings', `select=student_id,behavior,homework,performance&day=eq.${today}&shift=eq.${A.shift}&slot=eq.${A.slot}&student_id=${inList(ids)}`).catch(() => null) : Promise.resolve([]),
+        sel('period_attendance', `select=student_id,present,session,exam_title&day=eq.${today}&shift=eq.${A.shift}&slot=eq.${A.slot}&student_id=${inList(ids)}`).catch(() => []),
+        A.slot ? sel('class_ratings', `select=student_id,behavior,homework,performance&day=eq.${today}&shift=eq.${A.shift}&slot=eq.${A.slot}&student_id=${inList(ids)}`).catch(() => null) : Promise.resolve({}),
       ]);
-      att.forEach(a => { if (!(a.student_id in A.present)) A.present[a.student_id] = !!a.present; });
-      savedRatings = rts;
-      (rts || []).forEach(r => { if (!A.ratings[r.student_id]) A.ratings[r.student_id] = { behavior: +r.behavior, homework: +r.homework, performance: +r.performance }; });
+      att.forEach(a => { b.saved[a.student_id] = { present: !!a.present, session: a.session || 'class', exam_title: a.exam_title || null }; delete b.local[a.student_id]; });
+      if (rts === null) b.savedR = null;
+      else if (Array.isArray(rts)) { b.savedR = {}; rts.forEach(r => { b.savedR[r.student_id] = { behavior: +r.behavior, homework: +r.homework, performance: +r.performance }; }); }
+      else b.savedR = {};
+      if (att.length) A.marked = true;
     }
-    function saveRating(id, r) {
-      A.ratings[id] = r;
-      const row = ratingRow(id, today, A.shift, A.slot, r);
-      serial(() => writeOrQueue('POST', '/rest/v1/class_ratings?on_conflict=student_id,day,shift,slot', [row], 'return=minimal,resolution=merge-duplicates')
-        .catch(() => { A.error = 'রেটিং সংরক্ষণ হয়নি। আবার চাপুন।'; draw(); }));
+    const statusOf = (b, id) => id in b.local ? b.local[id] : b.saved[id]?.present;
+    const wantRating = () => sessionNow() === 'class' && A.slot >= 1;
+    function ensureLr(b) {
+      Object.keys(b.local).forEach(id => {
+        if (b.local[id] && wantRating() && b.savedR !== null && !b.lr[id]) b.lr[id] = b.savedR[id] ? { ...b.savedR[id], touched: true } : { ...RATING_DEFAULT };
+      });
     }
-    function mark(id, value) {
-      A.present[id] = value; A.marked = true;
-      const session = A.session || 'class', sh = A.shift, sl = A.slot;
-      if (value && session === 'class' && savedRatings !== null && !A.ratings[id]) saveRating(id, { ...RATING_DEFAULT });
-      if (!value && A.ratings[id]) {
-        delete A.ratings[id];
-        serial(() => writeOrQueue('DELETE', `/rest/v1/class_ratings?student_id=eq.${id}&day=eq.${today}&shift=eq.${sh}&slot=eq.${sl}`, null).catch(() => {}));
-      }
-      const row = { coaching_id: S.me.coaching_id, student_id: id, day: today, shift: sh, slot: Math.min(3, Math.max(0, sl)), present: value,
-        session, exam_title: session === 'exam' ? (A.examTitle.trim() || null) : null, teacher_id: S.uid, marked_at: new Date().toISOString() };
-      serial(() => writeOrQueue('POST', '/rest/v1/period_attendance?on_conflict=student_id,day,shift,slot', row, 'return=minimal,resolution=merge-duplicates')
-        .catch(() => { A.error = 'হাজিরা সংরক্ষণ হয়নি। আবার চাপুন।'; draw(); }));
+    function cycle(id) {
+      const b = bucket();
+      const cur_ = b.local[id];
+      if (cur_ === undefined) b.local[id] = true;
+      else if (cur_ === true) { b.local[id] = false; delete b.lr[id]; }
+      else { delete b.local[id]; }
+      A.error = null;
+    }
+    function save() {
+      const b = bucket(); ensureLr(b);
+      const ids = Object.keys(b.local);
+      if (!ids.length || PEND) return;
+      const session = sessionNow(), now = new Date().toISOString();
+      const rows = ids.map(id => ({ coaching_id: S.me.coaching_id, student_id: id, day: today, shift: A.shift, slot: Math.min(3, Math.max(0, A.slot)), present: b.local[id],
+        session, exam_title: session === 'exam' ? (A.examTitle.trim() || null) : null, teacher_id: S.uid, marked_at: now }));
+      const rrows = wantRating() && b.savedR !== null
+        ? ids.filter(id => b.local[id]).map(id => ratingRow(id, today, A.shift, A.slot, b.lr[id] || RATING_DEFAULT)) : [];
+      startSave({ rows, rrows, key: A.key });
+    }
+
+    // locked status: change with a reason
+    function changeStatus(st) {
+      const b = bucket(), sv = b.saved[st.id], to = !sv.present;
+      reasonSheet({
+        lead: `${esc(nameOf(st))}: ${sv.present ? 'উপস্থিত' : 'অনুপস্থিত'} থেকে ${to ? 'উপস্থিত' : 'অনুপস্থিত'}`,
+        run: async reason => {
+          const ok = await callRpc('change_attendance', { p_student: st.id, p_day: today, p_shift: A.shift, p_slot: Math.min(3, Math.max(0, A.slot)), p_present: to, p_session: sv.session || 'class', p_exam_title: sv.exam_title, p_reason: reason });
+          if (!ok) return false;
+          sv.present = to;
+          if (!to) { if (b.savedR) delete b.savedR[st.id]; }
+          else if (sv.session !== 'exam' && A.slot >= 1 && b.savedR && !b.savedR[st.id]) {
+            const d = RATING_DEFAULT;
+            if (await callRpc('change_rating', { p_student: st.id, p_day: today, p_shift: A.shift, p_slot: A.slot, p_behavior: d.behavior, p_homework: d.homework, p_performance: d.performance, p_reason: null })) b.savedR[st.id] = { ...d };
+          }
+          toast('বদলে দেওয়া হয়েছে'); draw(); return true;
+        },
+      });
+    }
+    // locked rating: change with a reason (or give the first rating, no reason needed)
+    function changeRating(st) {
+      const b = bucket(), old = b.savedR[st.id];
+      let d = old ? { ...old } : { ...RATING_DEFAULT };
+      reasonSheet({
+        needReason: !!old,
+        label: old ? 'বদলে দিন' : 'সংরক্ষণ',
+        lead: esc(nameOf(st)),
+        body: '<div class="rating"><div id="rc"></div></div>',
+        ok: () => !old || d.behavior !== old.behavior || d.homework !== old.homework || d.performance !== old.performance,
+        onOpen: (s, upd_) => {
+          const rc = s.querySelector('#rc');
+          const paint = () => { rc.innerHTML = `<div class="rhead"><span>রেটিং</span><b>${num(total(d))}/১০</b></div>${ratingChoices(d)}`; rc.querySelectorAll('[data-k]').forEach(x => x.addEventListener('click', () => { d = { ...d, [x.dataset.k]: +x.dataset.v }; paint(); upd_(); })); };
+          paint();
+        },
+        run: async reason => {
+          const ok = await callRpc('change_rating', { p_student: st.id, p_day: today, p_shift: A.shift, p_slot: A.slot, p_behavior: d.behavior, p_homework: d.homework, p_performance: d.performance, p_reason: old ? reason : null });
+          if (!ok) return false;
+          b.savedR[st.id] = { behavior: d.behavior, homework: d.homework, performance: d.performance };
+          toast('বদলে দেওয়া হয়েছে'); draw(); return true;
+        },
+      });
+    }
+
+    function banner() {
+      const online = navigator.onLine, pending = outbox.mine().length;
+      if (online && !pending && !A.error) return '';
+      return `<div class="card ${online ? 'sun' : 'sun'}"><div>${!online ? `নেট নেই। সংরক্ষণ করলে ফোনে জমা থাকবে${pending ? ` (${bn(pending)}টি জমা আছে)` : ''}, নেট এলে নিজে থেকেই যাবে।`
+        : pending ? `জমা থাকা ${bn(pending)}টি তথ্য পাঠানো হচ্ছে…` : ''}</div>${A.error ? `<div class="err">${esc(A.error)}</div>` : ''}</div>`;
+    }
+    function rowsHtml() {
+      const b = bucket(); ensureLr(b);
+      const frozen = !!PEND && PEND.key === A.key;
+      const groups = T.periodGroups(routine, list || [], A.shift, A.slot);
+      const group = groups.find(g => g.key === A.group) || (groups.length === 1 ? groups[0] : null);
+      const inGroup = list.filter(s => !group?.levels || group.levels.includes(s.class_level));
+      const inClass = inGroup.filter(s => A.cls == null || s.class_level === A.cls);
+      const shown = Search.filter(inClass, A.q, stuFields);
+      const marked = inClass.filter(s => statusOf(b, s.id) !== undefined).length, left = inClass.length - marked;
+      const free = inClass.filter(s => !(s.id in b.saved));
+      const canSave = !frozen && Object.keys(b.local).length > 0 && !(A.session === 'exam' && !A.examScope);
+      let h = `<div class="card"><h3>${left ? `${bn(marked)} জন চিহ্নিত, ${bn(left)} জন বাকি` : `সবাই চিহ্নিত, ${bn(marked)} জন`}</h3><div style="margin-top:8px">${bar(inClass.length ? marked / inClass.length : 0)}</div></div>`;
+      h += shown.map(st => {
+        const p = statusOf(b, st.id), locked = st.id in b.saved && !(st.id in b.local);
+        let x = `<div class="stack"><div class="att ${p === true ? 'p' : p === false ? 'a' : ''} ${locked ? 'lock' : ''}" data-row="${esc(st.id)}">${avatar(nameOf(st))}<div class="nm"><h3>${esc(nameOf(st))}</h3><div class="mute small">রোল ${esc(bn(st.roll || '—'))} · ক্লাস ${bn(st.class_level)}${locked ? ' · সংরক্ষিত' : ''}</div></div><span class="stt">${p === true ? 'উপস্থিত' : p === false ? 'অনুপস্থিত' : 'বাকি'}</span><span class="mark">${p === true ? '✓' : p === false ? '✕' : ''}</span></div>`;
+        if (p === true && wantRating()) {
+          if (locked && b.savedR !== null) x += b.savedR[st.id]
+            ? `<div class="rating locked" data-rate="${esc(st.id)}"><div class="rhead"><span>আজকের রেটিং</span><b>${num(total(b.savedR[st.id]))}/১০</b></div><div class="mute small">${ratingText(b.savedR[st.id])}</div></div>`
+            : `<div class="rating locked" data-rate="${esc(st.id)}"><div class="rhead"><span>রেটিং দেওয়া হয়নি</span><b>দিন</b></div></div>`;
+          else if (!locked && b.lr[st.id]) x += `<div class="rating" data-id="${esc(st.id)}"><div class="rhead"><span>আজকের রেটিং</span><b>${num(total(b.lr[st.id]))}/১০${b.lr[st.id].touched ? '' : ' <span class="pill">ডিফল্ট ৮</span>'}</b></div>${ratingChoices(b.lr[st.id])}</div>`;
+        }
+        if (p === false) x += `<div class="absent">${contacts == null ? '<span class="mute small">অভিভাবকের নম্বর আনা হচ্ছে…</span>' : (contacts[st.id] || []).map(callRow).join('') || '<span class="mute small">অভিভাবকের নম্বর যোগ করা নেই</span>'}</div>`;
+        return x + '</div>';
+      }).join('') || empty('search', 'কাউকে পাওয়া যায়নি।');
+      h += `<div class="row2"><button class="btn" id="allP" ${frozen || !free.some(s => !(s.id in b.local)) ? 'disabled' : ''}>সবাই উপস্থিত</button>
+        ${free.some(s => !(s.id in b.local)) ? `<button class="btn coral" id="restA" ${frozen ? 'disabled' : ''}>বাকিদের অনুপস্থিত</button>` : ''}</div>
+        <div class="mute small">${A.session === 'class' ? 'উপস্থিত শিক্ষার্থীর নিচে রেটিং থাকে, শুরুতে ডিফল্ট ৮। সংরক্ষণের পর কিছু বদলাতে কারণ লিখতে হবে।' : 'পরীক্ষার দিনে শুধু উপস্থিতি যায়। সংরক্ষণের পর কিছু বদলাতে কারণ লিখতে হবে।'}</div>
+        <div class="savebar"><button class="btn" id="save" ${canSave ? '' : 'disabled'}>${frozen ? 'সংরক্ষণ হচ্ছে…' : 'সংরক্ষণ'}</button><div class="mute small">ভুল হলে ৫ সেকেন্ডের মধ্যে ফিরিয়ে নিন।</div></div>`;
+      el._free = free;
+      return h;
+    }
+    function bindRows() {
+      const b = bucket(), frozen = !!PEND && PEND.key === A.key;
+      const stOf = id => list.find(s => s.id === id);
+      el.querySelectorAll('[data-row]').forEach(r => r.addEventListener('click', () => {
+        if (frozen) return;
+        const id = r.dataset.row;
+        if (id in b.saved && !(id in b.local)) return changeStatus(stOf(id));
+        cycle(id); drawRows();
+      }));
+      el.querySelectorAll('.rating[data-id] [data-k]').forEach(x => x.addEventListener('click', () => {
+        if (frozen) return;
+        const id = x.closest('.rating').dataset.id;
+        b.lr[id] = { ...b.lr[id], [x.dataset.k]: +x.dataset.v, touched: true }; drawRows();
+      }));
+      el.querySelectorAll('[data-rate]').forEach(r => r.addEventListener('click', () => { if (!frozen) changeRating(stOf(r.dataset.rate)); }));
+      const all = el.querySelector('#allP'); if (all) all.addEventListener('click', () => { el._free.forEach(s => { if (!(s.id in b.local)) b.local[s.id] = true; }); A.error = null; drawRows(); });
+      const rest = el.querySelector('#restA'); if (rest) rest.addEventListener('click', () => { el._free.forEach(s => { if (!(s.id in b.local)) b.local[s.id] = false; }); A.error = null; drawRows(); });
+      const sv = el.querySelector('#save'); if (sv) sv.addEventListener('click', save);
+    }
+    function drawRows() {
+      const box = el.querySelector('#rows'); if (!box) return draw();
+      const y = window.scrollY;
+      box.innerHTML = rowsHtml();
+      window.scrollTo(0, y);
+      bindRows();
     }
 
     function draw() {
-      const online = navigator.onLine, pending = outbox.mine().length;
-      let h = `<div class="card ${online && !pending ? 'teal' : 'sun'}"><div>${!online ? `অফলাইন মোড: হাজিরা ফোনে জমা হচ্ছে${pending ? ` (${bn(pending)}টি)` : ''}। নেট এলে নিজে থেকেই চলে যাবে।`
-          : pending ? `অনলাইন: জমা থাকা ${bn(pending)}টি তথ্য পাঠানো হচ্ছে…` : 'অনলাইন: প্রতিটি চাপ সাথে সাথে সংরক্ষণ হচ্ছে, অভিভাবক বার্তা পাচ্ছেন।'}</div>
-          ${A.error ? `<div class="err">${A.error}</div>` : ''}</div>
-        <div class="card"><h3>আজ কী হচ্ছে?</h3><div class="seg" style="margin-top:8px">
-          <button data-session="class" class="${A.session === 'class' ? 'on' : ''}"><b>নিয়মিত ক্লাস</b><span>হাজিরা + ক্লাস স্কোর</span></button>
-          <button data-session="exam" class="${A.session === 'exam' ? 'on' : ''}"><b>পরীক্ষা</b><span>শুধু হাজিরা</span></button></div>
+      let h = banner() + `<div class="card"><h3>আজ কী হচ্ছে?</h3><div class="seg" style="margin-top:8px">
+          <button data-session="class" class="${A.session === 'class' ? 'on' : ''}"><b>নিয়মিত ক্লাস</b><span>উপস্থিতি + ক্লাস স্কোর</span></button>
+          <button data-session="exam" class="${A.session === 'exam' ? 'on' : ''}"><b>পরীক্ষা</b><span>শুধু উপস্থিতি</span></button></div>
           ${A.session === 'exam' ? `<h4 style="margin-top:10px">আজ পরীক্ষা কখন?</h4><div class="seg" style="margin-top:6px">
-            <button data-scope="all" class="${A.examScope === 'all' ? 'on' : ''}"><b>১ম, ২য়, ৩য় সব স্লটে</b><span>একবার হাজিরা</span></button>
+            <button data-scope="all" class="${A.examScope === 'all' ? 'on' : ''}"><b>১ম, ২য়, ৩য় সব স্লটে</b><span>একবার উপস্থিতি</span></button>
             <button data-scope="slot" class="${A.examScope === 'slot' ? 'on' : ''}"><b>শুধু আমার স্লটে</b><span>নির্দিষ্ট সময়ে</span></button></div>
             ${A.marked ? `<div style="margin-top:8px">পরীক্ষা: ${esc(A.examTitle || 'নাম দেওয়া হয়নি')}</div>` : `<input id="examTitle" maxlength="60" placeholder="কোন পরীক্ষা (যেমন: মডেল টেস্ট · ইংরেজি ২য়)" value="${esc(A.examTitle)}" style="margin-top:8px">`}` : ''}
-          ${A.marked ? '<div class="mute small">হাজিরা শুরু হয়ে গেছে, তাই আজকের ধরন আর বদলানো যাবে না।</div>' : ''}</div>`;
+          ${A.marked ? '<div class="mute small">উপস্থিতি সংরক্ষণ শুরু হয়ে গেছে, তাই আজকের ধরন আর বদলানো যাবে না।</div>' : ''}</div>`;
+      let showRows = false;
       if (A.session === 'exam' && !A.examScope) h += empty('note_edit', 'উপরে বেছে নিন: পরীক্ষা সব স্লটে, নাকি শুধু আপনার স্লটে।');
       else if (A.session) {
         h += T.shiftSeg(A.shift);
@@ -246,9 +507,9 @@
         if (A.slot !== 0) h += T.slotSeg(slots, A.slot);
         const groups = T.periodGroups(routine, list || [], A.shift, A.slot);
         const group = groups.find(g => g.key === A.group) || (groups.length === 1 ? groups[0] : null);
-        if (groups.length > 1) h += `<div class="card"><h4>কোন ক্লাসের হাজিরা নিচ্ছেন?</h4><div class="stack" style="margin-top:8px">${groups.map(g => `<button class="pickrow ${g.key === group?.key ? 'on' : ''}" data-group="${g.key}"><b>${esc(g.title)}</b>${g.sub ? `<span class="mute small">${esc(g.sub)}</span>` : ''}</button>`).join('')}</div></div>`;
+        if (groups.length > 1) h += `<div class="card"><h4>কোন ক্লাসের উপস্থিতি নিচ্ছেন?</h4><div class="stack" style="margin-top:8px">${groups.map(g => `<button class="pickrow ${g.key === group?.key ? 'on' : ''}" data-group="${g.key}"><b>${esc(g.title)}</b>${g.sub ? `<span class="mute small">${esc(g.sub)}</span>` : ''}</button>`).join('')}</div></div>`;
         if (list === null) h += skel(3);
-        else if (loadFailed) h += `${empty('wifi_off', 'শিক্ষার্থীর তালিকা আনতে ইন্টারনেট লাগে। একবার তালিকা খোলার পর নেট গেলেও হাজিরা নেওয়া যাবে।')}<button class="btn" id="reload">আবার চেষ্টা করুন</button>`;
+        else if (loadFailed) h += `${empty('wifi_off', 'শিক্ষার্থীর তালিকা আনতে ইন্টারনেট লাগে। একবার তালিকা খোলার পর নেট গেলেও উপস্থিতি নেওয়া যাবে।')}<button class="btn" id="reload">আবার চেষ্টা করুন</button>`;
         else if (!list.length) h += empty('school', 'এই শিফটে কোনো শিক্ষার্থী নেই।');
         else if (groups.length > 1 && !group) h += empty('users', 'উপরে থেকে আপনার ক্লাসটি বেছে নিন।');
         else {
@@ -257,31 +518,18 @@
           if (!inGroup.length) h += empty('school', 'এই ক্লাসে কোনো শিক্ষার্থী নেই।');
           else {
             if (classes.length > 1) h += chipRow([['', 'সব ক্লাস'], ...classes.map(c => [c, 'ক্লাস ' + bn(c)])], A.cls ?? '');
-            const shown = inGroup.filter(s => A.cls == null || s.class_level === A.cls);
-            const presentN = shown.filter(s => A.present[s.id] === true).length;
-            const unmarked = shown.filter(s => !(s.id in A.present));
-            h += `<div class="card"><h3>উপস্থিত: ${bn(presentN)} / ${bn(shown.length)}</h3><div style="margin:8px 0">${bar(shown.length ? presentN / shown.length : 0)}</div>
-              ${unmarked.length ? `<div class="mute small">${bn(unmarked.length)} জনের হাজিরা এখনো দেওয়া হয়নি</div>` : ''}</div>`;
-            h += shown.map(st => {
-              const p = A.present[st.id];
-              let x = `<div class="stack"><div class="att ${p === true ? 'p' : p === false ? 'a' : ''}" data-toggle="${st.id}">${avatar(nameOf(st))}<div class="nm"><h3>${esc(nameOf(st))}</h3><div class="mute small">রোল ${esc(bn(st.roll || '—'))} · ক্লাস ${bn(st.class_level)}</div></div><span class="mark">${p === true ? '✓' : p === false ? '✕' : ''}</span></div>`;
-              if (p === true && A.session === 'class' && A.ratings[st.id]) x += `<div class="rating" data-id="${st.id}"><div class="rhead"><span>আজকের রেটিং</span><b>${num(total(A.ratings[st.id]))}/১০</b></div>${ratingChoices(A.ratings[st.id])}</div>`;
-              if (p === false) x += `<div class="absent">${contacts == null ? '<span class="mute small">অভিভাবকের নম্বর আনা হচ্ছে…</span>' : (contacts[st.id] || []).map(callRow).join('') || '<span class="mute small">অভিভাবকের নম্বর যোগ করা নেই</span>'}</div>`;
-              return x + '</div>';
-            }).join('');
-            h += `<button class="btn" id="allP">সবাইকে উপস্থিত চিহ্নিত করুন</button>
-              ${unmarked.length ? `<button class="btn coral" id="restA">বাকি ${bn(unmarked.length)} জনকে অনুপস্থিত হিসেবে সংরক্ষণ করুন</button>` : ''}
-              ${saved ? `<div class="mute small">${saved}</div>` : ''}
-              <div class="mute small">${A.session === 'class' ? 'উপস্থিত শিক্ষার্থীর নিচেই রেটিং দিন (শুরুতে ৮/১০ বসানো থাকে)। অভিভাবক হাজিরার সাথে আজকের স্কোরও পান।' : 'পরীক্ষার দিনে শুধু হাজিরা যায়; কোনো ক্লাস স্কোর পাঠানো হয় না।'}</div>`;
-            el._shown = shown; el._unmarked = unmarked;
+            h += `<input id="aq" maxlength="40" placeholder="নাম, রোল বা আইডি দিয়ে খুঁজুন" value="${esc(A.q)}" autocomplete="off"><div id="rows" class="stack"></div>`;
+            showRows = true;
           }
         }
       }
       const y = window.scrollY;
       el.innerHTML = h;
       window.scrollTo(0, y);
+      if (showRows) { el.querySelector('#rows').innerHTML = rowsHtml(); bindRows(); }
       bind();
     }
+    A.redraw = () => { if (el.isConnected) { if (document.activeElement?.id === 'aq') drawRows(); else draw(); } };
     const reloadPeriod = async () => { A.group = null; A.cls = null; draw(); try { await loadPeriod(); } catch { /* keep what we have */ } draw(); };
     function bind() {
       el.querySelectorAll('[data-session]').forEach(b => b.onclick = async () => {
@@ -307,11 +555,8 @@
       el.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { const n = +b.dataset.slot; if (n !== A.slot) { A.slot = n; reloadPeriod(); } });
       el.querySelectorAll('[data-group]').forEach(b => b.onclick = () => { if (b.dataset.group !== A.group) { A.group = b.dataset.group; A.cls = null; draw(); } });
       el.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => { A.cls = b.dataset.chip === '' ? null : +b.dataset.chip; draw(); });
-      el.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => { const id = b.dataset.toggle; mark(id, A.present[id] !== true); draw(); });
-      el.querySelectorAll('.rating [data-k]').forEach(b => b.onclick = () => { const id = b.closest('.rating').dataset.id; saveRating(id, { ...A.ratings[id], [b.dataset.k]: +b.dataset.v }); draw(); });
       const r = el.querySelector('#reload'); if (r) r.onclick = async () => { list = null; loadFailed = false; draw(); await load(); draw(); };
-      const all = el.querySelector('#allP'); if (all) all.onclick = () => { el._shown.forEach(s => mark(s.id, true)); draw(); };
-      const rest = el.querySelector('#restA'); if (rest) rest.onclick = () => { el._unmarked.forEach(s => mark(s.id, false)); saved = 'অনুপস্থিতদের অভিভাবকও বার্তা পাবেন।'; draw(); };
+      const qi = el.querySelector('#aq'); if (qi) qi.addEventListener('input', () => { A.q = qi.value.slice(0, 40); drawRows(); });
     }
     if (A.session && !(A.session === 'exam' && !A.examScope)) await load();
     draw();
@@ -319,7 +564,7 @@
     const tick = setInterval(() => {
       if (cur().r !== 't.att') return clearInterval(tick);
       const now = `${navigator.onLine}|${outbox.mine().length}|${contacts != null}`;
-      if (now !== last) { last = now; draw(); }
+      if (now !== last) { last = now; A.redraw(); }
     }, 2000);
   } };
 

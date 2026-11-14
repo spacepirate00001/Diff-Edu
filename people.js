@@ -43,7 +43,7 @@
       if (P.tab === 'student') {
         const classes = [...new Set(list.map(s => s.class_level))].sort((a, b) => a - b);
         h += chipRow([['', 'সব'], ...classes.map(c => [c, 'ক্লাস ' + bn(c)])], P.cls ?? '', 'data-cls');
-        const shown = list.filter(s => (P.cls == null || s.class_level === P.cls) && hit(s.name, s.roll, s.login, s.phone));
+        const shown = list.filter(s => (P.cls == null || s.class_level === P.cls) && (hit(s.phone) || (window.Search ? Search.score(Search.prep(s.name, s.login, s.roll), P.q) >= 0 : hit(s.name, s.roll, s.login))));
         h += shown.map(s => `<div class="card tap" data-go="a.editstudent:${s.id}" style="display:flex;gap:10px;align-items:center">${avatar(s.name)}<div style="flex:1"><h3>${esc(s.name)}</h3>
           <div class="mute small">ক্লাস ${bn(s.class_level)}${s.roll ? ' · রোল ' + esc(bn(s.roll)) : ''}${s.shifts.length ? ' · ' + shiftsBn(s.shifts) : ''}</div></div>${!s.active ? pill('বন্ধ', 'coral') : s.shifts.length > 1 ? pill(bn(s.shifts.length) + ' ব্যাচ', 'teal') : ''}</div>`).join('') || empty('search', 'কাউকে পাওয়া যায়নি।');
       } else {
@@ -108,7 +108,7 @@
     const draw = () => {
       const q = ascii(f.q).trim().toLowerCase();
       const linked = studs.filter(s => f.kids.includes(s.id));
-      const found = q ? studs.filter(s => !f.kids.includes(s.id) && ascii(`${s.name} ${s.roll} ${s.login}`).toLowerCase().includes(q)).slice(0, 20) : [];
+      const found = q ? (window.Search ? Search.filter(studs.filter(s => !f.kids.includes(s.id)), f.q, s => ({ name: s.name, login: s.login, roll: s.roll })) : studs.filter(s => !f.kids.includes(s.id) && ascii(`${s.name} ${s.roll} ${s.login}`).toLowerCase().includes(q))).slice(0, 20) : [];
       el.innerHTML = `<div class="card"><label>নাম</label><input id="pn" maxlength="100" value="${esc(f.name)}">
         <label>${guardian ? 'ফোন নম্বর' : 'ফোন নম্বর (ঐচ্ছিক)'}</label><input id="pp" inputmode="tel" maxlength="14" value="${esc(f.phone)}"></div>
         ${guardian ? `${section(`সন্তান (${bn(f.kids.length)} জন)`)}<input id="pk" maxlength="40" placeholder="শিক্ষার্থী খুঁজুন" value="${esc(f.q)}">
