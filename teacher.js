@@ -52,7 +52,6 @@
     return m;
   });
   const telHref = T.telHref = p => 'tel:' + ascii(p).replace(/[^\d+]/g, '');
-  const callRow = g => `<div class="call"><span>অনুপস্থিত · ${esc(g.relation ? g.relation + ' ' : '')}${esc(bn(g.phone))}</span><a class="pill coral" href="${telHref(g.phone)}">অভিভাবককে কল</a></div>`;
   let chain = Promise.resolve();
   const serial = T.serial = job => (chain = chain.then(job, job));
 
@@ -162,20 +161,14 @@
     try { states = await T.todayStates(shift, list.map(s => s.id)); } catch { /* keep null */ }
     let cls = null, q = '', byRoll = false;
     const rank = s => states?.[s.id] === 'absent' ? 0 : states?.[s.id] === 'present' ? 2 : 1;
+    // Always opens the sheet (callsheet.js), even with no guardian: the sheet then offers "নম্বর যোগ করতে জানান".
     const callBtn = st => {
       const gs = contacts[st.id] || [];
-      if (!gs.length) return '<span class="nonum"><span class="callb off">' + I('phone') + '</span><small>নম্বর নেই</small></span>';
-      if (gs.length === 1) return `<a class="callb" href="${esc(telHref(gs[0].phone))}" aria-label="কল করুন">${I('phone')}</a>`;
-      return `<button class="callb" data-call="${esc(st.id)}" aria-label="কল করুন">${I('phone')}</button>`;
+      const btn = `<button class="callb${gs.length ? '' : ' off'}" data-call="${esc(st.id)}" aria-label="কল করুন">${I('phone')}</button>`;
+      return gs.length ? btn : `<span class="nonum">${btn}<small>নম্বর নেই</small></span>`;
     };
     const route = id => isAdmin() ? 'a.editstudent' : 't.reqchange';
-    function callSheet(st) {
-      const gs = contacts[st.id] || [];
-      sheet(`<h2>${esc(nameOf(st))}</h2><div class="stack">${gs.map((g, i) => `<div class="card"><div class="call"><b>${esc(g.relation || 'অভিভাবক')} · ${esc(bn(g.phone))}</b><a class="callb" href="${esc(telHref(g.phone))}" aria-label="কল করুন">${I('phone')}</a></div>
-        ${g.name ? `<div class="mute small">${esc(g.name)}</div>` : ''}<button class="link" data-report="${i}">নম্বর ভুল? জানান</button></div>`).join('')}</div><button class="link" data-close>বন্ধ করুন</button>`, (s, close) => {
-        s.querySelectorAll('[data-report]').forEach(b => b.addEventListener('click', () => { const g = gs[+b.dataset.report]; close(); reportPhone(st.id, g.id, g.phone); }));
-      });
-    }
+
     function drawRows() {
       const base = list.filter(s => cls == null || s.class_level === cls);
       const cnt = k => base.filter(s => states?.[s.id] === k).length;
@@ -188,8 +181,7 @@
         if (e.target.closest('.callb')) return;
         go(route(), r.dataset.st);
       }));
-      el.querySelectorAll('.srow a.callb').forEach(a => a.addEventListener('click', e => e.stopPropagation()));
-      el.querySelectorAll('button[data-call]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); callSheet(list.find(s => s.id === b.dataset.call)); }));
+      el.querySelectorAll('button[data-call]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); const s = list.find(x => x.id === b.dataset.call); guardianCallSheet(s, contacts[s.id] || []); }));
       const o = el.querySelector('#ord'); if (o) o.addEventListener('click', () => { byRoll = !byRoll; drawRows(); });
     }
     function draw() {
@@ -202,25 +194,6 @@
     }
     draw();
   } };
-  function reportPhone(studentId, guardianId, oldPhone) {
-    sheet(`<h2>ভুল নম্বর জানান</h2><div class="mute">${esc(bn(oldPhone))} — এই নম্বরে সমস্যা কী?</div>
-      <div class="seg"><button data-owner="wrong" class="on"><b>অন্য কারো নম্বর</b></button><button data-owner="off"><b>বন্ধ/চলে না</b></button></div>
-      <label>সঠিক নম্বর (জানা থাকলে)</label><input id="np" inputmode="tel" maxlength="14" placeholder="01XXXXXXXXX">
-      <label>মন্তব্য</label><input id="nn" maxlength="200">
-      <button class="btn" id="rs">অ্যাডমিনকে পাঠান</button><button class="link" data-close>বাতিল</button>`, (s, close) => {
-      let owner = 'wrong';
-      s.querySelectorAll('[data-owner]').forEach(b => b.onclick = () => { owner = b.dataset.owner; s.querySelectorAll('[data-owner]').forEach(x => x.classList.toggle('on', x === b)); });
-      s.querySelector('#rs').onclick = async () => {
-        const np = ascii(s.querySelector('#np').value).replace(/\D/g, '');
-        if (np && !/^01\d{9}$/.test(np)) return toast('সঠিক নম্বর দিন (০১ দিয়ে শুরু, ১১ সংখ্যা)');
-        try {
-          await ins('phone_change_requests', { coaching_id: S.me.coaching_id, student_id: studentId, guardian_id: guardianId, old_phone: oldPhone, new_phone: np || null, owner, note: s.querySelector('#nn').value.trim(), reported_by: S.uid }, 'select=id');
-          toast('অ্যাডমিনকে জানানো হয়েছে'); close();
-        } catch (e) { if (/23505|duplicate/.test(e.body || '')) { toast('আগেই জানানো হয়েছে'); close(); } else toast('পাঠানো যায়নি'); }
-      };
-    });
-  }
-
   // ---------- take attendance (TakeAttendanceScreen, N6) ----------
   // One row per student per (day, shift, period) in period_attendance; slot 0 = exam through the whole shift.
   // A trigger rolls it up into the daily attendance row the guardian sees (periods.sql, exam-slot.sql).
@@ -506,7 +479,7 @@
             : `<div class="rating locked" data-rate="${esc(st.id)}"><div class="rhead"><span>রেটিং দেওয়া হয়নি</span><b>দিন</b></div></div>`;
           else if (!locked && b.lr[st.id]) x += `<div class="rating" data-id="${esc(st.id)}"><div class="rhead"><span>আজকের রেটিং</span><b>${num(total(b.lr[st.id]))}/১০${b.lr[st.id].touched ? '' : ' <span class="pill">ডিফল্ট ৮</span>'}</b></div>${ratingChoices(b.lr[st.id])}</div>`;
         }
-        if (p === false) x += `<div class="absent">${contacts == null ? '<span class="mute small">অভিভাবকের নম্বর আনা হচ্ছে…</span>' : (contacts[st.id] || []).map(callRow).join('') || '<span class="mute small">অভিভাবকের নম্বর যোগ করা নেই</span>'}</div>`;
+        if (p === false) x += `<div class="absent">${contacts == null ? '<span class="mute small">অভিভাবকের নম্বর আনা হচ্ছে…</span>' : `<button class="pill coral gcs-open" data-gcall="${esc(st.id)}">অভিভাবককে কল</button>`}</div>`;
         return x + '</div>';
       }).join('') || empty('search', 'কাউকে পাওয়া যায়নি।');
       h += `<div class="row2"><button class="btn" id="allP" ${frozen || !free.some(s => !(s.id in b.local)) ? 'disabled' : ''}>সবাই উপস্থিত</button>
@@ -519,6 +492,7 @@
     function bindRows() {
       const b = bucket(), frozen = !!PEND && PEND.key === A.key;
       const stOf = id => list.find(s => s.id === id);
+      el.querySelectorAll('[data-gcall]').forEach(x => x.addEventListener('click', e => { e.stopPropagation(); const s = stOf(x.dataset.gcall); if (s) guardianCallSheet(s, contacts?.[s.id] || []); }));
       el.querySelectorAll('[data-row]').forEach(r => r.addEventListener('click', () => {
         if (frozen) return;
         const id = r.dataset.row;
