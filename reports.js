@@ -142,7 +142,7 @@
     const cards = buildCards(RP.kind, from, to, d, prev);
     const gaps = d.exams.map(e => [e.subject || e.exam.title, d.studs.filter(s => !(s.id in e.marks)).length]).filter(g => g[1] > 0);
     h += `<div class="card ${gaps.length || !d.exams.length ? 'sun' : 'teal'}">${!d.exams.length ? `এই সময়ে ক্লাস ${bn(cls)} এর কোনো পরীক্ষা পাওয়া যায়নি। কার্ড শুধু রেটিং দিয়ে হবে। পরীক্ষা যোগ করতে: নম্বর ইনপুট।`
-      : `<div>পরীক্ষা ${bn(d.exams.length)} টি: ${esc(d.exams.map(e => e.subject || e.exam.title).join(', '))}</div>${gaps.length ? gaps.map(([s, n]) => `<div>• ${esc(s)}: ${bn(n)} জনের নম্বর এখনো দেওয়া হয়নি</div>`).join('') : '<div>সব নম্বর দেওয়া হয়েছে, কার্ড তৈরি।</div>'}`}</div>`;
+      : `<div>পরীক্ষা ${bn(d.exams.length)} টি: ${esc(d.exams.map(e => e.subject || e.exam.title).join(', '))}</div>${gaps.length ? gaps.map(([s, n]) => `<div>• ${esc(s)}: ${bn(n)} জনের নম্বর এখনো দেওয়া হয়নি</div>`).join('') : '<div>সব নম্বর দেওয়া আছে, কার্ড তৈরি।</div>'}`}</div>`;
     const canPub = cards.some(c => c.score != null);
     h += `<button class="btn" id="pall" ${cards.length ? '' : 'disabled'}>সব কার্ড প্রিন্ট করুন (এক পাতায় ২টি)</button>
       ${isAdmin() ? `<button class="btn sun" id="pub" ${canPub ? '' : 'disabled'}>অভিভাবকদের অ্যাপে প্রকাশ করুন</button>` : ''}`;
@@ -166,7 +166,7 @@
       pb.disabled = true; pb.textContent = 'প্রকাশ হচ্ছে…';
       try {
         await raw('POST', '/rest/v1/report_cards?on_conflict=student_id,kind,period_from,period_to&select=id', rows, { prefer: 'return=representation,resolution=merge-duplicates' });
-        toast('প্রকাশ হয়েছে। অভিভাবকরা অ্যাপে কার্ড দেখে "দেখেছি" চাপবেন।'); render();
+        toast('প্রকাশ হয়ে গেছে। অভিভাবকরা কার্ড দেখে "দেখেছি" চাপবেন।'); render();
       } catch { toast('প্রকাশ করা যায়নি। আবার চেষ্টা করুন।'); pb.disabled = false; pb.textContent = 'অভিভাবকদের অ্যাপে প্রকাশ করুন'; }
     };
     el.querySelector('#oldb').onclick = async () => {
@@ -208,7 +208,7 @@
       if (sv) sv.onclick = async () => {
         try {
           await raw('POST', '/rest/v1/report_settings?on_conflict=coaching_id&select=coaching_id', { coaching_id: S.me.coaching_id, due_dow: st.due_dow, reminder_time: st.reminder_time, due_time: st.due_time, enabled: st.enabled }, { prefer: 'return=representation,resolution=merge-duplicates' });
-          toast('সংরক্ষিত হয়েছে।'); st.open = false; draw();
+          toast('সংরক্ষণ হয়ে গেছে।'); st.open = false; draw();
         } catch { toast('সংরক্ষণ হয়নি।'); }
       };
     };

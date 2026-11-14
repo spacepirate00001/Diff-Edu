@@ -125,7 +125,7 @@
     el.querySelector('#ggo').onclick = async () => {
       const q = el.querySelector('#gq').value.trim(), a = el.querySelector('#ga').value.trim(), f = +ascii(el.querySelector('#gf').value) || 10, b = el.querySelector('#ggo');
       if (!q || !a) return toast('প্রশ্ন ও উত্তর দিন');
-      b.disabled = true; b.textContent = 'দেখা হচ্ছে…';
+      b.disabled = true; b.textContent = 'একটু অপেক্ষা…';
       try { const r = await fn('ai', { mode: 'grade', question: q, answer: a, full_marks: f }); el.querySelector('#gout').innerHTML = `<div class="card teal"><div class="mute small">প্রস্তাবিত নম্বর</div><div class="big">${num(r.suggested_marks)}/${num(r.full_marks)}</div><div style="white-space:pre-wrap">${esc(r.feedback)}</div></div>`; }
       catch (e) { toast(AI_ERR(e)); }
       b.disabled = false; b.textContent = 'মূল্যায়ন করুন';

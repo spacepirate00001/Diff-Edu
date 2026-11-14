@@ -59,7 +59,7 @@
   function pendingCard() {
     const n = outbox.mine().length;
     if (!n) return '';
-    return `<div class="card sun"><h3>${bn(n)}টি তথ্য ফোনে জমা আছে</h3><div class="mute">ইন্টারনেট ছিল না, তাই হাজিরা/রেটিং/নম্বর ফোনে রাখা হয়েছে। নেট এলে নিজে থেকেই চলে যাবে।</div>
+    return `<div class="card sun"><h3>${bn(n)}টি তথ্য ফোনে জমা আছে</h3><div class="mute">নেট ছিল না, তাই উপস্থিতি, রেটিং আর নম্বর ফোনেই রাখা আছে। নেট এলে নিজে চলে যাবে।</div>
       <button class="btn" id="sync" style="margin-top:8px">এখন পাঠান</button></div>`;
   }
   function bindSync(el) {
@@ -67,7 +67,7 @@
     if (b) b.onclick = async () => {
       b.disabled = true; b.textContent = 'পাঠানো হচ্ছে…';
       const n = await flushOutbox(); const left = outbox.mine().length;
-      toast(left === 0 ? 'সব তথ্য পাঠানো হয়েছে ✓' : n ? `${bn(n)}টি পাঠানো হয়েছে, বাকি ${bn(left)}টি।` : 'এখনো ইন্টারনেট পাওয়া যাচ্ছে না।');
+      toast(left === 0 ? 'সব তথ্য পাঠানো হয়ে গেছে ✓' : n ? `${bn(n)}টি পাঠানো হয়েছে, বাকি ${bn(left)}টি।` : 'এখনো নেট পাওয়া যাচ্ছে না।');
       render();
     };
   }
@@ -79,7 +79,7 @@
   // ---------- home ----------
   SCREENS['t.home'] = { home: true, title: () => 'স্বাগতম, ' + S.me.full_name,
     sub: () => (isAdmin() ? 'অ্যাডমিন' : 'শিক্ষক') + ' · ' + todayBnLong() + (shiftNow() ? ` · এখন ${shiftBn(shiftNow())} শিফট` : ''), hdr: 'var(--teal-dark)',
-    trail: () => '<button class="pill white" data-logout>লগআউট</button>', render: async (el) => {
+    trail: () => avatarBtn() + '<button class="pill white" data-logout>লগআউট</button>', render: async (el) => {
     flushOutbox().catch(() => {});
     const admin = isAdmin(), today = dhakaToday(), now = shiftNow();
     // Same order as StaffHome.kt: notices, staff notes, offline, today per shift, work waiting, 4 big jobs, folding categories.
@@ -97,11 +97,12 @@
         sel('student_change_requests', `select=id&status=eq.pending${admin ? '' : '&requested_by=eq.' + S.uid}&limit=200`).then(r => r.length).catch(() => 0),
         admin ? sel('phone_change_requests', 'select=id&status=eq.pending&limit=200').then(r => r.length).catch(() => 0) : 0,
         admin ? sel('leave_requests', 'select=id&status=eq.pending&limit=200').then(r => r.length).catch(() => 0) : 0,
+        admin ? rpc('pending_profile_requests').then(n => +n || 0).catch(() => 0) : 0, // profile change requests (0 on error)
       ]),
     ]);
     const badge = n => n > 0 ? bn(n) : null;
     const manage = admin ? [['users', 'অ্যাকাউন্ট ব্যবস্থাপনা', 'a.users'], ['note_edit', 'প্রোফাইল সম্পাদনা', 'a.people'], ['calendar', 'ক্লাস রুটিন', 'a.routine'],
-      ['question', 'পরিবর্তনের অনুরোধ', 't.requests', badge(todo[0])], ['phone', 'নম্বর সংশোধন', 'a.phones', badge(todo[1])], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['money', 'শিক্ষকদের সম্মানী', 't.honorarium']] : [];
+      ['question', 'পরিবর্তনের অনুরোধ', 't.requests', badge(todo[0])], ['phone', 'নম্বর সংশোধন', 'a.phones', badge(todo[1])], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['money', 'শিক্ষকদের সম্মানী', 't.honorarium'], ['notebook', 'পরিবর্তনের ইতিহাস', 'a.history']] : [];
     const daily = [['attendance', 'উপস্থিতি গ্রহণ', 't.att'], ['star', 'ক্লাস রেটিং', 't.rate'], ['signal', 'শিক্ষার্থীদের সংকেত', 't.signals'], ['question', 'প্রশ্ন বক্স', 't.doubts'], ['mic', 'ভয়েস ও মুখস্থ পড়া', 't.voice'], ['camera', 'CCTV যাচাই', 't.gate']];
     const exams = [['numbers', 'নম্বর এন্ট্রি', 't.marks'], ['document', 'রিপোর্ট কার্ড ও টপার', 'a.reports'], ['calendar', 'পরীক্ষার রুটিন', 't.routine'], ['calendar', 'পরীক্ষার পরিকল্পনা', 't.exams'],
       ['archive', 'প্রশ্ন ব্যাংক', 't.qbank'], ['ai_spark', 'AI প্রশ্নপত্র তৈরি', 't.aipaper'], ['note_edit', 'AI খাতা মূল্যায়ন', 't.grading'], ['seat', 'সিট প্ল্যান', 't.seat']];
@@ -114,7 +115,7 @@
       <div class="card"><div style="display:flex;align-items:center"><h3 style="flex:1">আজকের উপস্থিতি</h3><b class="tap" id="hreload" style="color:var(--teal-dark);font-size:14px">হালনাগাদ</b></div>
         <div class="mute small">শিফটে চাপলে তালিকা ও অভিভাবকের নম্বর</div>
         <div class="shifts3">${SHIFTS.map((s, i) => { const live = s.id === now, v = perShift[i]; return `<button class="${live ? 'live' : ''}" data-go="t.shift:${s.id}"><span class="lic">${I(s.icon)}</span><small>${s.bn}${live ? ' · এখন' : ''}</small><b>${v ? `${bn(v[1])}/${bn(v[0])}` : '…'}</b><small>উপস্থিত</small></button>`; }).join('')}</div></div>
-      ${admin ? todoCard([['শিক্ষকের পরিবর্তনের অনুরোধ', todo[0], 't.requests'], ['অভিভাবকের নম্বর সংশোধন', todo[1], 'a.phones'], ['ছুটির আবেদন', todo[2], 't.leave']], false) : ''}
+      ${admin ? todoCard([['শিক্ষকের পরিবর্তনের অনুরোধ', todo[0], 't.requests'], ['অভিভাবকের নম্বর সংশোধন', todo[1], 'a.phones'], ['ছুটির আবেদন', todo[2], 't.leave'], ['পরিবর্তনের অনুরোধ', todo[3], link('a.requests', 'পরিবর্তনের অনুরোধ')]], false) : ''}
       <div class="grid2">${action('attendance', 'উপস্থিতি', 'ক্লাস বা পরীক্ষা', 't.att')}${action('star', 'ক্লাস রেটিং', 'আজকের স্কোর', 't.rate')}${action('numbers', 'নম্বর এন্ট্রি', 'মডেল টেস্ট', 't.marks')}${action('megaphone', 'নোটিশ', 'সবাইকে জানান', 't.notice')}</div>
       ${dashSection(scr, 'manage', 'users', 'ব্যবস্থাপনা', fix(manage), true)}
       ${dashSection(scr, 'daily', 'attendance', 'প্রতিদিনের ক্লাস', fix(daily), !admin)}
@@ -122,7 +123,7 @@
       ${dashSection(scr, 'progress', 'chart', 'শিক্ষার্থী ও অগ্রগতি', fix(progress), false)}
       ${dashSection(scr, 'talk', 'chat', 'যোগাযোগ ও নোটিশ', fix(talk), false)}
       ${dashSection(scr, 'office', 'palm', admin ? 'আমার অফিস' : 'অফিস', fix(office), false)}
-      <div class="mute small" style="padding:0 4px">কোনো বিভাগে চাপ দিলে খোলে বা বন্ধ হয়; ফোন মনে রাখে কোনগুলো খোলা।</div>
+      <div class="mute small" style="padding:0 4px">কোনো বিভাগে চাপ দিলে খুলবে বা বন্ধ হবে। ফোন মনে রাখে কোনগুলো খোলা ছিল।</div>
       ${apkBanner()}`;
     bindDash(el);
     el.querySelector('#hreload').onclick = () => render();
@@ -329,6 +330,24 @@
   SCREENS['t.att'] = { title: 'উপস্থিতি গ্রহণ', sub: () => A.session === 'exam' ? 'পরীক্ষা' + (A.examTitle.trim() ? ': ' + A.examTitle.trim() : '') + (A.examScope === 'all' ? ' · সব স্লটে' : A.examScope === 'slot' ? ' · নির্দিষ্ট স্লটে' : '') : A.session === 'class' ? 'নিয়মিত ক্লাস' : 'আজ ক্লাস না পরীক্ষা, আগে বেছে নিন', render: async (el) => {
     const today = dhakaToday();
     if (A.day !== today) { if (PEND) commitPend(); Object.assign(A, { day: today, session: null, examTitle: '', examScope: null, slot: 1, group: null, q: '', bk: {}, marked: false, key: '', error: null }); }
+    // Auto-prepare once per day (TakeAttendanceScreen LaunchedEffect(routine)): the running shift, and this teacher's period.
+    // Only while nothing is chosen yet; a later tap always wins.
+    if (A.auto !== today) {
+      A.auto = today; A.autoLine = null;
+      const routineNow = await T.periods();
+      if (!A.session) {
+        const minsNow = () => { const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()).split(':'); return +p[0] * 60 + +p[1]; };
+        const now = shiftNow(), pickShift = now || A.shift;
+        const mine = [...new Set(routineNow.filter(p => p.shift === pickShift && p.teacher_id === S.uid && +p.slot >= 1 && +p.slot <= 3).map(p => +p.slot))].sort((a, b) => a - b);
+        // Shift window: three 40-minute periods from the shift's start (assumed times, same as the APK).
+        const startH = ({ morning: 7, afternoon: 15, night: 19 })[pickShift];
+        const timeSlot = Math.min(3, Math.max(1, 1 + Math.floor((minsNow() - startH * 60) / 40)));
+        const pickSlot = !mine.length ? 1 : mine.length === 1 ? mine[0] : now === pickShift ? mine.reduce((best, n) => Math.abs(n - timeSlot) < Math.abs(best - timeSlot) ? n : best) : mine[0];
+        const changed = pickShift !== A.shift || pickSlot !== A.slot;
+        A.shift = pickShift; A.slot = pickSlot;
+        if (changed) A.autoLine = `এখন চলছে: ${shiftBn(pickShift)} শিফট, ${T.slotBn(pickSlot)} ক্লাস (বদলাতে নিচে চাপুন)`;
+      }
+    }
     let list = null, loadFailed = false, contacts = null, routine = [];
     T.contacts().then(c => { contacts = c; }).catch(() => { contacts = {}; });
     const subNow = () => setSub(SCREENS['t.att'].sub());
@@ -398,7 +417,7 @@
             const d = RATING_DEFAULT;
             if (await callRpc('change_rating', { p_student: st.id, p_day: today, p_shift: A.shift, p_slot: A.slot, p_behavior: d.behavior, p_homework: d.homework, p_performance: d.performance, p_reason: null })) b.savedR[st.id] = { ...d };
           }
-          toast('বদলে দেওয়া হয়েছে'); draw(); return true;
+          toast('বদলে গেছে'); draw(); return true;
         },
       });
     }
@@ -421,7 +440,7 @@
           const ok = await callRpc('change_rating', { p_student: st.id, p_day: today, p_shift: A.shift, p_slot: A.slot, p_behavior: d.behavior, p_homework: d.homework, p_performance: d.performance, p_reason: old ? reason : null });
           if (!ok) return false;
           b.savedR[st.id] = { behavior: d.behavior, homework: d.homework, performance: d.performance };
-          toast('বদলে দেওয়া হয়েছে'); draw(); return true;
+          toast('বদলে গেছে'); draw(); return true;
         },
       });
     }
@@ -500,6 +519,7 @@
             ${A.marked ? `<div style="margin-top:8px">পরীক্ষা: ${esc(A.examTitle || 'নাম দেওয়া হয়নি')}</div>` : `<input id="examTitle" maxlength="60" placeholder="কোন পরীক্ষা (যেমন: মডেল টেস্ট · ইংরেজি ২য়)" value="${esc(A.examTitle)}" style="margin-top:8px">`}` : ''}
           ${A.marked ? '<div class="mute small">উপস্থিতি সংরক্ষণ শুরু হয়ে গেছে, তাই আজকের ধরন আর বদলানো যাবে না।</div>' : ''}</div>`;
       let showRows = false;
+      if (A.autoLine && !A.marked && !Object.keys(bucket().local).length) h += `<div class="mute small" style="margin:0 4px 8px">${esc(A.autoLine)}</div>`;
       if (A.session === 'exam' && !A.examScope) h += empty('note_edit', 'উপরে বেছে নিন: পরীক্ষা সব স্লটে, নাকি শুধু আপনার স্লটে।');
       else if (A.session) {
         h += T.shiftSeg(A.shift);
@@ -583,11 +603,11 @@
       list.forEach(s => { if (!R.ratings[s.id]) R.ratings[s.id] = m[s.id] ? { behavior: +m[s.id].behavior, homework: +m[s.id].homework, performance: +m[s.id].performance } : { ...RATING_DEFAULT }; });
     }
     function draw() {
-      let h = T.shiftSeg(R.shift) + T.slotSeg(T.slotsOf(routine, R.shift), R.slot) + '<div class="card cream mute">সবার জন্য ৮ বসানো আছে (আচরণ ৩ + হোমওয়ার্ক ৩ + পারফরম্যান্স ২)। যাদের আলাদা, শুধু তাদের নামে চাপ দিয়ে বদলান, তারপর সংরক্ষণ করুন।</div>';
+      let h = T.shiftSeg(R.shift) + T.slotSeg(T.slotsOf(routine, R.shift), R.slot) + '<div class="card cream mute">সবার রেটিং আগে থেকে ৮ ধরা আছে (আচরণ ৩ + হোমওয়ার্ক ৩ + পারফরম্যান্স ২)। কারও আলাদা হলে শুধু তার নামে চাপ দিয়ে বদলান, তারপর সংরক্ষণ করুন।</div>';
       if (list === null || saved === null) h += skel(3);
       else if (!list.length) h += empty('school', 'এই ব্যাচে কোনো শিক্ষার্থী নেই।');
       else {
-        if (saved.length && !R.dirty) h += '<div>' + pill('আজকের রেটিং আগেই সংরক্ষিত হয়েছে, চাইলে বদলাতে পারেন', 'teal') + '</div>';
+        if (saved.length && !R.dirty) h += '<div>' + pill('আজকের রেটিং আগেই সংরক্ষণ করা আছে। চাইলে বদলাতে পারেন।', 'teal') + '</div>';
         h += list.map(st => {
           const r = R.ratings[st.id], t = total(r), open = R.open === st.id;
           return `<div class="card rrow ${open ? 'open' : ''}"><div class="rtop" data-open="${st.id}">${avatar(nameOf(st))}<div class="nm"><h3>${esc(nameOf(st))}</h3>
@@ -607,7 +627,7 @@
         const rows = list.map(s => ratingRow(s.id, today, R.shift, R.slot, R.ratings[s.id]));
         try {
           const sent = await serial(() => writeOrQueue('POST', '/rest/v1/class_ratings?on_conflict=student_id,day,shift,slot', rows, 'return=minimal,resolution=merge-duplicates'));
-          R.dirty = false; msg = sent ? 'রেটিং সংরক্ষিত হয়েছে। শিক্ষার্থী ও অভিভাবক নিজেরটা দেখতে পাবেন।' : 'ইন্টারনেট নেই, তাই ফোনে রাখা হয়েছে। নেট এলে নিজে থেকেই চলে যাবে।';
+          R.dirty = false; msg = sent ? 'রেটিং সংরক্ষণ হয়ে গেছে। শিক্ষার্থী আর অভিভাবক নিজেরটা দেখতে পাবেন।' : 'ইন্টারনেট নেই, তাই ফোনে রাখা হয়েছে। নেট এলে নিজে থেকেই চলে যাবে।';
         } catch { msg = 'সংরক্ষণ করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।'; }
         busy = false; draw();
       };
@@ -619,29 +639,41 @@
   // Notice board; the admin can archive a notice (hidden from families, restorable) and delete it for good
   // from the archive (VisitorScreens.NoticesScreen, notices-archive.sql).
   const NB = { archive: false, confirm: null, msg: null };
-  SCREENS.notices = { title: () => NB.archive ? 'নোটিশ আর্কাইভ' : 'সকল নোটিশ', sub: () => NB.archive ? 'সরিয়ে রাখা নোটিশ; চাইলে ফিরিয়ে আনুন' : '', render: async (el) => {
+  SCREENS.notices = { title: () => NB.archive ? 'নোটিশ আর্কাইভ' : 'নোটিশ বোর্ড', sub: () => NB.archive ? 'সরিয়ে রাখা নোটিশ; চাইলে ফিরিয়ে আনুন' : '', render: async (el) => {
     const admin = isAdmin();
     if (!admin) NB.archive = false;
-    const AUD = { all: 'সবাই', guardians: 'অভিভাবক', students: 'শিক্ষার্থী', teachers: 'শিক্ষক' };
-    const COLS = 'select=id,title,body,audience,class_level,created_at';
+    const COLS = 'select=id,title,body,audience,created_at,created_by';
     const ns = NB.archive ? await sel('notices', `${COLS}&archived_at=not.is.null&order=archived_at.desc&limit=100`)
       : await cached('notices', () => sel('notices', `${COLS}&archived_at=is.null&order=created_at.desc&limit=60`));
     const act = async (done, job) => {
-      try { await job(); NB.msg = done; } catch { NB.msg = 'করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।'; }
+      try { await job(); NB.msg = done; } catch { NB.msg = 'কাজটি করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।'; }
       NB.confirm = null; render();
     };
+    // The admin, and the teacher who posted it, can edit a live notice (not one in the archive).
+    const actions = n => {
+      const canEdit = !NB.archive && (admin || n.created_by === S.uid), b = [];
+      if (canEdit) b.push(`<button class="pill nb-edit" data-edit="${esc(n.id)}">বদলান</button>`);
+      if (admin && !NB.archive) b.push(`<button class="pill nb-arch" data-arch="${esc(n.id)}">আর্কাইভে রাখুন</button>`);
+      if (admin && NB.archive) {
+        b.push(`<button class="pill nb-restore" data-restore="${esc(n.id)}">ফিরিয়ে আনুন</button>`);
+        // Two taps for a permanent delete.
+        const armed = NB.confirm === n.id;
+        b.push(`<button class="pill ${armed ? 'nb-purge-armed' : 'nb-purge'}" data-purge="${esc(n.id)}">${armed ? 'নিশ্চিত, চিরতরে মুছুন' : 'চিরতরে মুছুন'}</button>`);
+      }
+      return b.join('');
+    };
     el.innerHTML = (admin ? `<div class="chips"><button class="chip-btn ${NB.archive ? '' : 'on'}" data-nb="0">বোর্ড</button><button class="chip-btn ${NB.archive ? 'on' : ''}" data-nb="1">আর্কাইভ</button></div>` : '')
-      + (NB.msg ? `<div class="mute">${esc(NB.msg)}</div>` : '')
-      + (ns.map(n => `<div class="card"><div class="mute small">${fmtDateY(n.created_at)} · ${AUD[n.audience] || ''}${n.class_level ? ' · ক্লাস ' + bn(n.class_level) : ''}</div><h3>${esc(n.title)}</h3><div style="white-space:pre-wrap;margin-top:4px">${esc(n.body)}</div>
-        ${!admin ? '' : NB.archive ? `<div class="chips" style="margin-top:8px"><button class="pill teal" data-restore="${n.id}">ফিরিয়ে আনুন</button><button class="pill${NB.confirm === n.id ? ' coral' : ''}" data-purge="${n.id}">${NB.confirm === n.id ? 'নিশ্চিত, চিরতরে মুছুন' : 'চিরতরে মুছুন'}</button></div>`
-          : `<div class="chips" style="margin-top:8px"><button class="pill" data-arch="${n.id}">আর্কাইভে রাখুন</button></div>`}</div>`).join('')
-        || empty('inbox', NB.archive ? 'আর্কাইভে কোনো নোটিশ নেই' : 'এখনো কোনো নোটিশ নেই।'));
+      + (NB.msg ? `<div class="nb-msg">${esc(NB.msg)}</div>` : '')
+      + (ns.length ? noticeGroups(ns).map(([label, g]) => `<div class="nb-group">${esc(label)}</div>${g.map(n => noticeCard(n, actions(n))).join('')}`).join('')
+        : empty('inbox', NB.archive ? 'আর্কাইভে কোনো নোটিশ নেই' : 'কোনো নোটিশ নেই। আজ সবাই শান্ত।'));
+    bindNoticeCards(el);
     el.querySelectorAll('[data-nb]').forEach(b => b.onclick = () => { NB.archive = b.dataset.nb === '1'; NB.msg = null; NB.confirm = null; setTitle(SCREENS.notices.title()); setSub(SCREENS.notices.sub()); render(); });
-    el.querySelectorAll('[data-arch]').forEach(b => b.onclick = () => act('নোটিশটি আর্কাইভে রাখা হয়েছে। অভিভাবকরা আর দেখবেন না; আর্কাইভ থেকে ফিরিয়ে আনা যাবে।', () => rpc('set_notice_archived', { p_id: b.dataset.arch, p_archived: true })));
-    el.querySelectorAll('[data-restore]').forEach(b => b.onclick = () => act('নোটিশটি আবার বোর্ডে দেখা যাবে।', () => rpc('set_notice_archived', { p_id: b.dataset.restore, p_archived: false })));
+    el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => nav.go('t.notice', ns.find(x => x.id === b.dataset.edit)));
+    el.querySelectorAll('[data-arch]').forEach(b => b.onclick = () => act('নোটিশটি আর্কাইভে সরানো হলো। অভিভাবকরা আর দেখবেন না। চাইলে আর্কাইভ থেকে ফিরিয়ে আনা যাবে।', () => rpc('set_notice_archived', { p_id: b.dataset.arch, p_archived: true })));
+    el.querySelectorAll('[data-restore]').forEach(b => b.onclick = () => act('নোটিশটি আবার বোর্ডে ফিরে এসেছে।', () => rpc('set_notice_archived', { p_id: b.dataset.restore, p_archived: false })));
     el.querySelectorAll('[data-purge]').forEach(b => b.onclick = () => {
       if (NB.confirm !== b.dataset.purge) { NB.confirm = b.dataset.purge; return render(); }
-      act('নোটিশটি চিরতরে মুছে ফেলা হয়েছে।', () => rpc('delete_archived_notice', { p_id: b.dataset.purge }));
+      act('নোটিশটি চিরতরে মুছে গেছে।', () => rpc('delete_archived_notice', { p_id: b.dataset.purge }));
     });
   } };
   SCREENS.director = { title: 'পরিচালকের বার্তা', render: async (el) => {

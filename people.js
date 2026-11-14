@@ -10,7 +10,7 @@
     return /bad phone/.test(b) ? 'ফোন নম্বর ঠিক নেই (০১ দিয়ে শুরু, ১১ সংখ্যা)।' : /guardian needs a phone/.test(b) ? 'অভিভাবকের ফোন নম্বর লাগবে।'
       : /name required/.test(b) ? 'নাম লিখুন।' : /admin only/.test(b) ? 'শুধু অ্যাডমিন এটি করতে পারেন।' : /already decided/.test(b) ? 'এই অনুরোধের সিদ্ধান্ত আগেই হয়ে গেছে।' : 'সংরক্ষণ হয়নি। আবার চেষ্টা করুন।';
   };
-  const shiftsBn = l => l.map(s => SH(s)?.bn || s).join(' + ');
+  const shiftsBn = l => l.map(s => SH(s)?.bn || esc(s)).join(' + ');
   async function loadStudents() {
     const [shifts, rows] = await Promise.all([batchShifts(), sel('students', 'select=id,class_level,roll,active,batch_id,profile:profiles!students_profile_id_fkey(full_name,phone,login_id),extra:student_batches(batch_id),links:guardian_students(guardian:profiles!guardian_students_guardian_id_fkey(full_name))&order=class_level,roll&limit=3000')]);
     return rows.map(o => ({ id: o.id, name: o.profile?.full_name || o.roll || 'নাম নেই', phone: o.profile?.phone || '', class_level: o.class_level, roll: o.roll || '', active: o.active !== false, login: o.profile?.login_id || '',
@@ -37,9 +37,9 @@
     const draw = () => {
       const q = ascii(P.q).trim().toLowerCase();
       const hit = (...f) => !q || f.some(x => ascii(String(x || '')).toLowerCase().includes(q));
-      let h = pending ? `<div class="card sun tap" data-go="t.requests">শিক্ষকদের ${bn(pending)}টি পরিবর্তনের অনুরোধ অপেক্ষায় আছে →</div>` : '';
+      let h = '<button class="btn" data-go="a.admit">নতুন ভর্তি</button>' + (pending ? `<div class="card sun tap" data-go="t.requests">শিক্ষকদের ${bn(pending)}টি পরিবর্তনের অনুরোধ অপেক্ষায় আছে →</div>` : '');
       h += chipRow([['student', 'শিক্ষার্থী'], ['teacher', 'শিক্ষক'], ['guardian', 'অভিভাবক']], P.tab, 'data-tab');
-      h += `<input id="pq" maxlength="40" placeholder="নাম, রোল, লগইন আইডি বা ফোন দিয়ে খুঁজুন" value="${esc(P.q)}">`;
+      h += `<input id="pq" maxlength="40" placeholder="নাম, রোল, আইডি বা ফোন দিয়ে খুঁজুন" value="${esc(P.q)}">`;
       if (P.tab === 'student') {
         const classes = [...new Set(list.map(s => s.class_level))].sort((a, b) => a - b);
         h += chipRow([['', 'সব'], ...classes.map(c => [c, 'ক্লাস ' + bn(c)])], P.cls ?? '', 'data-cls');
@@ -63,8 +63,14 @@
 
   // ---------- edit student (EditStudentScreen) ----------
   SCREENS['a.editstudent'] = { title: 'শিক্ষার্থী সম্পাদনা', render: async (el, id) => {
-    const s = (await loadStudents()).find(x => x.id === id);
+    const [s, links] = await Promise.all([
+      loadStudents().then(all => all.find(x => x.id === id)),
+      sel('guardian_students', `select=relation,guardian:profiles!guardian_students_guardian_id_fkey(id,full_name,phone)&student_id=eq.${id}`),
+    ]);
     if (!s) { el.innerHTML = empty('search', 'কাউকে পাওয়া যায়নি।'); return; }
+    // Linked guardians: name and phone can be changed here. oname/ophone are what the server holds now.
+    const G = links.filter(l => l.guardian).map(l => ({ id: l.guardian.id, relation: l.relation || '',
+      oname: l.guardian.full_name || '', ophone: l.guardian.phone || '', name: l.guardian.full_name || '', phone: l.guardian.phone || '' }));
     const f = { name: s.name, phone: s.phone, roll: s.roll, cls: s.class_level, main: s.shifts[0] || 'afternoon', extra: s.shifts.slice(1), active: s.active };
     const draw = () => {
       el.innerHTML = `<div class="card"><label>নাম</label><input id="en" maxlength="100" value="${esc(f.name)}">
@@ -74,21 +80,43 @@
         ${section('ক্লাস')}${chipRow(CLASSES.map(c => [c, bn(c)]), f.cls, 'data-cls')}
         ${section('ব্যাচ')}<div class="card">${shiftPicker(f.main, f.extra)}</div>
         <div class="card"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ea" ${f.active ? 'checked' : ''} style="width:auto"> ভর্তি আছে</label><div class="mute small">বন্ধ করলে হাজিরা ও তালিকায় আর আসবে না; তথ্য মুছবে না।</div></div>
-        ${s.guardians.length ? `<div class="mute small">অভিভাবক: ${esc(s.guardians.join(', '))} (বদলাতে অভিভাবকের প্রোফাইল খুলুন)</div>` : ''}
+        ${section('অভিভাবক')}
+        ${G.map((g, i) => `<div class="card">${g.relation ? `<div class="guard-rel">${esc(g.relation)}</div>` : ''}
+          <label>নাম</label><input id="gn${i}" maxlength="100" value="${esc(g.name)}">
+          <label>মোবাইল নম্বর</label><input id="gp${i}" inputmode="tel" maxlength="14" value="${esc(g.phone)}">
+        </div>`).join('') || '<div class="card"><div class="mute">এখনো কোনো অভিভাবক যোগ হয়নি</div></div>'}
         <div class="err" id="ee"></div><button class="btn" id="es">সংরক্ষণ করুন</button>`;
-      const keep = () => { f.name = el.querySelector('#en').value; f.phone = ascii(el.querySelector('#ep').value).replace(/\s/g, ''); f.roll = el.querySelector('#er').value; f.active = el.querySelector('#ea').checked; };
+      const keep = () => {
+        f.name = el.querySelector('#en').value; f.phone = ascii(el.querySelector('#ep').value).replace(/\s/g, ''); f.roll = el.querySelector('#er').value; f.active = el.querySelector('#ea').checked;
+        G.forEach((g, i) => { const n = el.querySelector('#gn' + i), p = el.querySelector('#gp' + i); if (n) g.name = n.value; if (p) g.phone = ascii(p.value).replace(/\s/g, ''); });
+      };
       el.querySelectorAll('[data-cls]').forEach(b => b.onclick = () => { keep(); f.cls = +b.dataset.cls; draw(); });
       el.querySelectorAll('[data-main]').forEach(b => b.onclick = () => { keep(); f.main = b.dataset.main; f.extra = f.extra.filter(x => x !== f.main); draw(); });
       el.querySelectorAll('[data-extra]').forEach(b => b.onclick = () => { keep(); const x = b.dataset.extra; f.extra = f.extra.includes(x) ? f.extra.filter(y => y !== x) : f.extra.concat(x); draw(); });
       el.querySelector('#es').onclick = async () => {
         keep();
         const err = el.querySelector('#ee');
+        const b = el.querySelector('#es');
         if (!f.name.trim()) return err.textContent = 'নাম লিখুন।';
         if (!PHONE_OK(f.phone)) return err.textContent = 'ফোন নম্বর ঠিক নেই (০১ দিয়ে শুরু, ১১ সংখ্যা)।';
-        const b = el.querySelector('#es'); b.disabled = true; b.textContent = 'সংরক্ষণ হচ্ছে…';
+        if (G.some(g => !g.name.trim())) return err.textContent = 'নাম লিখুন।';
+        if (G.some(g => !/^01\d{9}$/.test(g.phone))) return err.textContent = 'ফোন নম্বর ঠিক নেই (০১ দিয়ে শুরু, ১১ সংখ্যা)।';
+        b.disabled = true; b.textContent = 'সংরক্ষণ হচ্ছে…';
         try {
           await rpc('admin_update_student', { p_student: s.id, p_full_name: f.name.trim(), p_phone: f.phone, p_class_level: f.cls, p_roll: f.roll.trim(), p_shifts: [f.main, ...f.extra], p_active: f.active });
-          toast('সংরক্ষিত হয়েছে।'); err.textContent = '';
+          // Then only the guardians whose name or phone changed, with the same profile save the person screen uses.
+          const changed = G.filter(g => g.name !== g.oname || g.phone !== g.ophone);
+          try {
+            for (const g of changed) {
+              await rpc('admin_update_profile', { p_id: g.id, p_full_name: g.name.trim(), p_phone: g.phone });
+              g.oname = g.name; g.ophone = g.phone;
+            }
+          } catch {
+            err.textContent = 'শিক্ষার্থীর তথ্য ঠিক আছে, কিন্তু অভিভাবকের তথ্য বদলানো যায়নি। আবার চেষ্টা করুন।';
+            b.disabled = false; b.textContent = 'সংরক্ষণ করুন';
+            return;
+          }
+          toast('সংরক্ষণ হয়ে গেছে।'); err.textContent = '';
         } catch (e) { err.textContent = friendly(e); }
         b.disabled = false; b.textContent = 'সংরক্ষণ করুন';
       };
@@ -130,7 +158,7 @@
           await rpc('admin_update_profile', { p_id: id, p_full_name: f.name.trim(), p_phone: f.phone });
           const changed = guardian && (f.kids.length !== orig.length || f.kids.some(k => !orig.includes(k)));
           if (changed) { await rpc('admin_set_guardian_links', { p_guardian: id, p_students: f.kids }); orig.splice(0, orig.length, ...f.kids); }
-          toast('সংরক্ষিত হয়েছে।'); err.textContent = '';
+          toast('সংরক্ষণ হয়ে গেছে।'); err.textContent = '';
         } catch (e) { err.textContent = friendly(e); }
         b.disabled = false; b.textContent = 'সংরক্ষণ করুন';
       };
@@ -149,7 +177,7 @@
         ${section('নতুন ক্লাস')}${chipRow([['', 'ক্লাস বদল নেই'], ...CLASSES.map(c => [c, 'ক্লাস ' + bn(c)])], f.cls ?? '', 'data-cls')}
         <div class="seg"><button data-chg="0" class="${!f.change ? 'on' : ''}"><b>ব্যাচ বদল নেই</b></button><button data-chg="1" class="${f.change ? 'on' : ''}"><b>ব্যাচ বদলাতে চাই</b></button></div>
         ${f.change ? `<div class="card">${shiftPicker(f.main, f.extra)}</div>` : ''}
-        <label>কারণ / অন্য কিছু বদলাতে হলে লিখুন (যেমন নামের বানান)</label><textarea id="rn" maxlength="300">${esc(f.note)}</textarea>
+        <label>কারণ, বা অন্য কিছু বদলাতে লিখুন (যেমন নামের বানান)</label><textarea id="rn" maxlength="300">${esc(f.note)}</textarea>
         <div class="err" id="re"></div><button class="btn" id="rs">অ্যাডমিনকে পাঠান</button>`;
       const keep = () => { f.note = el.querySelector('#rn').value; };
       el.querySelectorAll('[data-cls]').forEach(b => b.onclick = () => { keep(); f.cls = b.dataset.cls === '' ? null : +b.dataset.cls; draw(); });
@@ -162,10 +190,10 @@
         const b = el.querySelector('#rs'); b.disabled = true; b.textContent = 'পাঠানো হচ্ছে…';
         try {
           await ins('student_change_requests', { coaching_id: S.me.coaching_id, student_id: s.id, requested_by: S.uid, new_class_level: f.cls, new_shifts: f.change ? [f.main, ...f.extra] : null, note: f.note.trim() || null }, 'select=id');
-          el.innerHTML = `<div class="card teal">অনুরোধ পাঠানো হয়েছে। অ্যাডমিন অনুমোদন দিলে বদলে যাবে। "আমার অনুরোধ" পাতায় অবস্থা দেখতে পারবেন।</div><button class="btn" data-go="t.requests">আমার অনুরোধ</button>`;
+          el.innerHTML = `<div class="card teal">অনুরোধ গেছে। অ্যাডমিন অনুমোদন দিলে বদলে যাবে। অবস্থা দেখুন "আমার অনুরোধ" পাতায়।</div><button class="btn" data-go="t.requests">আমার অনুরোধ</button>`;
           el.querySelectorAll('[data-go]').forEach(bindGo);
         } catch (e) {
-          el.querySelector('#re').textContent = /row-level security/.test(e.body || '') ? 'আজ অনেক অনুরোধ পাঠানো হয়েছে, কাল আবার চেষ্টা করুন।' : friendly(e);
+          el.querySelector('#re').textContent = /row-level security/.test(e.body || '') ? 'আজ অনেক অনুরোধ গেছে। কাল আবার চেষ্টা করুন।' : friendly(e);
           b.disabled = false; b.textContent = 'অ্যাডমিনকে পাঠান';
         }
       };
@@ -187,9 +215,9 @@
         ${r.new_shifts ? `<div>ব্যাচ: ${shiftsBn(cur(r))} → ${shiftsBn(r.new_shifts)}</div>` : ''}
         ${r.note ? `<div>কারণ: ${esc(r.note)}</div>` : ''}${r.admin_note ? `<div class="mute">অ্যাডমিনের মন্তব্য: ${esc(r.admin_note)}</div>` : ''}
         ${r.status === 'pending' ? (isAdmin() ? `${onlyNote ? '<div class="mute small">এই অনুরোধে শুধু মন্তব্য আছে: অনুমোদনের আগে "প্রোফাইল সম্পাদনা" থেকে নিজে বদলে নিন।</div>' : ''}<input data-note="${r.id}" maxlength="200" placeholder="মন্তব্য (ঐচ্ছিক)">
-          <div class="chips"><button class="pill teal" data-ok="${r.id}">অনুমোদন ও বদলান</button><button class="pill coral" data-no="${r.id}">বাতিল</button></div>`
-          : `<button class="pill" data-undo="${r.id}">অনুরোধ তুলে নিন</button>`) : ''}</div>`;
-    }).join('') || empty('question', 'কোনো অনুরোধ নেই।'));
+          <div class="chips"><button class="pill teal" data-ok="${esc(r.id)}">অনুমোদন ও বদলান</button><button class="pill coral" data-no="${esc(r.id)}">বাতিল</button></div>`
+          : `<button class="pill" data-undo="${esc(r.id)}">অনুরোধ তুলে নিন</button>`) : ''}</div>`;
+    }).join('') || empty('question', 'এখন কোনো অনুরোধ নেই। সব গোছানো।'));
     const decide = async (id, ok) => {
       const note = el.querySelector(`[data-note="${id}"]`)?.value || '';
       try { await rpc('decide_student_request', { p_id: id, p_approve: ok, p_note: note.trim() }); render(); } catch (e) { toast(friendly(e)); }
@@ -215,7 +243,7 @@
       return `<button class="pickrow ${RT.open === key ? 'on' : ''}" data-cell="${key}" style="flex-direction:row;justify-content:space-between"><b>${c == null ? 'সব ক্লাস একসাথে' : 'ক্লাস ' + bn(c)}</b><span>${!r ? 'ক্লাস নেই' : esc(r.teacher?.full_name || 'শিক্ষক নেই')}</span></button>
         ${RT.open === key ? `<div class="chips" style="margin:4px 0 8px">${staff.map(t => `<button class="chip-btn ${r?.teacher_id === t.id ? 'on' : ''}" data-set="${key}|${t.id}">${r?.teacher_id === t.id ? '✓ ' : ''}${esc(t.full_name)}</button>`).join('')}<button class="chip-btn" data-set="${key}|none" style="background:var(--sun-soft)">ক্লাস নেই</button></div>` : ''}`; };
     let h = chipRow(SHIFTS.map(s => [s.id, `${s.bn} (${s.time})`]), RT.shift, 'data-sh') +
-      '<div class="card cream mute">এই রুটিন অনুযায়ী হাজিরা ও রেটিংয়ের পাতা সাজানো হয়, শিক্ষকরা নম্বর দেওয়ার মনে করানো বার্তা পান, আর রিপোর্ট কার্ডে শিক্ষকের নাম যায়। ঘরে চাপ দিয়ে শিক্ষক বদলান।</div>';
+      '<div class="card cream mute">এই রুটিন অনুযায়ী হাজিরা ও রেটিংয়ের পাতা সাজে, শিক্ষকরা নম্বর দেওয়ার মনে করানো বার্তা পান, রিপোর্ট কার্ডেও শিক্ষকের নাম যায়। ঘরে চাপ দিয়ে শিক্ষক বদলান।</div>';
     const names = Object.keys(count);
     if (names.length) h += `<div class="card teal"><h3>দিনে কার কয়টি ক্লাস (${shiftBn(RT.shift)})</h3>${names.map(n => `<div>${esc(n)}: ${bn(count[n].size)}টি</div>`).join('')}</div>`;
     for (const slot of [1, 2, 3]) {
@@ -224,7 +252,7 @@
         : levels.map(c => cell(slot, c)).join('') + (RT.open === slot + ':0' ? `<div class="chips">${staff.map(t => `<button class="chip-btn" data-set="${slot}:0|${t.id}">${esc(t.full_name)}</button>`).join('')}<button class="chip-btn" data-set="${slot}:0|none" style="background:var(--sun-soft)">ক্লাস নেই</button></div>`
           : `<button class="btn ghost" data-all="${slot}">এই সময়ে সব ক্লাস একসাথে একজনের কাছে</button>`)}</div></div>`;
     }
-    h += '<div class="card"><h3>মনে রাখুন</h3><div class="mute">• একই সময়ে একজন শিক্ষক একাধিক ক্লাস নিলে (যেমন ক্লাস ৭ আর ৮ একসাথে) দুই ঘরেই তাঁর নাম দিন।<br>• যে ক্লাসের এই সময়ে ক্লাস হয় না, সেখানে "ক্লাস নেই" দিন।<br>• বদল সাথে সাথে সবার অ্যাপে কাজ করবে; আগের দিনের হাজিরা বা রেটিং বদলায় না।</div></div>';
+    h += '<div class="card"><h3>মনে রাখবেন</h3><div class="mute">• একই সময়ে একজন শিক্ষক একাধিক ক্লাস নিলে (যেমন ক্লাস ৭ আর ৮ একসাথে) দুই ঘরেই তাঁর নাম দিন।<br>• যে ক্লাসের এই সময়ে ক্লাস হয় না, সেখানে "ক্লাস নেই" দিন।<br>• বদল তখনই সবার অ্যাপে চলবে; আগের দিনের হাজিরা বা রেটিং বদলায় না।</div></div>';
     el.innerHTML = h;
     const save = async (slot, cls, teacher) => {
       try { await rpc('admin_set_period', { p_shift: RT.shift, p_slot: slot, p_class: cls, p_teacher: teacher }); RT.open = null; render(); }

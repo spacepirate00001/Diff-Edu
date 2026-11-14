@@ -160,7 +160,7 @@
           }).join('; ');
         }).join('\n');
         await ins('notices', { coaching_id: S.me.coaching_id, title: 'পরীক্ষার রুটিন (হালনাগাদ)', body: body + '\n\nআদেশক্রমে - পরিচালক', audience: 'all', created_by: S.uid });
-        return 'নোটিশ পাঠানো হয়েছে। সবাই হোমের নোটিশ বোর্ডে দেখবেন।';
+        return 'নোটিশ গেছে। সবাই হোমের নোটিশ বোর্ডে দেখতে পাবেন।';
       });
     }
     function card(e) {
@@ -190,7 +190,7 @@
       else if (!exams) h += skel(3);
       else {
         const shown = exams.filter(e => ER.cls == null || e.cls === ER.cls);
-        if (!shown.length) h += empty('calendar', 'এই সময়ে কোনো পরীক্ষা নেই।');
+        if (!shown.length) h += empty('calendar', 'এই সময়ে কোনো পরীক্ষা নেই। দম নেওয়ার সময়।');
         const byDate = {};
         shown.forEach(e => (byDate[e.date] ||= []).push(e));
         Object.keys(byDate).sort().forEach(d => {
@@ -229,7 +229,7 @@
         const f = el.querySelector(`[data-form="${b.dataset.save}"]`), v = k => f.querySelector(`[data-f="${k}"]`).value;
         const full = parseFloat(ascii(v('full'))), title = v('title').trim();
         if (!title || isNaN(full)) { ER.failed = true; ER.msg = !title ? 'পরীক্ষার নাম লিখুন।' : 'পূর্ণমান ১ থেকে ১০০০ এর মধ্যে দিন।'; return draw(); }
-        run(async () => { await rpc('admin_update_exam', { p_id: b.dataset.save, p_date: v('date'), p_title: title, p_full: full, p_subject: v('subject').trim() }); return 'সংরক্ষিত হয়েছে।'; });
+        run(async () => { await rpc('admin_update_exam', { p_id: b.dataset.save, p_date: v('date'), p_title: title, p_full: full, p_subject: v('subject').trim() }); return 'সংরক্ষণ হয়ে গেছে।'; });
       });
     }
     ER.msg = null; ER.open = null; ER.confirm = null;
@@ -271,7 +271,7 @@
       const rate = +(rateRow[0]?.per_class || 0), paid = paidRow[0];
       const labels = [...new Set(recent.map(r => r.label))].slice(0, 6);
       let dayBack = 0;
-      el.innerHTML = `<div class="card"><h3>ক্লাস নিলেন? যোগ করুন</h3>
+      el.innerHTML = `<div class="card"><h3>ক্লাস নিলেন? এখানে যোগ করুন</h3>
           ${chipRow([...Array(LOG_BACK_DAYS + 1).keys()].map(i => [i, dayLabel(daysAgo(i))]), 0, 'data-day')}
           ${labels.length ? `<div style="margin-top:8px">${chipRow(labels.map(l => [l, l]), '', 'data-label')}</div>` : ''}
           <input id="lb" maxlength="60" placeholder="কোন ক্লাস (যেমন: ৫ম শ্রেণি · গণিত)" style="margin-top:8px">
@@ -279,7 +279,7 @@
         ${monthSwitch(m)}
         <div class="card ${paid ? 'good' : 'sun'}"><div class="stats"><div><b>${bn(logs.length)}</b><span class="mute small">ক্লাস</span></div><div><b>${taka(rate)}</b><span class="mute small">প্রতি ক্লাস</span></div><div><b>${taka(paid ? paid.amount : logs.length * rate)}</b><span class="mute small">${paid ? 'পরিশোধিত' : 'মোট'}</span></div></div></div>
         ${section('এই মাসের ক্লাস')}
-        ${logs.map(l => `<div class="card" style="display:flex;align-items:center;gap:8px"><div style="flex:1"><h3>${esc(l.label)}</h3><div class="mute small">${dayLabel(l.day)}</div></div>${l.day >= daysAgo(LOG_BACK_DAYS) && !paid ? `<button class="pill coral" data-dellog="${l.id}">মুছুন</button>` : ''}</div>`).join('') || empty('calendar', 'এই মাসে কোনো ক্লাস যোগ করা হয়নি।')}`;
+        ${logs.map(l => `<div class="card" style="display:flex;align-items:center;gap:8px"><div style="flex:1"><h3>${esc(l.label)}</h3><div class="mute small">${dayLabel(l.day)}</div></div>${l.day >= daysAgo(LOG_BACK_DAYS) && !paid ? `<button class="pill coral" data-dellog="${l.id}">মুছুন</button>` : ''}</div>`).join('') || empty('calendar', 'এই মাসে এখনো কোনো ক্লাস যোগ হয়নি।')}`;
       el.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { dayBack = +b.dataset.day; el.querySelectorAll('[data-day]').forEach(x => x.classList.toggle('on', x === b)); });
       el.querySelectorAll('[data-label]').forEach(b => b.onclick = () => { el.querySelector('#lb').value = b.dataset.label; });
       el.querySelector('#ladd').onclick = async () => {
@@ -335,20 +335,50 @@
     }
   } };
 
-  // ---------- post notice (PostNoticeScreen) ----------
-  SCREENS['t.notice'] = { title: 'নোটিশ পাঠান', render: async (el) => {
-    let aud = 'all';
-    el.innerHTML = `<div class="card"><label>শিরোনাম</label><input id="nt" maxlength="120"><label>বিস্তারিত</label><textarea id="nb" maxlength="2000"></textarea></div>
-      <div class="h2">প্রাপক</div><div class="chips">${[['all', 'সবাই'], ['guardians', 'অভিভাবক'], ['students', 'শিক্ষার্থী'], ['teachers', 'শিক্ষক']].map(([v, l]) => `<button class="chip-btn ${v === aud ? 'on' : ''}" data-aud="${v}">${l}</button>`).join('')}</div>
-      <button class="btn" id="ns">নোটিশ পাঠান</button>
-      <div class="card cream"><h3>লেখার নির্দেশনা</h3><div class="mute">ছোট, পরিষ্কার শিরোনাম দিন। তারিখ, সময় ও কী করতে হবে তা স্পষ্ট লিখুন।</div></div>`;
-    el.querySelectorAll('[data-aud]').forEach(b => b.onclick = () => { aud = b.dataset.aud; el.querySelectorAll('[data-aud]').forEach(x => x.classList.toggle('on', x === b)); });
-    el.querySelector('#ns').onclick = async () => {
-      const t = el.querySelector('#nt').value.trim(), body = el.querySelector('#nb').value.trim();
-      if (!t || !body) return toast('শিরোনাম ও বিস্তারিত লিখুন');
-      try { await ins('notices', { coaching_id: S.me.coaching_id, title: t, body, audience: aud, created_by: S.uid }); el.innerHTML = `<div class="card teal">${empty('megaphone', 'নোটিশটি পাঠানো হয়েছে।')}</div><button class="btn" data-go="notices">সকল নোটিশ</button>`; el.querySelectorAll('[data-go]').forEach(bindGo); }
-      catch { toast('পাঠানো যায়নি'); }
+  // ---------- post / edit notice (PostNoticeScreen): edit mode when a notice is passed as the route param ----------
+  // Templates: the same four one-tap drafts as TeacherScreens.kt NOTICE_TEMPLATES (hidden in edit mode).
+  const NOTICE_TEMPLATES = [
+    { label: 'ক্লাস বাতিল', title: 'আজ ক্লাস বন্ধ', body: 'আজকের ক্লাস বন্ধ থাকবে। পরের ক্লাসের সময় আগের মতোই।', aud: 'all' },
+    { label: 'পরীক্ষা', title: 'কালকের পরীক্ষা', body: 'কাল পরীক্ষা আছে। সময়মতো আসবে, সঙ্গে কলম আর প্রবেশপত্র আনবে।', aud: 'all' },
+    { label: 'ফি', title: 'ফি জমার অনুরোধ', body: 'এই মাসের ফি এখনো বাকি থাকলে অফিসে জমা দিন। কোনো প্রশ্ন থাকলে অফিসে ফোন করুন।', aud: 'guardians' },
+    { label: 'ছুটি', title: 'ছুটির খবর', body: 'ছুটির কারণে ক্লাস বন্ধ থাকবে। ছুটির পরের ক্লাসের তারিখ আলাদা জানানো হবে।', aud: 'all' },
+  ];
+  const NB_PICK = [['all', 'সকলে'], ['guardians', 'অভিভাবক'], ['students', 'শিক্ষার্থী'], ['teachers', 'শিক্ষক']];
+  SCREENS['t.notice'] = { title: p => p ? 'নোটিশ বদলান' : 'নোটিশ পাঠান', render: async (el, editing) => {
+    const edit = editing?.id ? editing : null;
+    const st = { title: edit?.title ?? '', body: edit?.body ?? '', aud: edit?.audience ?? 'all', busy: false, sent: false, failed: false };
+    const canSend = () => !st.busy && !st.sent && st.title.trim() !== '' && st.body.trim() !== '';
+    const draw = () => {
+      el.innerHTML = (edit ? '' : `<div class="chips nb-tpl"><span class="mute">ছাঁচ:</span>${NOTICE_TEMPLATES.map((t, i) => `<button class="chip-btn" data-tpl="${i}">${esc(t.label)}</button>`).join('')}</div>`)
+        + `<div class="card"><label>শিরোনাম</label><input id="nt" maxlength="120" value="${esc(st.title)}"><label>বিস্তারিত</label><textarea id="nb" maxlength="2000">${esc(st.body)}</textarea></div>
+        <div class="h2">প্রাপক</div><div class="grid2">${NB_PICK.map(([v, l]) => `<button class="nb-pick ${v === st.aud ? 'on' : ''}" data-aud="${v}">${l}</button>`).join('')}</div>
+        <button class="btn" id="ns" ${canSend() ? '' : 'disabled'}>${st.busy ? 'একটু অপেক্ষা…' : edit ? 'সংরক্ষণ' : 'পাঠান'}</button>
+        ${st.failed ? '<div class="nb-err">পাঠানো বা বদলানো যায়নি। নেট দেখে আবার চেষ্টা করুন।</div>' : ''}
+        ${st.sent ? `<div class="card teal"><h3>নোটিশ গেছে। এখন সবাই জানবে।</h3><button class="btn" id="nok">ঠিক আছে</button></div>` : ''}
+        <div class="card cream"><h3>লেখার নির্দেশনা</h3><div class="mute">ছোট, স্পষ্ট বাক্য লিখুন · প্রশংসা আগে, পরামর্শ পরে · ভয় দেখানো ভাষা এড়িয়ে চলুন</div></div>`;
+      const btn = () => { const b = el.querySelector('#ns'); if (b) b.disabled = !canSend(); };
+      el.querySelector('#nt').oninput = e => { st.title = e.target.value; btn(); };
+      el.querySelector('#nb').oninput = e => { st.body = e.target.value; btn(); };
+      el.querySelectorAll('[data-tpl]').forEach(b => b.onclick = () => { const t = NOTICE_TEMPLATES[+b.dataset.tpl]; Object.assign(st, { title: t.title, body: t.body, aud: t.aud, failed: false }); draw(); });
+      el.querySelectorAll('[data-aud]').forEach(b => b.onclick = () => { st.aud = b.dataset.aud; draw(); });
+      el.querySelector('#ns')?.addEventListener('click', submit);
+      el.querySelector('#nok')?.addEventListener('click', () => nav.back());
     };
+    const submit = async () => {
+      st.busy = true; st.failed = false; draw();
+      const row = { title: st.title.trim(), body: st.body.trim(), audience: st.aud };
+      try {
+        if (edit) {
+          const r = await upd('notices', `id=eq.${edit.id}`, row);
+          if (!Array.isArray(r) || !r.length) throw new Error('no row updated');
+          toast('বদলে গেছে'); st.busy = false; return nav.back();
+        }
+        await ins('notices', { coaching_id: S.me.coaching_id, ...row, created_by: S.uid });
+        st.sent = true;
+      } catch { st.failed = true; }
+      st.busy = false; draw();
+    };
+    draw();
   } };
 
   // ---------- admin: fees (FeeScreens) ----------
@@ -419,7 +449,7 @@
           <label>শুরুর পিন</label><input id="up" inputmode="numeric" maxlength="6" value="${role === 'teacher' ? '2580' : '1234'}">
           <div class="mute small">প্রথম লগইনে নিজের পিন ঠিক করতে বলা হবে।</div>
           <button class="btn" id="uadd">অ্যাকাউন্ট তৈরি করুন</button></div>
-        <div class="card"><h3>পিন রিসেট</h3><label>লগইন আইডি</label><input id="rl" maxlength="20"><label>নতুন পিন</label><input id="rp" inputmode="numeric" maxlength="6" value="1234"><button class="btn sun" id="rset">পিন রিসেট করুন</button></div>`;
+        <div class="card"><h3>পিন রিসেট</h3><label>লগইন আইডি</label><input id="rl" maxlength="20"><label>নতুন পিন বানান</label><input id="rp" inputmode="numeric" maxlength="6" value="1234"><button class="btn sun" id="rset">পিন রিসেট করুন</button></div>`;
       el.querySelectorAll('[data-role]').forEach(b => b.onclick = () => { role = b.dataset.role; draw(); });
       el.querySelector('#uadd').onclick = async () => {
         const v = id => el.querySelector(id)?.value.trim();
@@ -457,5 +487,281 @@
       };
     }));
     el.querySelectorAll('[data-rj]').forEach(b => b.onclick = async () => { try { await rpc('decide_phone_change', { p_id: b.dataset.rj, p_approve: false, p_phone: null }); render(); } catch { toast('হয়নি'); } });
+  } };
+})();
+
+(function () {
+  // ---------- admin: new admission (AdmitScreen.kt, create_family) ----------
+  const LOGIN_OK = /^[a-z0-9]{2,20}$/, PIN_OK = /^\d{4,6}$/, PHONE_OK = /^01\d{9}$/;
+  const SAME_DIGIT = /^(\d)\1{5}$/;
+  const SEQUENCES = new Set(['012345', '123456', '234567', '345678', '456789', '543210', '654321', '765432', '876543', '987654']);
+  const RELATIONS = [['মা', 'মা'], ['বাবা', 'বাবা'], ['অন্য', 'অন্য']];
+
+  // A random 6-digit PIN from the browser's CSPRNG, skipping the obvious ones (111111, 123456 ...).
+  const newPin = () => {
+    const buf = new Uint32Array(1), limit = 4294000000; // a multiple of 1e6 below 2^32, so no bias
+    for (;;) {
+      let n;
+      do { crypto.getRandomValues(buf); n = buf[0]; } while (n >= limit);
+      const p = String(n % 1000000).padStart(6, '0');
+      if (!SAME_DIGIT.test(p) && !SEQUENCES.has(p)) return p;
+    }
+  };
+  const loginOf = s => ascii(s).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
+  const digitsOf = (s, max) => ascii(s).replace(/\D/g, '').slice(0, max);
+  const admitError = e => /already|taken|exists|duplicate|unique/i.test(String((e && (e.body || e.message)) || ''))
+    ? 'এই আইডি আগে থেকেই আছে, অন্যটা দিন।' : 'ভর্তি করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।';
+  const copyText = async text => { try { await navigator.clipboard.writeText(text); return true; } catch { return false; } };
+  // The text that is copied or shared: both logins and PINs, in plain Bangla.
+  const admitText = r => ['ডিফ এডু', '', `শিক্ষার্থীর লগইন আইডি: ${r.sLogin}`, `পিন: ${r.sPin}`, '', `অভিভাবকের লগইন আইডি: ${r.gLogin}`,
+    r.existed ? 'অভিভাবক আগে থেকেই আছেন, তাঁর পিন আগের মতোই।' : `পিন: ${r.gPin}`, '', 'প্রথমবার লগইন করে পিন বদলে নিন।'].join('\n');
+
+  SCREENS['a.admit'] = { title: 'নতুন ভর্তি', sub: 'শিক্ষার্থী আর অভিভাবক, একটি ফর্মে', render: async (el) => {
+    const blank = () => ({ name: '', cls: 1, roll: '', shift: 'morning', login: '', pin: newPin(), phone: '',
+      gName: '', gPhone: '', rel: '', gPin: newPin(), busy: false, err: '', done: null, copied: false });
+    let f = blank();
+    const valid = () => !!(f.name.trim() && f.roll.trim() && LOGIN_OK.test(f.login) && PIN_OK.test(f.pin) && (!f.phone || PHONE_OK.test(f.phone))
+      && f.gName.trim() && PHONE_OK.test(f.gPhone) && PIN_OK.test(f.gPin));
+    // Reads the typed values back into f (ASCII digits, lowercase login, length limits).
+    // Only called from handlers, before f changes, so a redraw never loses typing.
+    const keep = () => {
+      const put = (k, id, fix) => { const x = el.querySelector(id); if (x) f[k] = fix(x.value); };
+      put('name', '#ad-name', x => x.slice(0, 100));
+      put('roll', '#ad-roll', x => digitsOf(x, 9));
+      put('login', '#ad-login', loginOf);
+      put('pin', '#ad-pin', x => digitsOf(x, 6));
+      put('phone', '#ad-phone', x => digitsOf(x, 11));
+      put('gName', '#ad-gname', x => x.slice(0, 100));
+      put('gPhone', '#ad-gphone', x => digitsOf(x, 11));
+      put('gPin', '#ad-gpin', x => digitsOf(x, 6));
+    };
+    const seg = (items, cur, attr) => `<div class="seg">${items.map(([v, l, sub]) => `<button ${attr}="${esc(v)}" class="${String(v) === String(cur) ? 'on' : ''}"><b>${esc(l)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</button>`).join('')}</div>`;
+    const isReady = () => !!valid() && !f.done && !f.busy;
+    // Typing updates the save button at once; no redraw, so the typed text stays put.
+    el.addEventListener('input', () => { keep(); const b = el.querySelector('#ad-save'); if (b) b.disabled = !isReady(); });
+    const draw = () => {
+      const ready = isReady();
+      const r = f.done;
+      el.innerHTML = `<div class="card"><h3>শিক্ষার্থী</h3>
+        <label>পুরো নাম</label><input id="ad-name" maxlength="100" value="${esc(f.name)}">
+        <label>ক্লাস</label>${seg(CLASSES.slice(0, 5).map(c => [c, bn(c)]), f.cls, 'data-cls')}<div style="height:8px"></div>${seg(CLASSES.slice(5).map(c => [c, bn(c)]), f.cls, 'data-cls')}
+        <label>রোল</label><input id="ad-roll" inputmode="numeric" maxlength="9" value="${esc(f.roll)}">
+        <label>ব্যাচ</label>${seg(SHIFTS.map(s => [s.id, s.bn, s.time]), f.shift, 'data-shift')}
+        <label>লগইন আইডি</label><input id="ad-login" maxlength="20" value="${esc(f.login)}"><div class="mute small">যেমন s105</div>
+        <label>পিন</label><input id="ad-pin" inputmode="numeric" maxlength="6" value="${esc(f.pin)}"><div class="mute small">প্রথম লগইনে পিন বদলাতে হবে</div>
+        <button class="link ad-regen" id="ad-newpin">নতুন পিন বানান</button>
+        <label>মোবাইল নম্বর (ঐচ্ছিক)</label><input id="ad-phone" inputmode="tel" maxlength="14" value="${esc(f.phone)}">
+      </div>
+      <div class="card"><h3>অভিভাবক</h3>
+        <label>নাম</label><input id="ad-gname" maxlength="100" value="${esc(f.gName)}">
+        <label>মোবাইল নম্বর</label><input id="ad-gphone" inputmode="tel" maxlength="14" value="${esc(f.gPhone)}">
+        <div class="mute small">এই নম্বরই অভিভাবকের লগইন আইডি। এসএমএস এই নম্বরে যাবে।</div>
+        <label>সম্পর্ক</label>${seg(RELATIONS, f.rel, 'data-rel')}
+        <label>পিন</label><input id="ad-gpin" inputmode="numeric" maxlength="6" value="${esc(f.gPin)}"><div class="mute small">আগে থেকে থাকলে এই পিন লাগবে না</div>
+        <button class="link ad-regen" id="ad-newgpin">নতুন পিন বানান</button>
+      </div>
+      <button class="btn" id="ad-save" ${ready ? '' : 'disabled'}>${f.busy ? 'একটু অপেক্ষা…' : 'ভর্তি করুন'}</button>
+      <div class="err" id="ad-err">${esc(f.err)}</div>
+      ${r ? `<div class="card teal"><h3>ভর্তি হয়ে গেছে। স্বাগতম!</h3>
+        <div class="mute small" style="margin-top:8px">শিক্ষার্থী</div>
+        <div><b>লগইন আইডি: ${esc(r.sLogin)} · পিন: ${esc(r.sPin)}</b></div>
+        <div class="mute small" style="margin-top:8px">অভিভাবক</div>
+        ${r.existed ? `<div><b>লগইন আইডি: ${esc(r.gLogin)}</b></div><div class="mute">অভিভাবক আগে থেকেই আছেন, তাঁর পিন আগের মতোই।</div>`
+          : `<div><b>লগইন আইডি: ${esc(r.gLogin)} · পিন: ${esc(r.gPin)}</b></div>`}
+        <div class="adm-row" style="margin-top:12px"><button class="btn" id="ad-copy">কপি করুন</button><button class="btn" id="ad-send" style="background:var(--teal-dark)">পাঠান</button></div>
+        ${f.copied ? '<div class="mute small" style="margin-top:6px;color:var(--teal-dark)">কপি হয়েছে।</div>' : ''}
+        <button class="btn" id="ad-again" style="margin-top:10px;background:var(--teal-soft);color:var(--teal-dark)">আরেকজন ভর্তি করুন</button></div>` : ''}
+      <div class="mute small">ভর্তির আগে অভিভাবকের লিখিত সম্মতিপত্র সংগ্রহ করুন।</div>`;
+
+      el.querySelectorAll('[data-cls]').forEach(b => b.onclick = () => { keep(); f.cls = +b.dataset.cls; draw(); });
+      el.querySelectorAll('[data-shift]').forEach(b => b.onclick = () => { keep(); f.shift = b.dataset.shift; draw(); });
+      el.querySelectorAll('[data-rel]').forEach(b => b.onclick = () => { keep(); f.rel = f.rel === b.dataset.rel ? '' : b.dataset.rel; draw(); });
+      el.querySelector('#ad-newpin').onclick = () => { keep(); f.pin = newPin(); draw(); };
+      el.querySelector('#ad-newgpin').onclick = () => { keep(); f.gPin = newPin(); draw(); };
+      el.querySelector('#ad-save').onclick = save;
+      el.querySelector('#ad-copy')?.addEventListener('click', async () => {
+        keep();
+        if (await copyText(admitText(f.done))) { f.copied = true; draw(); } else toast('কপি করা যায়নি।');
+      });
+      el.querySelector('#ad-send')?.addEventListener('click', async () => {
+        keep();
+        const text = admitText(f.done);
+        if (navigator.share) {
+          try { await navigator.share({ title: 'ডিফ এডু লগইন', text }); return; }
+          catch (e) { if (e && e.name === 'AbortError') return; }
+        }
+        if (await copyText(text)) { f.copied = true; draw(); } else toast('কপি করা যায়নি।');
+      });
+      el.querySelector('#ad-again')?.addEventListener('click', () => { f = blank(); draw(); });
+    };
+
+    const save = async () => {
+      keep();
+      if (!valid()) return;
+      f.busy = true; f.err = ''; draw();
+      try {
+        const student = { login_id: f.login, pin: f.pin, full_name: f.name.trim(), class_level: f.cls, roll: f.roll.trim(), shift: f.shift };
+        if (f.phone) student.phone = f.phone;
+        const guardian = { full_name: f.gName.trim(), phone: f.gPhone, pin: f.gPin };
+        if (f.rel) guardian.relation = f.rel;
+        const res = await fn('admin-users', { action: 'create_family', student, guardian });
+        const existed = !!(res && res.guardian_existed);
+        // The guardian's login is the phone number; a guardian who already exists keeps the old PIN.
+        f.done = { sLogin: f.login, sPin: f.pin, gLogin: f.gPhone, gPin: existed ? '' : f.gPin, existed };
+        f.copied = false;
+        store.del('c.allstudents');
+      } catch (e) { f.err = admitError(e); }
+      f.busy = false; draw();
+    };
+
+    draw();
+  } };
+})();
+
+(function () {
+  // ---------- admin: change history (ChangeHistoryScreen.kt, SupabaseAdminRepository.changeHistory) ----------
+  // Plain and calm on purpose: no jokes here. The row-to-text rules follow the APK's repository.
+  const RATING_FIELDS = [['behavior', 'আচরণ'], ['homework', 'বাড়ির কাজ'], ['performance', 'পারফরম্যান্স'], ['total', 'মোট']];
+  const KIND = { period_attendance: 'attendance', attendance: 'attendance', class_ratings: 'rating', marks: 'marks' };
+  const SLOT_BN = ['১ম', '২য়', '৩য়'];
+  const str = (o, k) => (o && o[k] != null ? String(o[k]) : '');
+  const dbl = (o, k) => (o && o[k] != null ? +o[k] : 0);
+  const dnum = v => bn(Number.isInteger(v) ? v : String(v)); // 39 -> ৩৯, 1.5 -> ১.৫
+  // Timestamps from PostgREST: no zone means UTC (same as the APK's parseTimestamp).
+  const toMs = raw => {
+    let s = String(raw || '').trim().replace(' ', 'T').replace(/\.\d+/, '');
+    if (/[+-]\d{2}$/.test(s)) s += ':00';
+    if (!/(Z|[+-]\d{2}:\d{2})$/.test(s)) s += 'Z';
+    const t = Date.parse(s);
+    return Number.isNaN(t) ? null : t;
+  };
+  const DHAKA = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const parts = ms => Object.fromEntries(DHAKA.formatToParts(new Date(ms)).map(p => [p.type, p.value]));
+  // "2026-11-05" -> "৫ নভেম্বর ২০২৬" (the same as bnDate in the APK)
+  const isoDay = iso => {
+    const p = ascii(iso).split('-'), m = +p[1];
+    return p.length === 3 && m >= 1 && m <= 12 ? `${bn(+p[2])} ${MONTHS[m - 1]} ${bn(+p[0])}` : iso;
+  };
+  const dayText = d => (d ? isoDay(String(d)) : null);
+  // "৩:০৮" in Dhaka time (12-hour, no leading zero on the hour)
+  const timeText = raw => {
+    const ms = toMs(raw);
+    if (ms == null) return '';
+    const p = parts(ms), h = +p.hour;
+    return `${bn(h % 12 || 12)}:${bn(p.minute)}`;
+  };
+  // "১৪ নভেম্বর ২০২৬, বিকেল ৩:৫৮"
+  const whenText = raw => {
+    const ms = toMs(raw);
+    if (ms == null) return String(raw || '');
+    const p = parts(ms), h = +p.hour;
+    const part = h < 4 ? 'রাত' : h < 6 ? 'ভোর' : h < 12 ? 'সকাল' : h < 15 ? 'দুপুর' : h < 18 ? 'বিকেল' : h < 20 ? 'সন্ধ্যা' : 'রাত';
+    return `${isoDay(`${p.year}-${p.month}-${p.day}`)}, ${part} ${timeText(raw)}`;
+  };
+  const shiftBnOf = db => (SHIFTS.find(s => s.id === String(db || '').toLowerCase()) || {}).bn || null;
+  // "বিকেল শিফট ২য় পিরিয়ড"
+  const periodText = row => {
+    const slot = +row.slot || 0, shift = shiftBnOf(row.shift);
+    const out = [shift ? `${shift} শিফট` : null, slot >= 1 && slot <= 3 ? `${SLOT_BN[slot - 1]} পিরিয়ড` : null].filter(Boolean).join(' ');
+    return out || null;
+  };
+  const whatText = (table, row) => {
+    if (table === 'period_attendance') {
+      const title = str(row, 'exam_title');
+      const session = row.session === 'exam' ? 'পরীক্ষা' + (title ? ` (${title})` : '') : 'ক্লাস';
+      return ['উপস্থিতি', session, periodText(row), dayText(row.day)].filter(Boolean).join(' · ');
+    }
+    if (table === 'attendance') return ['উপস্থিতি', dayText(row.date)].filter(Boolean).join(' · ');
+    if (table === 'class_ratings') return ['ক্লাস রেটিং', dayText(row.day), periodText(row)].filter(Boolean).join(' · ');
+    if (table === 'marks') return 'পরীক্ষার নম্বর';
+    return table;
+  };
+  const presentText = p => (p ? 'উপস্থিত' : 'অনুপস্থিত');
+  // The value a row held, for a deleted row.
+  const valueText = (table, row) => {
+    if (table === 'period_attendance') return presentText(!!row.present);
+    if (table === 'attendance') return [['check_in', 'চেক-ইন'], ['check_out', 'চেক-আউট']]
+      .map(([k, l]) => (timeText(str(row, k)) ? `${l} ${timeText(str(row, k))}` : null)).filter(Boolean).join(', ');
+    if (table === 'class_ratings') return RATING_FIELDS.filter(([k]) => row[k] != null).map(([k, l]) => `${l} ${dnum(dbl(row, k))}`).join(', ');
+    if (table === 'marks') return row.obtained == null ? '' : `নম্বর ${dnum(dbl(row, 'obtained'))}`;
+    return '';
+  };
+  const timeArrow = (from, to) => { const p = timeText(from), q = timeText(to); return p && q ? `: ${p} → ${q}` : ''; };
+  // What changed, in Bangla. Falls back to a plain line when no field difference is found.
+  const changeText = (table, action, oldRow, newRow) => {
+    if (action === 'delete') {
+      const v = valueText(table, oldRow || {});
+      return v ? `মুছে ফেলা হয়েছে: ${v}` : 'মুছে ফেলা হয়েছে';
+    }
+    if (!oldRow || !newRow) return 'বদলানো হয়েছে';
+    const a = oldRow, b = newRow;
+    let diff = '';
+    if (table === 'period_attendance') {
+      const was = !!a.present, now = !!b.present;
+      if (was !== now) diff = `${presentText(was)} → ${presentText(now)}`;
+    } else if (table === 'attendance') {
+      if (str(a, 'check_in') !== str(b, 'check_in')) diff = 'চেক-ইন বদল' + timeArrow(str(a, 'check_in'), str(b, 'check_in'));
+      else if (str(a, 'check_out') !== str(b, 'check_out')) diff = 'চেক-আউট বদল' + timeArrow(str(a, 'check_out'), str(b, 'check_out'));
+    } else if (table === 'class_ratings') {
+      diff = RATING_FIELDS.filter(([k]) => dbl(a, k) !== dbl(b, k)).map(([k, l]) => `${l} ${dnum(dbl(a, k))} → ${dnum(dbl(b, k))}`).join(', ');
+    } else if (table === 'marks' && dbl(a, 'obtained') !== dbl(b, 'obtained')) {
+      diff = `নম্বর ${dnum(dbl(a, 'obtained'))} → ${dnum(dbl(b, 'obtained'))}`;
+    }
+    return diff || 'বদলানো হয়েছে';
+  };
+  // The student a change belongs to: the log's own column, else the row's student_id.
+  const studentIdOf = r => str(r, 'student_id') || str(r.new_row || r.old_row || {}, 'student_id');
+
+  async function loadHistory() {
+    const rows = await sel('change_log', 'select=*&order=changed_at.desc&limit=100');
+    if (!rows.length) return [];
+    const uids = [...new Set(rows.map(r => str(r, 'changed_by')).filter(Boolean))];
+    const sids = [...new Set(rows.map(studentIdOf).filter(Boolean))];
+    // Two plain lookups for names. If one fails, names show as "অজানা" and the list still loads.
+    const [users, studs] = await Promise.all([
+      uids.length ? sel('profiles', `select=id,full_name&id=${inList(uids)}`).catch(() => []) : [],
+      sids.length ? sel('students', `select=id,profile:profiles!students_profile_id_fkey(full_name)&id=${inList(sids)}`).catch(() => []) : [],
+    ]);
+    const userName = Object.fromEntries(users.map(u => [u.id, u.full_name || '']));
+    const studentName = Object.fromEntries(studs.map(s => [s.id, (s.profile && s.profile.full_name) || '']));
+    return rows.map(r => {
+      const table = str(r, 'table_name'), action = str(r, 'action');
+      const oldRow = r.old_row || null, newRow = r.new_row || null;
+      const row = (action === 'delete' ? oldRow : newRow || oldRow) || {};
+      return {
+        id: r.id,
+        when: whenText(str(r, 'changed_at')),
+        who: userName[str(r, 'changed_by')] || 'অজানা',
+        student: studentName[studentIdOf(r)] || 'অজানা',
+        what: whatText(table, row),
+        change: changeText(table, action, oldRow, newRow),
+        reason: str(r, 'reason'),
+        kind: KIND[table] || table,
+      };
+    });
+  }
+
+  const card = e => `<div class="card"><h3>${esc(e.student)}</h3>
+    <div style="margin-top:4px">${esc(e.what)}</div>
+    ${e.change ? `<div style="color:var(--teal-dark);margin-top:2px">${esc(e.change)}</div>` : ''}
+    <div class="mute small" style="margin-top:6px">পরিবর্তন করেছেন: ${esc(e.who)} · ${esc(e.when)}</div>
+    ${e.reason ? `<div class="mute">কারণ: ${esc(e.reason)}</div>` : ''}</div>`;
+
+  SCREENS['a.history'] = { title: 'পরিবর্তনের ইতিহাস', sub: 'কে, কখন, কী বদলেছে', render: async (el) => {
+    let kind = '', list = null; // list: null = not loaded, undefined = failed
+    const load = async () => { try { list = await loadHistory(); } catch { list = undefined; } };
+    const draw = () => {
+      let h = chipRow([['', 'সব'], ['attendance', 'উপস্থিতি'], ['rating', 'রেটিং'], ['marks', 'নম্বর']], kind, 'data-kind');
+      if (list === undefined) h += '<button class="link hist-retry" data-retry>তালিকা আনা যায়নি। আবার চেষ্টা করতে এখানে চাপুন.</button>';
+      else {
+        const shown = list.filter(e => !kind || e.kind === kind);
+        h += shown.map(card).join('') || empty('inbox', 'এখনো কোনো পরিবর্তন নেই।');
+      }
+      el.innerHTML = h;
+      el.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { kind = b.dataset.kind; draw(); });
+      el.querySelector('[data-retry]')?.addEventListener('click', async () => { el.innerHTML = skel(2); await load(); draw(); });
+    };
+    await load();
+    draw();
   } };
 })();

@@ -35,7 +35,7 @@
       sel('quizzes', `select=id,title,class_level,questions,subject:subjects(name)&class_level=eq.${st.class_level}`),
       rpc('class_leaderboard', { p_class: st.class_level }).catch(() => []),
     ]);
-    el.innerHTML = section('কুইজ') + (qz.map(q => `<div class="card tap" data-q="${q.id}" style="display:flex;gap:12px;align-items:center">${chip('trophy', 40)}<div><h3>${esc(q.title)}</h3><div class="mute small">${esc(q.subject?.name || '')} · ${bn((q.questions || []).length)}টি প্রশ্ন</div></div></div>`).join('') || empty('trophy', 'এই ক্লাসের জন্য এখনো কোনো কুইজ নেই।'))
+    el.innerHTML = section('কুইজ') + (qz.map(q => `<div class="card tap" data-q="${q.id}" style="display:flex;gap:12px;align-items:center">${chip('trophy', 40)}<div><h3>${esc(q.title)}</h3><div class="mute small">${esc(q.subject?.name || '')} · ${bn((q.questions || []).length)}টি প্রশ্ন</div></div></div>`).join('') || empty('trophy', 'এই ক্লাসে এখনো কোনো কুইজ নেই। আজ একটু বিশ্রাম।'))
       + section('লিডারবোর্ড') + `<div class="card">${(lb || []).slice(0, 20).map((r, i) => `<div class="row" style="${r.student_id === st.id ? 'font-weight:700;color:var(--teal-dark)' : ''}"><span>${bn(i + 1)}. ${esc(r.display_name)}${r.student_id === st.id ? ' (তুমি)' : ''}</span><b>${bn(r.stars)} স্টার</b></div>`).join('') || '<div class="mute">এখনো কেউ নেই</div>'}</div>`;
     el.querySelectorAll('[data-q]').forEach(b => b.onclick = () => {
       const q = qz.find(x => x.id === b.dataset.q);

@@ -67,18 +67,65 @@ const shiftNow = () => {
   const m = +p[0] * 60 + +p[1];
   return m >= 420 && m < 540 ? 'morning' : m >= 900 && m < 1020 ? 'afternoon' : m >= 1140 && m < 1260 ? 'night' : null;
 };
-/** Notices on top of the home screen: the newest large ("নতুন" for 3 days), the next two as one-liners. */
+// ---------- notice board (ui/screens/visitor/VisitorScreens.kt NoticeCard + noticeGroups; home NoticeHighlight) ----------
+const NB_AUD = { all: { tag: 'সবার জন্য', pick: 'সকলে' }, guardians: { tag: 'অভিভাবকদের জন্য', pick: 'অভিভাবক' }, students: { tag: 'শিক্ষার্থীদের জন্য', pick: 'শিক্ষার্থী' }, teachers: { tag: 'শিক্ষকদের জন্য', pick: 'শিক্ষক' } };
+const NB_LONG = 140;                 // longer bodies clamp to 3 lines with "আরও পড়ুন"
+const NB_OPEN = new Set();           // notice ids the reader opened, kept while the list redraws
+const nbAud = a => NB_AUD[a] ? a : 'all';
+/** Dhaka calendar day (YYYY-MM-DD) of a timestamp. */
+const noticeDay = iso => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
+const noticeDate = iso => fmtDateY(noticeDay(iso));
+const noticeFresh = n => noticeDay(n.created_at) >= daysAgo(3);
+/** Newest-first list split into আজ / এই সপ্তাহ / আগের নোটিশ (Dhaka dates). Empty groups are dropped. */
+function noticeGroups(list) {
+  const today = dhakaToday(), week = daysAgo(6), day = n => noticeDay(n.created_at);
+  return [
+    ['আজ', list.filter(n => day(n) >= today)],
+    ['এই সপ্তাহ', list.filter(n => day(n) >= week && day(n) < today)],
+    ['আগের নোটিশ', list.filter(n => day(n) < week)],
+  ].filter(g => g[1].length);
+}
+/** One notice card: audience tag, "নতুন" for 3 days, date, bold title, body (3 lines until "আরও পড়ুন"), then the row of buttons. actions: extra buttons HTML. */
+function noticeCard(n, actions = '') {
+  const a = NB_AUD[nbAud(n.audience)], long = (n.body || '').length > NB_LONG, open = NB_OPEN.has(n.id);
+  return `<div class="card nb-card" data-nid="${esc(n.id)}">
+    <div class="nb-tagrow"><span class="pill nb-tag nb-tag-${nbAud(n.audience)}">${esc(a.tag)}</span>${noticeFresh(n) ? '<span class="pill nb-new">নতুন</span>' : ''}<span class="nb-date">${esc(noticeDate(n.created_at))}</span></div>
+    <h3 class="nb-ctitle">${esc(n.title)}</h3>
+    ${n.body ? `<div class="nb-cbody${long && !open ? ' clamp' : ''}">${esc(n.body)}</div>` : ''}
+    ${long ? `<button class="nb-more" data-more="${esc(n.id)}">${open ? 'কম দেখুন' : 'আরও পড়ুন'}</button>` : ''}
+    <div class="nb-actions"><button class="pill teal" data-speak="${esc(n.title + '। ' + (n.body || ''))}">পড়ে শোনাও</button>${actions}</div>
+  </div>`;
+}
+/** Wires the "আরও পড়ুন" toggles and the read-aloud buttons of a list drawn with noticeCard. */
+function bindNoticeCards(el) {
+  el.querySelectorAll('[data-more]').forEach(b => b.onclick = () => {
+    const open = !NB_OPEN.has(b.dataset.more);
+    open ? NB_OPEN.add(b.dataset.more) : NB_OPEN.delete(b.dataset.more);
+    b.closest('.nb-card').querySelector('.nb-cbody')?.classList.toggle('clamp', !open);
+    b.textContent = open ? 'কম দেখুন' : 'আরও পড়ুন';
+  });
+  el.querySelectorAll('[data-speak]').forEach(b => b.onclick = () => {
+    if (!('speechSynthesis' in window)) return toast('এই ব্রাউজারে পড়ে শোনানো যায় না');
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(b.dataset.speak); u.lang = 'bn-BD';
+    const v = speechSynthesis.getVoices().find(v => v.lang.startsWith('bn')); if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  });
+}
+/** Notice board on every home screen: always the same card (min height), "N টি নতুন", the newest large, the next two as lines. */
 async function noticeHighlight(aud) {
   const f = aud ? `&audience=in.(all,${aud})` : '';
-  let list;
-  try { list = await cached('nh' + (aud || ''), () => sel('notices', `select=id,title,body,audience,created_at&archived_at=is.null&order=created_at.desc&limit=3${f}`)); } catch { return ''; }
   const go = 'notices' + (aud ? ':' + aud : '');
-  let h = `<div class="nboard tap" data-go="${go}"><div class="nb-top"><b>নোটিশ বোর্ড</b><span>সব দেখুন</span></div>`;
-  if (!list.length) return h + '<div class="nb-mute">এখন কোনো নোটিশ নেই।</div></div>';
-  const [first, ...rest] = list, day = String(first.created_at).slice(0, 10);
-  h += `<div class="nb-meta">${day >= daysAgo(3) ? '<span class="pill nb-new">নতুন</span>' : ''}<span>${fmtDateY(first.created_at)}</span></div>
+  let list = null;
+  try { list = await cached('nh' + (aud || ''), () => sel('notices', `select=id,title,body,audience,created_at,created_by&archived_at=is.null&order=created_at.desc&limit=50${f}`)); } catch {}
+  const newCount = list ? list.filter(noticeFresh).length : 0;
+  let h = `<div class="nboard tap" data-go="${go}"><div class="nb-top"><b>নোটিশ বোর্ড</b>${newCount ? `<span class="pill nb-new">${bn(newCount)}টি নতুন</span>` : ''}<span class="nb-all">সব দেখুন</span></div>`;
+  if (!list) return h + '<div class="nb-mute">নোটিশ আনা যায়নি</div></div>';
+  if (!list.length) return h + '<div class="nb-mute">কোনো নোটিশ নেই। আজ সবাই শান্ত।</div></div>';
+  const [first, ...rest] = list;
+  h += `<div class="nb-meta"><span class="pill nb-tag nb-tag-${nbAud(first.audience)}">${esc(NB_AUD[nbAud(first.audience)].tag)}</span>${noticeFresh(first) ? '<span class="pill nb-new">নতুন</span>' : ''}<span class="nb-date">${noticeDate(first.created_at)}</span></div>
     <div class="nb-title">${esc(bn(first.title))}</div>${first.body ? `<div class="nb-body">${esc(bn(first.body))}</div>` : ''}`;
-  h += rest.slice(0, 2).map(n => `<div class="nb-row"><i></i><span>${esc(bn(n.title))}</span><small>${fmtDate(n.created_at)}</small></div>`).join('');
+  h += rest.slice(0, 2).map(n => `<div class="nb-row"><i></i><span>${esc(bn(n.title))}</span><small>${noticeDate(n.created_at)}</small></div>`).join('');
   return h + '</div>';
 }
 /** A folding category of tiles (3 per row); the phone remembers which are open. tiles: [icon, title, go, badge?] */
@@ -101,8 +148,8 @@ function bindDash(el) {
 /** "Work waiting" card: only items above zero; "no work" otherwise. items: [label, count, go] */
 const todoCard = (items, loading) => {
   const w = items.filter(i => i[1] > 0);
-  return `<div class="card ${w.length ? 'sun' : 'teal'}"><h3>আপনার জন্য কাজ</h3><div style="margin-top:6px">${loading ? '<span class="mute">দেখা হচ্ছে…</span>'
-    : !w.length ? '<span style="color:var(--teal-dark)">এই মুহূর্তে কোনো কাজ বাকি নেই ✓</span>'
+  return `<div class="card ${w.length ? 'sun' : 'teal'}"><h3>আপনার জন্য কাজ</h3><div style="margin-top:6px">${loading ? '<span class="mute">একটু অপেক্ষা…</span>'
+    : !w.length ? '<span style="color:var(--teal-dark)">আজ কোনো কাজ বাকি নেই। হালকা দিন।</span>'
     : w.map(([l, n, go]) => `<div class="todo tap" data-go="${go}"><span class="todo-n">${bn(n)}</span><span style="flex:1">${esc(l)}</span><b>দেখুন</b></div>`).join('')}</div></div>`;
 };
 const bar = (frac, color) => `<div class="bar"${color ? ` style="--c:${color}"` : ''}><i style="width:${Math.max(0, Math.min(1, frac)) * 100}%"></i></div>`;
@@ -268,7 +315,52 @@ async function signedUrl(bucket, path, seconds = 600) {
   const s = o.signedURL || o.signedUrl;
   return CFG.url + '/storage/v1' + (s.startsWith('/') ? s : '/' + s);
 }
-const upload = (bucket, path, blob, type) => raw('POST', `/storage/v1/object/${bucket}/${path}`, blob, { headers: { 'Content-Type': type } });
+// upsert: replace an existing object of the same name (the avatar keeps one name per user)
+const upload = (bucket, path, blob, type, upsert = false) => raw('POST', `/storage/v1/object/${bucket}/${path}`, blob, { headers: { 'Content-Type': type, ...(upsert ? { 'x-upsert': 'true' } : {}) } });
+// ---------- profile photo (private bucket "avatars": signed URL, cached in memory ~9 min by path) ----------
+// AV.path: undefined = not read yet this session, null = no photo, otherwise the object path.
+const AV = { path: undefined, loading: null, urls: new Map() };
+function avatarPath() {
+  if (AV.path !== undefined || !S.uid) return Promise.resolve(AV.path ?? null);
+  AV.loading ||= sel('profiles', `select=avatar_path&id=eq.${S.uid}`)
+    .then(r => (AV.path = r[0]?.avatar_path || null))
+    .catch(() => null)                       // failed: stays unread, the next call tries again
+    .finally(() => { AV.loading = null; });
+  return AV.loading;
+}
+async function avatarUrl(path) {
+  const c = AV.urls.get(path);
+  if (c && c.until > Date.now()) return c.url;
+  const url = await signedUrl('avatars', path);
+  AV.urls.set(path, { url, until: Date.now() + 9 * 60e3 });
+  return url;
+}
+/** After an upload (path) or removal (null), or with no argument to re-read the row, redraw every avatar. */
+async function refreshAvatar(path) {
+  if (path === undefined) AV.path = undefined;
+  else { AV.path = path; if (path) AV.urls.delete(path); }
+  await hydrateAvatars();
+}
+/** Fills every .hav and [data-avatar] on the page with the photo; the initial stays when there is none or it fails. */
+async function hydrateAvatars(root = document) {
+  const els = [...root.querySelectorAll('.hav, [data-avatar]')];
+  if (!els.length || !S.uid) return;
+  const path = await avatarPath();
+  els.forEach(el => { el.querySelector(':scope > .hav-img')?.remove(); el.classList.remove('has-img'); });
+  if (!path) return;
+  let url;
+  try { url = await avatarUrl(path); } catch { return; }
+  els.forEach(el => {
+    const img = new Image();
+    img.className = 'hav-img'; img.alt = ''; img.decoding = 'async';
+    img.onload = () => el.classList.add('has-img');
+    img.onerror = () => img.remove();
+    img.src = url;
+    el.appendChild(img);
+  });
+}
+/** Round 40px avatar button for a home header; opens the profile. The photo is filled in by hydrateAvatars(). */
+const avatarBtn = () => `<button class="hav" data-go="profile" aria-label="প্রোফাইল"><span class="hav-i">${esc((S.me?.full_name || '?').trim().charAt(0))}</span></button>`;
 const PROFILE_COLS = 'id,full_name,role,login_id,phone,coaching_id,must_change_pin';
 
 // ---------- offline outbox (same rules as the APK's Outbox) ----------
@@ -390,12 +482,15 @@ function bindGo(b) { b.addEventListener('click', () => { const s = b.dataset.go;
 function setSub(t) { $('#sub').textContent = t || ''; $('#sub').hidden = !t; }
 function setTitle(t) { $('#title').textContent = t; }
 
+const ADMIN_ONLY = new Set(['a.fees', 'a.users', 'a.phones', 'a.admit', 'a.history', 'a.people', 'a.editstudent', 'a.editperson', 'a.requests']);
 async function render() {
   const seq = ++renderSeq;
   offlineFlag = false;
   const { r, p } = cur();
   const sc = SCREENS[r];
   if (S.me?.must_change_pin && !sc.dark && r !== 'pin') return nav.reset('pin', 'forced');
+  // The server (RLS) is the real guard; this only keeps the wrong role away from admin/teacher screens.
+  if (S.me && ((ADMIN_ONLY.has(r) && !isAdmin()) || (r.startsWith('t.') && !isStaff()))) return nav.reset(homeRoute());
   view.innerHTML = skel(3);
   const el = document.createElement('div');
   el.className = 'screen';
@@ -405,6 +500,7 @@ async function render() {
     if (seq !== renderSeq) return; // user navigated away while loading
     if (offlineFlag) el.insertAdjacentHTML('afterbegin', '<div class="offline">অফলাইন — শেষ দেখা তথ্য</div>');
     view.replaceChildren(el);
+    hydrateAvatars();                        // profile photos into the header button and this screen
     el.querySelectorAll('[data-go]').forEach(bindGo);
     sc.after?.(el, p);
   } catch (e) {
@@ -416,8 +512,8 @@ async function render() {
 }
 const rerender = () => render();
 
-const FAMILY_SCRIPTS = ['family.js', 'play.js', 'comms.js', 'extras.js', 'reports.js'];
-const STAFF_SCRIPTS = ['search.js', 'teacher.js', 'office.js', 'play.js', 'comms.js', 'classroom.js', 'extras.js', 'reports.js', 'people.js'];
+const FAMILY_SCRIPTS = ['family.js', 'play.js', 'comms.js', 'extras.js', 'reports.js', 'profile.js'];
+const STAFF_SCRIPTS = ['search.js', 'teacher.js', 'office.js', 'play.js', 'comms.js', 'classroom.js', 'extras.js', 'reports.js', 'people.js', 'profile.js'];
 const loaded = {};
 function loadScript(src) {
   return loaded[src] ||= new Promise((ok, fail) => {
@@ -461,6 +557,7 @@ SCREENS.login = { dark: true, render: async (el, role) => {
       <div class="dfield"><span>${I('field_id') || ''}</span><input id="id" name="username" placeholder="আইডি" autocomplete="username" required></div>
       <div class="dfield"><span>${I('lock')}</span><input id="pin" name="password" type="password" inputmode="numeric" maxlength="6" placeholder="পিন (৪–৬ সংখ্যা)" autocomplete="current-password" required><button type="button" id="eye" aria-label="পিন দেখুন">${I('eye')}</button></div>
       <div class="err center" id="err"></div>
+      <button type="button" class="dforgot" id="forgot">পিন ভুলে গেছেন?</button>
       <button class="dbtn" id="go" disabled>লগইন করুন</button>
     </form>
     <div class="lsub">পিন ভুলে গেলে কোচিং অফিসে যোগাযোগ করুন।</div></div>`;
@@ -469,9 +566,14 @@ SCREENS.login = { dark: true, render: async (el, role) => {
   idI.oninput = pinI.oninput = () => { pinI.value = ascii(pinI.value).replace(/\D/g, '').slice(0, 6); el.querySelector('#err').textContent = ''; can(); };
   el.querySelector('#eye').onclick = () => { pinI.type = pinI.type === 'password' ? 'text' : 'password'; el.querySelector('#eye').innerHTML = I(pinI.type === 'password' ? 'eye' : 'eye_off'); };
   el.querySelector('[data-back]').onclick = () => nav.back();
+  el.querySelector('#forgot').onclick = () => sheet(`<h2>পিন ভুলে গেছেন?</h2>
+    <div class="mute">অফিসে ফোন করে আপনার আইডি বলুন। নতুন পিন পাবেন, তারপর নিজের পিন বানিয়ে নেবেন।</div>
+    <div class="forgot-no">০১৭১১-৬৭৮৮১৮</div>
+    <a class="btn" href="tel:01711678818">ফোন করুন</a>
+    <button class="link" data-close>ঠিক আছে</button>`);
   el.querySelector('#f').onsubmit = async ev => {
     ev.preventDefault(); if (b.disabled) return;
-    b.disabled = true; b.textContent = 'অপেক্ষা করুন…';
+    b.disabled = true; b.textContent = 'একটু অপেক্ষা…';
     try { await signIn(idI.value, ascii(pinI.value)); await enterApp(); }
     catch (e) { el.querySelector('#err').textContent = e.status === 400 ? 'আইডি অথবা পিন সঠিক নয়। আবার চেষ্টা করুন।' : 'ইন্টারনেট সংযোগ দেখুন।'; b.textContent = 'লগইন করুন'; can(); }
   };
@@ -495,19 +597,19 @@ SCREENS.admission = { title: 'ভর্তি তথ্য', sub: 'Diff Edu · �
       await raw('POST', '/rest/v1/rpc/submit_admission_inquiry', { p_slug: CFG.slug, p_student_name: el.querySelector('#an').value.trim(), p_class_level: +el.querySelector('#ac').value, p_phone: phone, p_message: el.querySelector('#am').value.trim() || null }, { auth: false });
       el.innerHTML = `<div class="card good">${empty('party', 'ধন্যবাদ! আপনার তথ্য পাওয়া গেছে। অফিস থেকে শীঘ্রই ফোন করা হবে।')}</div>`;
     } catch (e) {
-      el.querySelector('#aerr').textContent = e.status === 400 || /limit|too many/i.test(e.body || '') ? 'আজ এই নম্বর থেকে অনেকবার পাঠানো হয়েছে। পরে চেষ্টা করুন বা অফিসে ফোন করুন।' : 'পাঠানো যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।';
+      el.querySelector('#aerr').textContent = e.status === 400 || /limit|too many/i.test(e.body || '') ? 'আজ এই নম্বর থেকে অনেকবার পাঠানো হয়েছে। পরে চেষ্টা করুন বা অফিসে ফোন করুন।' : 'পাঠানো যায়নি। নেট দেখে আবার পাঠান।';
       b.disabled = false; b.textContent = 'পাঠান';
     }
   };
 } };
 
-SCREENS.pin = { title: p => p === 'forced' ? 'নতুন পিন' : 'পিন বদলান', home: p => p === 'forced', render: async (el, mode) => {
+SCREENS.pin = { title: p => p === 'forced' ? 'নতুন পিন বানান' : 'পিন বদলান', home: p => p === 'forced', render: async (el, mode) => {
   const forced = mode === 'forced';
   el.innerHTML = `<div class="card"><h2>${forced ? 'নিজের পিন ঠিক করুন' : 'পিন বদলান'}</h2>
     <div class="mute">${forced ? 'নিরাপত্তার জন্য প্রথমবার নিজের একটি নতুন পিন দিন। পরের বার থেকে এই পিন দিয়ে লগইন করবেন।' : 'নতুন পিন দিন। পরের বার থেকে এই পিন দিয়ে লগইন করবেন।'}</div>
     <form id="pf"><label>নতুন পিন (৪–৬ সংখ্যা)</label><input id="np" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" required>
     <label>আবার লিখুন</label><input id="np2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" required>
-    <div class="err" id="perr"></div><button class="btn" id="pgo">পিন সংরক্ষণ করুন</button></form></div>
+    <div class="err" id="perr"></div><button class="btn" id="pgo">সংরক্ষণ করুন</button></form></div>
     ${forced ? '<button class="btn ghost" data-logout>লগআউট</button>' : ''}`;
   el.querySelectorAll('[data-logout]').forEach(b => b.onclick = () => signOut());
   el.querySelector('#pf').onsubmit = async ev => {
@@ -517,10 +619,10 @@ SCREENS.pin = { title: p => p === 'forced' ? 'নতুন পিন' : 'পি�
     if (a !== b2) { err.textContent = 'দুই জায়গায় পিন মেলেনি।'; return; }
     if (a === '1234' || a === '2580') { err.textContent = 'এটা সহজ পিন। অন্য পিন বাছুন।'; return; }
     const btn = el.querySelector('#pgo'); btn.disabled = true; btn.textContent = 'সংরক্ষণ হচ্ছে…'; err.textContent = '';
-    try { await changePin(a); toast('নতুন পিন সংরক্ষিত হয়েছে ✓'); nav.reset(homeRoute()); }
+    try { await changePin(a); toast('নতুন পিন সংরক্ষণ হয়ে গেছে।'); nav.reset(homeRoute()); }
     catch (e) {
-      err.textContent = e.message === 'flag' ? 'নতুন পিন চালু হয়ে গেছে, তবে সার্ভারে পুরোপুরি জমা হয়নি। আবার একই নতুন পিন দিয়ে সংরক্ষণ চাপুন।' : 'সংরক্ষণ করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।';
-      btn.disabled = false; btn.textContent = 'পিন সংরক্ষণ করুন';
+      err.textContent = e.message === 'flag' ? 'নতুন পিন চালু হয়ে গেছে, তবে সার্ভারে পুরোপুরি জমা হয়নি। আবার একই নতুন পিন দিয়ে সংরক্ষণ করুন।' : 'সংরক্ষণ করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।';
+      btn.disabled = false; btn.textContent = 'সংরক্ষণ করুন';
     }
   };
 } };

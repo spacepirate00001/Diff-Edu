@@ -21,10 +21,41 @@
   const noteCard = (n, go) => `<div class="card${go ? ' tap" data-go="' + go : ''}" style="display:flex;gap:12px;align-items:flex-start">${chip(/অনুপস্থিত/.test(n.title) ? 'alert' : 'attendance', 40)}
     <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px"><h3 style="flex:1">${esc(n.title)}</h3>${n.read_at ? '' : '<span style="width:9px;height:9px;border-radius:50%;background:var(--coral);flex:none"></span>'}</div>
     <div class="mute small">${n.day === dhakaToday() ? 'আজ' : fmtDateY(n.day)}</div><div style="margin-top:4px">${esc(bn(n.body))}</div></div></div>`;
-  SCREENS['g.home'] = { home: true, title: () => 'স্বাগতম, ' + S.me.full_name, sub: () => 'অভিভাবক · ' + todayBnLong(), trail: () => logoutPill('sun'), render: async (el) => {
+  // "আজ" card for the selected child (TodayCard in GuardianScreens.kt): shift status + one line per marked slot.
+  const SLOT_BN = n => ({ 1: '১ম', 2: '২য়', 3: '৩য়' })[n] || bn(n);
+  const todayShell = c => `<div class="card tap today-card" data-go="att:${esc(c.id)}"><h3>${esc(nm(c))}</h3>
+    <div class="mute small">ক্লাস ${bn(c.class_level)} · রোল ${bn(c.roll)}</div><div class="today-body"><div class="mute" style="margin-top:10px">একটু অপেক্ষা…</div></div></div>`;
+  async function fillToday(el, c) {
+    const box = el.querySelector('.today-body');
+    if (!box) return;
+    const q = `day=eq.${dhakaToday()}&shift=eq.${shiftOf(c).id}&student_id=eq.${c.id}`;
+    const [pa, cr] = await Promise.allSettled([sel('period_attendance', `select=slot,present&${q}`), sel('class_ratings', `select=slot,total&${q}`)]);
+    if (!el.isConnected) return;
+    if (pa.status === 'rejected' && cr.status === 'rejected') { box.innerHTML = '<div class="mute" style="margin-top:10px">আজকের খবর আনা যায়নি। নিচে টেনে রিফ্রেশ করুন।</div>'; return; }
+    const marks = {}, scores = {};
+    if (pa.status === 'fulfilled') (pa.value || []).forEach(r => { marks[+r.slot] = !!r.present; });
+    if (cr.status === 'fulfilled') (cr.value || []).forEach(r => { scores[+r.slot] = +r.total; });
+    const vals = Object.values(marks);
+    let h = '<div style="margin-top:10px">';
+    if (vals.some(v => v)) h += '<span class="pill" style="background:#137442;color:#fff">● আজ উপস্থিত</span>';
+    else if (vals.some(v => !v)) h += '<span class="pill" style="background:var(--coral-soft);color:#A8381A">● আজ উপস্থিত নয়</span>';
+    else h += '<span class="pill" style="background:var(--line);color:var(--ink-soft)">আজ এখনো উপস্থিতি নেওয়া হয়নি</span>';
+    h += '</div>';
+    // Slot 0 = the whole-shift exam, 1..3 = class periods. Only slots with a mark or a score get a line.
+    for (let slot = 0; slot <= 3; slot++) {
+      const m = marks[slot], s = scores[slot];
+      if (m === undefined && s === undefined) continue;
+      const parts = [slot === 0 ? 'পরীক্ষা' : SLOT_BN(slot) + ' ক্লাস'];
+      if (m !== undefined) parts.push(m ? 'উপস্থিত' : 'অনুপস্থিত');
+      if (s !== undefined) parts.push('স্কোর ' + bn(String(s)) + '/১০');
+      h += `<div class="mute" style="margin-top:6px">${esc(parts.join(' · '))}</div>`;
+    }
+    box.innerHTML = h;
+  }
+  SCREENS['g.home'] = { home: true, title: () => 'স্বাগতম, ' + S.me.full_name, sub: () => 'অভিভাবক · ' + todayBnLong(), trail: () => avatarBtn() + logoutPill('sun'), render: async (el) => {
     const nh = noticeHighlight('guardians'); // notices first: guardians must not miss holidays, exam dates and fee news
     await loadKids();
-    if (!kids.length) { el.innerHTML = (await nh) + empty('child', 'কোনো শিক্ষার্থী যুক্ত করা হয়নি। অনুগ্রহ করে কোচিং অফিসে যোগাযোগ করুন।'); return; }
+    if (!kids.length) { el.innerHTML = (await nh) + empty('child', 'কোনো শিক্ষার্থী যুক্ত হয়নি। কোচিং অফিসে যোগাযোগ করুন।'); return; }
     selIdx = Math.min(selIdx, kids.length - 1);
     const c = kids[selIdx];
     const [att, fees, notes] = await Promise.all([
@@ -35,10 +66,10 @@
     const today = att.find(a => a.date === dhakaToday() && a.check_in);
     const due = fees.reduce((s, f) => s + (+f.amount - +f.paid_amount), 0);
     const note = notes.find(n => n.student_id === c.id);
-    el.innerHTML = `${await nh}
+    el.innerHTML = `${todayShell(c)}${await nh}
       ${kids.length > 1 ? chipRow(kids.map((k, i) => [i, nm(k)]), selIdx, 'data-kid') : ''}
       ${note ? `<div class="stack"><div style="color:var(--teal-dark);font-weight:600;font-size:14px">সর্বশেষ বার্তা</div>${noteCard(note, 'notes')}</div>` : ''}
-      <div class="card"><h2>আজকের তথ্য</h2>${today ? `<div class="ok" style="font-weight:700;font-size:16px">${esc(nm(c))} আজ ${fmtTime(today.check_in)}-এ উপস্থিত হয়েছে।</div>` : '<div class="mute">আজকের উপস্থিতির তথ্য এখনো পাওয়া যায়নি।</div>'}</div>
+      <div class="card"><h2>আজকের তথ্য</h2>${today ? `<div class="ok" style="font-weight:700;font-size:16px">${esc(nm(c))} আজ ${fmtTime(today.check_in)}-এ উপস্থিত হয়েছে।</div>` : '<div class="mute">আজকের উপস্থিতির খবর এখনো আসেনি।</div>'}</div>
       ${due > 0 ? `<div class="card sun tap" data-go="fees:${c.id}"><h3>বকেয়া ফি: ${taka(due)}</h3><div class="mute">${fees.filter(f => +f.amount > +f.paid_amount).map(f => MONTHS[+f.month.slice(5, 7) - 1] + ' ' + bn(f.month.slice(0, 4))).join(', ')}</div><div class="small" style="color:var(--teal-dark);font-weight:600">বিস্তারিত দেখুন ›</div></div>` : ''}
       <div class="card"><div class="stats"><div><b>${bn(rw(c).stars || 0)}</b><span class="mute small">স্টার</span></div><div><b>${bn(rw(c).streak_days || 0)} দিন</b><span class="mute small">টানা উপস্থিতি</span></div></div></div>
       ${grid2([fun('document', 'রিপোর্ট কার্ড', 'myreports:' + c.id, { tint: 'sun', sub: 'সাপ্তাহিক ফল' }), fun('calendar', 'উপস্থিতি', 'att:' + c.id, { tint: 'sky', sub: 'মাসের হিসাব' })])}
@@ -49,6 +80,7 @@
       ${dashSection('guardian', 'account', 'card', 'ফি ও অ্যাকাউন্ট', [['card', 'ফি ও পরিশোধ', 'fees:' + c.id], ['lock', 'পিন বদলান', 'pin'], ['lock', 'আমার তথ্য ও গোপনীয়তা', 'mydata']], false)}
       ${apkBanner()}`;
     bindDash(el);
+    fillToday(el, c);
     el.querySelectorAll('[data-kid]').forEach(b => b.onclick = () => { selIdx = +b.dataset.kid; store.set('kid', selIdx); render(); });
     el.querySelectorAll('[data-logout]').forEach(b => b.onclick = confirmLogout);
     setTimeout(apkPopup, 1500);
@@ -76,13 +108,13 @@
   const moodDone = m => `<div style="display:flex;align-items:center;gap:10px"><span style="font-size:30px">${MOOD_E[m - 1]}</span><span>${m <= 2 ? 'মন খারাপ লাগছে? শিক্ষকরা তোমার পাশে আছেন।' : 'জানানোর জন্য ধন্যবাদ!'}</span></div>`;
 
   // ---------- student home (StudentScreens.StudentHomeScreen) ----------
-  SCREENS['s.home'] = { home: true, title: () => 'স্বাগতম, ' + S.me.full_name, sub: 'আজকের পড়া এক নজরে', hdr: 'var(--plum400)', trail: () => logoutPill('white'),
+  SCREENS['s.home'] = { home: true, title: () => 'স্বাগতম, ' + S.me.full_name, sub: 'আজকের পড়া এক নজরে', hdr: 'var(--plum400)', trail: () => avatarBtn() + logoutPill('white'),
     extra: () => '<span class="hx-mascot" id="hxm"><img src="logo.svg" alt=""></span><span class="pill white" id="hxs">স্টার …</span><span class="pill white" id="hxd">টানা উপস্থিতি … দিন</span>',
     render: async (el) => {
     const nh = noticeHighlight('students'); // notices first, so nobody misses holidays or exam dates
     await loadKids();
     const st = kids[0];
-    if (!st) { el.innerHTML = (await nh) + '<div class="card sun mute">ক্লাসের তথ্য লোড হচ্ছে…</div>'; return; }
+    if (!st) { el.innerHTML = (await nh) + '<div class="card sun mute">একটু অপেক্ষা করো…</div>'; return; }
     const r = rw(st), av = r.avatar && window.SHOP_EMOJI ? SHOP_EMOJI(r.avatar) : null;
     const hs = $('#hxs'), hd = $('#hxd'), hm = $('#hxm');
     if (hs) hs.textContent = 'স্টার ' + bn(r.stars || 0);
@@ -104,7 +136,7 @@
       const t = revisionPlan(next.exam_date, chs, dhakaToday())[0];
       countdown = `<div class="card tap ${left <= 3 ? 'warn' : 'grape'}" data-go="s.revision:${next.id}" style="display:flex;align-items:center;gap:10px">
         <div style="width:72px;text-align:center;flex:none"><div style="font-size:34px;font-weight:700;line-height:40px;color:${left <= 3 ? 'var(--coral)' : 'var(--plum400)'}">${left === 0 ? 'আজ' : bn(left)}</div>${left > 0 ? '<div class="mute small">দিন বাকি</div>' : ''}</div>
-        <div style="flex:1"><h3>${esc(next.subject?.name || '')} · ${esc(next.title)}</h3><div>${t ? (t.full ? 'আজ: পুরো সিলেবাস একবার রিভিশন দাও' : 'আজ পড়ো: ' + t.chapters.map(c => esc(c.title)).join(', ')) : 'রিভিশন প্ল্যান দেখো →'}</div></div></div>`;
+        <div style="flex:1"><h3>${esc(next.subject?.name || '')} · ${esc(next.title)}</h3><div>${t ? (t.full ? 'আজ: পুরো সিলেবাস একবার রিভিশন দাও' : 'আজ পড়ো: ' + t.chapters.map(c => esc(c.title)).join(', ')) : 'রিভিশন প্ল্যান দেখো'}</div></div></div>`;
     }
     const big = document.body.classList.contains('big');
     const fin = hw.filter(h => done.has(h.id)).length;
@@ -114,7 +146,7 @@
       ${countdown}
       <div class="card sky" id="mood">${mood == null ? `<h3>আজ তোমার মন কেমন?</h3><div class="moods">${MOOD_E.map((e, i) => `<button data-mood="${i + 1}"><span>${e}</span><small>${MOOD_BN[i]}</small></button>`).join('')}</div>` : moodDone(mood)}</div>
       ${section('আজকের কাজ')}
-      ${!hw.length ? empty('inbox', 'আজ কোনো বাড়ির কাজ নেই।') : `<div class="card ${fin === hw.length ? 'teal' : ''}"><h3>${fin === hw.length ? 'সব কাজ শেষ!' : `${bn(fin)} / ${bn(hw.length)} কাজ শেষ`}</h3><div style="margin-top:8px">${bar(fin / hw.length)}</div></div>
+      ${!hw.length ? empty('inbox', 'বাড়ির কাজ নেই। আজ ছুটি!') : `<div class="card ${fin === hw.length ? 'teal' : ''}"><h3>${fin === hw.length ? 'সব কাজ শেষ!' : `${bn(fin)} / ${bn(hw.length)} কাজ শেষ`}</h3><div style="margin-top:8px">${bar(fin / hw.length)}</div></div>
         ${hw.map(h => `<div class="card"><div style="display:flex;gap:12px;align-items:center"><button class="mark-btn ${done.has(h.id) ? 'on' : ''}" data-hw="${h.id}" aria-label="শেষ">${done.has(h.id) ? '✓' : ''}</button>
           <div style="flex:1">${pill(h.subject?.name || 'বিষয়', 'sky')}<h3 style="margin-top:4px;${done.has(h.id) ? 'color:var(--ink-soft)' : ''}">${esc(h.title)}</h3><div class="mute small">জমা দেওয়ার শেষ দিন: ${h.due_date ? fmtDateY(h.due_date) : ''}</div></div></div>
           <button class="pill warn" style="margin-top:8px;border:0;cursor:pointer" data-confused="${esc((h.subject?.name || '') + ': ' + h.title)}">বুঝিনি</button></div>`).join('')}`}
@@ -171,7 +203,7 @@
     const plan = revisionPlan(ex.exam_date, syl.length ? syl : all, today);
     const key = 'rev.' + ex.id, doneDays = new Set(store.get(key) || []);
     const draw = () => {
-      el.innerHTML = `<div class="card sun"><h3>${left === 0 ? 'পরীক্ষা আজ! শুভকামনা' : `পরীক্ষা ${fmtDateY(ex.exam_date)} · আর ${bn(left)} দিন`}</h3><div class="mute">প্রতিদিনের পড়া শেষ হলে টিক দাও। অধ্যায়ের পাশে বইয়ের পৃষ্ঠা দেওয়া আছে।</div></div>`
+      el.innerHTML = `<div class="card sun"><h3>${left === 0 ? 'পরীক্ষা আজ! শুভকামনা' : `পরীক্ষা ${fmtDateY(ex.exam_date)} · আর ${bn(left)} দিন`}</h3><div class="mute">পড়া শেষ হলে দিনটিতে টিক দাও। অধ্যায়ের পাশে বইয়ের পৃষ্ঠা লেখা আছে।</div></div>`
         + (plan.length ? plan.map(d => {
           const dn = doneDays.has(d.date), isT = d.date === today;
           return `<div class="card ${dn ? 'teal' : isT ? 'grape' : ''}" style="display:flex;align-items:center;gap:8px"><div style="flex:1"><div class="small" style="font-weight:600;color:${isT ? 'var(--plum400)' : 'var(--ink-soft)'}">${isT ? 'আজ · ' : ''}${fmtDateY(d.date)}</div>
@@ -232,12 +264,12 @@
   } };
 
   // ---------- notices ----------
-  SCREENS.notices = { title: 'নোটিশ', render: async (el, aud) => {
+  // Notice board (NoticesScreen): groups আজ / এই সপ্তাহ / আগের নোটিশ; the card is in app.js (noticeCard).
+  SCREENS.notices = { title: 'নোটিশ বোর্ড', render: async (el, aud) => {
     const f = aud ? `&audience=in.(all,${aud})` : '';
-    const ns = await cached('notices' + (aud || ''), () => sel('notices', `select=id,title,body,audience,created_at&archived_at=is.null&order=created_at.desc&limit=50${f}`));
-    el.innerHTML = ns.map(n => `<div class="card"><div class="mute small">${fmtDateY(n.created_at)}</div><h3>${esc(n.title)}</h3><div style="white-space:pre-wrap;margin-top:4px">${esc(n.body)}</div>
-      <button class="pill teal" data-speak="${esc(n.title + '। ' + (n.body || ''))}" style="margin-top:8px">পড়ে শোনাও</button></div>`).join('') || empty('bell', 'এখনো কোনো নোটিশ নেই।');
-    bindSpeak(el);
+    const ns = await cached('notices' + (aud || ''), () => sel('notices', `select=id,title,body,audience,created_at,created_by&archived_at=is.null&order=created_at.desc&limit=50${f}`));
+    el.innerHTML = ns.length ? noticeGroups(ns).map(([label, g]) => `<div class="nb-group">${esc(label)}</div>${g.map(n => noticeCard(n)).join('')}`).join('') : empty('bell', 'কোনো নোটিশ নেই। আজ সবাই শান্ত।');
+    bindNoticeCards(el);
   } };
 
   // ---------- materials ----------
@@ -258,7 +290,7 @@
     const ns = await cached('notes', () => sel('guardian_notes', 'select=id,student_id,day,title,body,read_at&order=updated_at.desc&limit=60'));
     const unread = ns.filter(n => !n.read_at).map(n => n.id);
     if (unread.length && !offlineFlag) rpc('mark_notes_read', { p_ids: unread }).catch(() => {});
-    el.innerHTML = ns.map(n => noteCard(n)).join('') || empty('bell', 'এখনো কোনো বার্তা আসেনি। শিক্ষক উপস্থিতি নিলে বা রেটিং দিলে এখানে দেখাবে।');
+    el.innerHTML = ns.map(n => noteCard(n)).join('') || empty('bell', 'কোনো বার্তা নেই। শিক্ষক উপস্থিতি নিলে বা রেটিং দিলে এখানে আসবে।');
   } };
 
   // ---------- rating & praise ----------
