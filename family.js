@@ -247,7 +247,7 @@
     el.innerHTML = ms.map(m => `<div class="card tap" data-mat="${m.id}" style="display:flex;gap:12px;align-items:center">${chip(K[m.kind]?.[0] || 'book', 40)}<div style="flex:1"><h3>${esc(m.title)}</h3><div class="mute small">${esc(m.subject?.name || '')}${m.chapter ? ' · ' + esc(m.chapter) : ''} · ${K[m.kind]?.[1] || ''}</div></div></div>`).join('') || empty('book', 'এই ক্লাসের জন্য এখনো কোনো উপকরণ নেই।');
     el.querySelectorAll('[data-mat]').forEach(b => b.onclick = async () => {
       const m = ms.find(x => x.id === b.dataset.mat);
-      try { const u = m.url || (m.storage_path ? await signedUrl('materials', m.storage_path) : null); if (u) window.open(u, '_blank', 'noopener'); else toast('ফাইল পাওয়া যায়নি'); }
+      try { const u = safeUrl(m.url) || (m.storage_path ? await signedUrl('materials', m.storage_path) : null); if (u) window.open(u, '_blank', 'noopener'); else toast('ফাইল পাওয়া যায়নি'); }
       catch { toast('খোলা যায়নি'); }
     });
   } };
@@ -282,7 +282,7 @@
   SCREENS.director = { title: 'পরিচালকের বার্তা', render: async (el) => {
     const ms = await cached('director', () => sel('director_messages', 'select=id,title,body,video_url,published_on&order=published_on.desc'));
     el.innerHTML = ms.map(m => `<div class="card"><div class="mute small">${fmtDateY(m.published_on)}</div><h3>${esc(m.title)}</h3><div style="white-space:pre-wrap;margin-top:4px">${esc(m.body)}</div>
-      <div class="chips" style="margin-top:8px"><button class="pill teal" data-speak="${esc(m.title + '। ' + (m.body || ''))}">পড়ে শোনাও</button>${m.video_url ? `<a class="pill sun" href="${esc(m.video_url)}" target="_blank" rel="noopener">ভিডিও দেখুন</a>` : ''}</div></div>`).join('') || empty('mic', 'এখনো কোনো বার্তা নেই।');
+      <div class="chips" style="margin-top:8px"><button class="pill teal" data-speak="${esc(m.title + '। ' + (m.body || ''))}">পড়ে শোনাও</button>${safeUrl(m.video_url) ? `<a class="pill sun" href="${esc(safeUrl(m.video_url))}" target="_blank" rel="noopener">ভিডিও দেখুন</a>` : ''}</div></div>`).join('') || empty('mic', 'এখনো কোনো বার্তা নেই।');
     bindSpeak(el);
   } };
 

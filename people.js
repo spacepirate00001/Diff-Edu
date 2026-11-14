@@ -49,7 +49,7 @@
       } else {
         const shown = list.filter(p => hit(p.full_name, p.login_id, p.phone));
         h += shown.map(p => `<div class="card tap" data-go="a.editperson:${p.id}" style="display:flex;gap:10px;align-items:center">${avatar(p.full_name)}<div style="flex:1"><h3>${esc(p.full_name || 'নাম নেই')}</h3>
-          <div class="mute small">${[p.phone ? 'ফোন ' + bn(p.phone) : '', p.login_id ? 'আইডি ' + esc(p.login_id) : '', P.tab === 'guardian' ? 'সন্তান ' + bn(p.kids.length) + ' জন' : ''].filter(Boolean).join(' · ')}</div></div></div>`).join('') || empty('search', 'কাউকে পাওয়া যায়নি।');
+          <div class="mute small">${[p.phone ? 'ফোন ' + esc(bn(p.phone)) : '', p.login_id ? 'আইডি ' + esc(p.login_id) : '', P.tab === 'guardian' ? 'সন্তান ' + bn(p.kids.length) + ' জন' : ''].filter(Boolean).join(' · ')}</div></div></div>`).join('') || empty('search', 'কাউকে পাওয়া যায়নি।');
       }
       el.innerHTML = h;
       if (drawn) el.querySelectorAll('[data-go]').forEach(bindGo); // the first draw is bound by render()
@@ -212,7 +212,7 @@
     const count = {}; rows.forEach(p => { if (p.teacher_id) { const n = p.teacher?.full_name || ''; count[n] = (count[n] || new Set()).add(p.slot); } });
     const cell = (slot, c) => { const r = rows.find(p => +p.slot === slot && (c == null ? p.class_level == null : +p.class_level === c));
       const key = slot + ':' + (c ?? 0);
-      return `<button class="pickrow ${RT.open === key ? 'on' : ''}" data-cell="${key}" style="flex-direction:row;justify-content:space-between"><b>${c == null ? 'সব ক্লাস একসাথে' : 'ক্লাস ' + bn(c)}</b><span>${!r ? 'ক্লাস নেই' : r.teacher?.full_name || 'শিক্ষক নেই'}</span></button>
+      return `<button class="pickrow ${RT.open === key ? 'on' : ''}" data-cell="${key}" style="flex-direction:row;justify-content:space-between"><b>${c == null ? 'সব ক্লাস একসাথে' : 'ক্লাস ' + bn(c)}</b><span>${!r ? 'ক্লাস নেই' : esc(r.teacher?.full_name || 'শিক্ষক নেই')}</span></button>
         ${RT.open === key ? `<div class="chips" style="margin:4px 0 8px">${staff.map(t => `<button class="chip-btn ${r?.teacher_id === t.id ? 'on' : ''}" data-set="${key}|${t.id}">${r?.teacher_id === t.id ? '✓ ' : ''}${esc(t.full_name)}</button>`).join('')}<button class="chip-btn" data-set="${key}|none" style="background:var(--sun-soft)">ক্লাস নেই</button></div>` : ''}`; };
     let h = chipRow(SHIFTS.map(s => [s.id, `${s.bn} (${s.time})`]), RT.shift, 'data-sh') +
       '<div class="card cream mute">এই রুটিন অনুযায়ী হাজিরা ও রেটিংয়ের পাতা সাজানো হয়, শিক্ষকরা নম্বর দেওয়ার মনে করানো বার্তা পান, আর রিপোর্ট কার্ডে শিক্ষকের নাম যায়। ঘরে চাপ দিয়ে শিক্ষক বদলান।</div>';

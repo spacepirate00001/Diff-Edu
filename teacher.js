@@ -401,13 +401,13 @@
   } };
   SCREENS.director = { title: 'পরিচালকের বার্তা', render: async (el) => {
     const ms = await cached('director', () => sel('director_messages', 'select=id,title,body,video_url,published_on&order=published_on.desc'));
-    el.innerHTML = ms.map(m => `<div class="card"><div class="mute small">${fmtDateY(m.published_on)}</div><h3>${esc(m.title)}</h3><div style="white-space:pre-wrap;margin-top:4px">${esc(m.body)}</div>${m.video_url ? `<a class="pill sun" style="margin-top:8px" href="${esc(m.video_url)}" target="_blank" rel="noopener">ভিডিও দেখুন</a>` : ''}</div>`).join('') || empty('mic', 'এখনো কোনো বার্তা নেই।');
+    el.innerHTML = ms.map(m => `<div class="card"><div class="mute small">${fmtDateY(m.published_on)}</div><h3>${esc(m.title)}</h3><div style="white-space:pre-wrap;margin-top:4px">${esc(m.body)}</div>${safeUrl(m.video_url) ? `<a class="pill sun" style="margin-top:8px" href="${esc(safeUrl(m.video_url))}" target="_blank" rel="noopener">ভিডিও দেখুন</a>` : ''}</div>`).join('') || empty('mic', 'এখনো কোনো বার্তা নেই।');
   } };
   SCREENS.materials = { title: 'শিক্ষা উপকরণ', sub: c => 'ক্লাস ' + bn(c), render: async (el, cls) => {
     cls = +cls || 5;
     const ms = await cached('mat' + cls, () => sel('materials', `select=id,chapter,title,kind,url,storage_path,subject:subjects(name)&class_level=eq.${cls}&order=created_at.desc`));
     el.innerHTML = chipRow(CLASSES.map(c => [c, 'ক্লাস ' + bn(c)]), cls) +
-      (ms.map(m => `<div class="card tap" data-url="${esc(m.url || '')}" style="display:flex;gap:12px;align-items:center">${chip(m.kind === 'pdf' ? 'document' : 'book', 40)}<div><h3>${esc(m.title)}</h3><div class="mute small">${esc(m.subject?.name || '')}${m.chapter ? ' · ' + esc(m.chapter) : ''}</div></div></div>`).join('') || empty('book', 'এই ক্লাসের জন্য এখনো কোনো উপকরণ নেই।'));
+      (ms.map(m => `<div class="card tap" data-url="${esc(safeUrl(m.url))}" style="display:flex;gap:12px;align-items:center">${chip(m.kind === 'pdf' ? 'document' : 'book', 40)}<div><h3>${esc(m.title)}</h3><div class="mute small">${esc(m.subject?.name || '')}${m.chapter ? ' · ' + esc(m.chapter) : ''}</div></div></div>`).join('') || empty('book', 'এই ক্লাসের জন্য এখনো কোনো উপকরণ নেই।'));
     el.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => nav.replace('materials', b.dataset.chip));
     el.querySelectorAll('[data-url]').forEach(b => b.onclick = () => b.dataset.url ? window.open(b.dataset.url, '_blank', 'noopener') : toast('লিংক নেই'));
   } };

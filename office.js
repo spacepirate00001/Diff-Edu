@@ -255,7 +255,7 @@
         return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><div><h3>${esc(t.full_name)}</h3><div class="mute small">${bn(c)} ক্লাস × ${taka(r)}</div></div><div class="center"><b style="font-size:19px">${taka(c * r)}</b><div>${p ? pill('পরিশোধিত ' + taka(p.amount), 'good') : pill('বাকি', 'bad')}</div></div></div>
           <div class="chips" style="margin-top:8px"><button class="pill teal" data-rate="${t.id}" data-cur="${r}">রেট ঠিক করুন</button>${!p && c ? `<button class="pill sun" data-pay="${t.id}" data-c="${c}" data-a="${c * r}">পরিশোধ করা হয়েছে</button>` : ''}</div></div>`;
       }).join('') || empty('teacher', 'কোনো শিক্ষক অ্যাকাউন্ট নেই।');
-      el.querySelectorAll('[data-rate]').forEach(b => b.onclick = () => sheet(`<h2>ক্লাস প্রতি রেট</h2><input id="rv" inputmode="numeric" value="${b.dataset.cur}"><button class="btn" id="rs">সংরক্ষণ</button><button class="link" data-close>বাতিল</button>`, (s, close) => {
+      el.querySelectorAll('[data-rate]').forEach(b => b.onclick = () => sheet(`<h2>ক্লাস প্রতি রেট</h2><input id="rv" inputmode="numeric" value="${esc(b.dataset.cur)}"><button class="btn" id="rs">সংরক্ষণ</button><button class="link" data-close>বাতিল</button>`, (s, close) => {
         s.querySelector('#rs').onclick = async () => { const v = +ascii(s.querySelector('#rv').value); if (!(v >= 0)) return; try { await upsert('pay_rates', { teacher_id: b.dataset.rate, coaching_id: S.me.coaching_id, per_class: v, updated_at: new Date().toISOString() }, 'teacher_id'); close(); render(); } catch { toast('সংরক্ষণ হয়নি'); } };
       }));
       el.querySelectorAll('[data-pay]').forEach(b => b.onclick = async () => {
@@ -449,7 +449,7 @@
     el.innerHTML = rs.map(r => `<div class="card"><h3>${esc(r.student?.profile?.full_name || r.student?.roll || '')}</h3><div class="mute small">অভিভাবক: ${esc(r.guardian?.full_name || '')} · জানিয়েছেন ${esc(r.reporter?.full_name || '')}</div>
       <div style="margin-top:4px">পুরনো: ${esc(bn(r.old_phone))}${r.new_phone ? ` → নতুন: <b>${esc(bn(r.new_phone))}</b>` : ''}</div>${r.note ? `<div class="mute small">${esc(r.note)}</div>` : ''}
       <div class="chips" style="margin-top:8px"><button class="pill good" data-ap="${r.id}" data-np="${esc(r.new_phone || '')}">নম্বর বদলান</button><button class="pill bad" data-rj="${r.id}">বাতিল</button></div></div>`).join('') || empty('phone', 'কোনো অপেক্ষমাণ অনুরোধ নেই।');
-    el.querySelectorAll('[data-ap]').forEach(b => b.onclick = () => sheet(`<h2>নতুন নম্বর</h2><input id="np" inputmode="tel" value="${b.dataset.np}" maxlength="14"><button class="btn" id="ok">সংরক্ষণ</button><button class="link" data-close>বাতিল</button>`, (s, close) => {
+    el.querySelectorAll('[data-ap]').forEach(b => b.onclick = () => sheet(`<h2>নতুন নম্বর</h2><input id="np" inputmode="tel" value="${esc(b.dataset.np)}" maxlength="14"><button class="btn" id="ok">সংরক্ষণ</button><button class="link" data-close>বাতিল</button>`, (s, close) => {
       s.querySelector('#ok').onclick = async () => {
         const p = ascii(s.querySelector('#np').value).replace(/\D/g, ''); if (!/^01\d{9}$/.test(p)) return toast('সঠিক নম্বর দিন');
         try { await rpc('decide_phone_change', { p_id: b.dataset.ap, p_approve: true, p_phone: p }); close(); toast('বদলানো হয়েছে'); store.del('c.contacts'); render(); }
