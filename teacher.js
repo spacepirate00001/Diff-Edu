@@ -103,7 +103,7 @@
     HOME_CFG = await hcP;
     const badge = n => n > 0 ? bn(n) : null;
     const manage = admin ? [['users', 'অ্যাকাউন্ট ব্যবস্থাপনা', 'a.users'], ['note_edit', 'প্রোফাইল সম্পাদনা', 'a.people'], ['calendar', 'ক্লাস রুটিন', 'a.routine'],
-      ['question', 'পরিবর্তনের অনুরোধ', 't.requests', badge(todo[0])], ['phone', 'নম্বর সংশোধন', 'a.phones', badge(todo[1])], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['money', 'শিক্ষকদের সম্মানী', 't.honorarium'], ['notebook', 'পরিবর্তনের ইতিহাস', 'a.history'], ['signal', 'সার্ভার থেকে নিয়ন্ত্রণ', 'a.control']] : [];
+      ['question', 'পরিবর্তনের অনুরোধ', 't.requests', badge(todo[0])], ['phone', 'নম্বর সংশোধন', 'a.phones', badge(todo[1])], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['money', 'শিক্ষকদের সম্মানী', 't.honorarium'], ['notebook', 'পরিবর্তনের ইতিহাস', 'a.history'], ['signal', 'সার্ভার থেকে নিয়ন্ত্রণ', 'a.control'], ['letters', 'লেখা বদলান', 'a.texts']] : [];
     const daily = [['attendance', 'উপস্থিতি গ্রহণ', 't.att'], ['check_list', 'আজ কার হাজিরা', 't.board'], ['star', 'ক্লাস রেটিং', 't.rate'], ['signal', 'শিক্ষার্থীদের সংকেত', 't.signals'], ['question', 'প্রশ্ন বক্স', 't.doubts'], ['mic', 'ভয়েস ও মুখস্থ পড়া', 't.voice'], ['camera', 'CCTV যাচাই', 't.gate']];
     const exams = [['numbers', 'নম্বর এন্ট্রি', 't.marks'], ['document', 'রিপোর্ট কার্ড ও টপার', 'a.reports'], ['calendar', 'পরীক্ষার রুটিন', 't.routine'], ['calendar', 'পরীক্ষার পরিকল্পনা', 't.exams'],
       ['archive', 'প্রশ্ন ব্যাংক', 't.qbank'], ['ai_spark', 'AI প্রশ্নপত্র তৈরি', 't.aipaper'], ['note_edit', 'AI খাতা মূল্যায়ন', 't.grading'], ['seat', 'সিট প্ল্যান', 't.seat']];

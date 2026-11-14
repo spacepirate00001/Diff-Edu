@@ -469,3 +469,14 @@ button.pill::after,a.pill::after{content:"";position:absolute;inset:-11px -4px}
 .gcs-owners .pill{min-height:48px;cursor:pointer;border:0}
 .gcs-form .err:empty{display:none}
 .gcs-open{min-height:48px;border:0;cursor:pointer;font:inherit}
+
+/* text editor (texts.js: "লেখা বদলান") */
+.txt-hint{padding:12px 16px;border-radius:var(--r-m);background:var(--plum50);color:var(--plum700);font-size:15px;font-weight:600;line-height:24px}
+.txt-q{width:100%;min-height:48px;box-sizing:border-box;padding:10px 12px;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff}
+.txt-label{display:block;margin:8px 0 4px;font-size:14px;color:var(--ink-soft)}
+.txt-item{display:flex;flex-direction:column;gap:8px}
+.txt-pills{display:flex;flex-wrap:wrap;gap:6px}
+.txt-row{display:flex;flex-direction:column;gap:2px}
+.txt-orig,.txt-new{font-weight:700;line-height:24px;overflow-wrap:anywhere}
+.txt-ta{width:100%;min-height:72px;box-sizing:border-box;padding:10px 12px;font:inherit;font-size:16px;line-height:24px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;resize:vertical}
+.txt-item .btn{min-height:48px}

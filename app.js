@@ -28,7 +28,7 @@ const num = v => { const x = +v; return bn(Number.isInteger(x) ? x : x.toFixed(1
 const dhakaToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
 const daysAgo = n => { const d = new Date(dhakaToday() + 'T00:00:00'); d.setDate(d.getDate() - n); return d.toLocaleDateString('en-CA'); };
 const monthStart = () => dhakaToday().slice(0, 7) + '-01';
-const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); };
+const toast = m => { const t = $('#toast'); t.textContent = m; applyTextOverrides(t); t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); };
 const CLASSES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // ক্লাস ১–১০ (APK: ContentScreens.CLASSES)
 const SHIFTS = [
   { id: 'morning', bn: 'সকাল', time: '৭:০০ – ৯:০০', icon: 'sunrise' },
@@ -186,6 +186,73 @@ function homeBanner(cfg) {
   } catch { return ''; }
 }
 
+// ---------- text overrides (app_config key 'strings', edited in texts.js "লেখা বদলান") ----------
+// One flat map { "<exact default text>": "<replacement>" }. Wherever a screen shows exactly that text, the replacement is drawn.
+const TXT_MAX = 400, TXT_LEN = 300;
+let TEXT_MAP = null;                       // Map(original -> replacement), from the copy this phone has
+/** Keeps only valid pairs (string -> string, non-empty, <= 300 chars, at most 400). Anything else is dropped. Never throws. */
+function textOverridesClean(v) {
+  const map = new Map();
+  try {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return map;
+    for (const [k, val] of Object.entries(v)) {
+      if (map.size >= TXT_MAX) break;
+      if (typeof k !== 'string' || typeof val !== 'string') continue;
+      const from = k.trim(), to = val.trim();
+      if (!from || !to || from.length > TXT_LEN || to.length > TXT_LEN || from === to) continue;
+      map.set(from, to);
+    }
+  } catch {}
+  return map;
+}
+function textMap() {
+  if (!TEXT_MAP) TEXT_MAP = textOverridesClean(store.get('textoverrides'));
+  return TEXT_MAP;
+}
+/** The editor saved a new map: this phone uses it at once (the others get it on their next home open). */
+function setTextOverrides(obj) {
+  const map = textOverridesClean(obj);
+  if (map.size) store.set('textoverrides', Object.fromEntries(map)); else store.del('textoverrides');
+  TEXT_MAP = map;
+}
+/** Refreshes the copy from the server in the background. The screen already shows the copy this phone has. Never throws. */
+async function loadTextOverrides() {
+  try {
+    const rows = await sel('app_config', 'select=value&key=eq.strings&limit=1');
+    const before = JSON.stringify([...textMap()]);
+    setTextOverrides(rows?.[0]?.value ?? null);
+    if (JSON.stringify([...textMap()]) !== before) { applyTextOverrides(view); applyTextOverrides($('#bar')); }
+  } catch { /* offline or table missing: keep the copy we have */ }
+}
+/** Draws the replacements inside root: text whose whole (trimmed) content is an original, and aria-label / placeholder / title. Never throws. */
+function applyTextOverrides(root) {
+  try {
+    if (!root || cur().r === 'a.texts') return;   // the editor always shows the originals
+    const map = textMap();
+    if (!map.size) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+      acceptNode: n => n.nodeType === Node.TEXT_NODE ? NodeFilter.FILTER_ACCEPT
+        : n.matches('script,style,textarea,input,[data-no-override]') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP,
+    });
+    const nodes = [];
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) nodes.push(n);
+    for (const n of nodes) {
+      const s = n.nodeValue, t = s.trim();
+      if (!t || !map.has(t)) continue;
+      const lead = s.length - s.trimStart().length;      // keep the surrounding spaces
+      n.nodeValue = s.slice(0, lead) + map.get(t) + s.slice(lead + t.length);
+    }
+    const els = [root, ...root.querySelectorAll('[aria-label],[placeholder],[title]')];
+    for (const el of els) {
+      if (el.closest('[data-no-override]')) continue;
+      for (const a of ['aria-label', 'placeholder', 'title']) {
+        const v = el.getAttribute(a), t = v && v.trim();
+        if (t && map.has(t)) el.setAttribute(a, map.get(t));
+      }
+    }
+  } catch { /* a bad row must never break a screen */ }
+}
+
 /** A folding category of tiles (3 per row); the phone remembers which are open. tiles: [icon, title, go, badge?] */
 function dashSection(screen, key, icon, title, tiles, defaultOpen) {
   const shown = applyHomeConfig(HOME_CFG, title, tiles);
@@ -222,6 +289,7 @@ function sheet(html, onOpen) {
   const d = document.createElement('div');
   d.className = 'sheet-bg';
   d.innerHTML = `<div class="sheet" role="dialog">${html}</div>`;
+  applyTextOverrides(d);
   document.body.appendChild(d);
   const close = () => d.remove();
   d.onclick = e => { if (e.target === d) close(); };
@@ -540,10 +608,10 @@ function show(dir = 1) {
 }
 function bindGo(b) { b.addEventListener('click', () => { const s = b.dataset.go; const i = s.indexOf(':'); i < 0 ? go(s) : go(s.slice(0, i), s.slice(i + 1)); }); }
 // Sub-title computed after loading (e.g. the child's name)
-function setSub(t) { $('#sub').textContent = t || ''; $('#sub').hidden = !t; }
-function setTitle(t) { $('#title').textContent = t; }
+function setSub(t) { $('#sub').textContent = t || ''; $('#sub').hidden = !t; applyTextOverrides($('#sub')); }
+function setTitle(t) { $('#title').textContent = t; applyTextOverrides($('#title')); }
 
-const ADMIN_ONLY = new Set(['a.fees', 'a.users', 'a.phones', 'a.admit', 'a.history', 'a.people', 'a.editstudent', 'a.editperson', 'a.requests', 'a.control']);
+const ADMIN_ONLY = new Set(['a.fees', 'a.users', 'a.phones', 'a.admit', 'a.history', 'a.people', 'a.editstudent', 'a.editperson', 'a.requests', 'a.control', 'a.texts']);
 async function render() {
   const seq = ++renderSeq;
   offlineFlag = false;
@@ -561,6 +629,8 @@ async function render() {
     if (seq !== renderSeq) return; // user navigated away while loading
     if (offlineFlag) el.insertAdjacentHTML('afterbegin', '<div class="offline">অফলাইন — শেষ দেখা তথ্য</div>');
     view.replaceChildren(el);
+    applyTextOverrides(el); applyTextOverrides($('#bar'));   // "লেখা বদলান" replacements (app.js applyTextOverrides)
+    if (sc.home) loadTextOverrides();                        // homes refresh the copy in the background
     hydrateAvatars();                        // profile photos into the header button and this screen
     el.querySelectorAll('[data-go]').forEach(bindGo);
     sc.after?.(el, p);
@@ -574,7 +644,7 @@ async function render() {
 const rerender = () => render();
 
 const FAMILY_SCRIPTS = ['family.js', 'play.js', 'comms.js', 'extras.js', 'reports.js', 'profile.js'];
-const STAFF_SCRIPTS = ['search.js', 'callsheet.js', 'teacher.js','board.js', 'control.js', 'office.js', 'play.js', 'comms.js', 'classroom.js', 'extras.js', 'reports.js', 'people.js', 'profile.js'];
+const STAFF_SCRIPTS = ['search.js', 'callsheet.js', 'teacher.js','board.js', 'control.js', 'texts.js', 'office.js', 'play.js', 'comms.js', 'classroom.js', 'extras.js', 'reports.js', 'people.js', 'profile.js'];
 const loaded = {};
 function loadScript(src) {
   return loaded[src] ||= new Promise((ok, fail) => {
@@ -583,6 +653,7 @@ function loadScript(src) {
   });
 }
 async function enterApp(restore) {
+  loadTextOverrides();                       // login and boot: the saved replacement texts, in the background
   for (const f of (isStaff() ? STAFF_SCRIPTS : FAMILY_SCRIPTS)) await loadScript(f);
   if (S.me.role === 'guardian' && !store.get('consent')) {
     // Guardians confirm consent once before using the app (same as the APK).
