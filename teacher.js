@@ -273,7 +273,7 @@
         attOk = true; queued = !r1;
         const b = bucket(p.key);
         p.rows.forEach(r => { b.saved[r.student_id] = { present: r.present, session: r.session, exam_title: r.exam_title }; delete b.local[r.student_id]; });
-        A.marked = true;
+        if (p.key === A.key) A.marked = true; // only a save made in this visit, on the shift+slot still on screen
         if (p.rrows.length) {
           const r2 = await writeOrQueue('POST', '/rest/v1/class_ratings?on_conflict=student_id,day,shift,slot', p.rrows, 'return=minimal,resolution=merge-duplicates');
           queued = queued || !r2;
@@ -362,7 +362,9 @@
     }
     // What the server already has for this (shift, slot): those rows are locked.
     async function loadPeriod() {
-      A.key = keyNow();
+      const k = keyNow();
+      if (A.key !== k) A.marked = false; // "saved in this visit" is per shift+slot
+      A.key = k;
       const b = bucket();
       const ids = (list || []).map(s => s.id);
       if (!ids.length) return;
@@ -374,7 +376,6 @@
       if (rts === null) b.savedR = null;
       else if (Array.isArray(rts)) { b.savedR = {}; rts.forEach(r => { b.savedR[r.student_id] = { behavior: +r.behavior, homework: +r.homework, performance: +r.performance }; }); }
       else b.savedR = {};
-      if (att.length) A.marked = true;
     }
     const statusOf = (b, id) => id in b.local ? b.local[id] : b.saved[id]?.present;
     const wantRating = () => sessionNow() === 'class' && A.slot >= 1;
@@ -517,7 +518,7 @@
             <button data-scope="all" class="${A.examScope === 'all' ? 'on' : ''}"><b>১ম, ২য়, ৩য় সব স্লটে</b><span>একবার উপস্থিতি</span></button>
             <button data-scope="slot" class="${A.examScope === 'slot' ? 'on' : ''}"><b>শুধু আমার স্লটে</b><span>নির্দিষ্ট সময়ে</span></button></div>
             ${A.marked ? `<div style="margin-top:8px">পরীক্ষা: ${esc(A.examTitle || 'নাম দেওয়া হয়নি')}</div>` : `<input id="examTitle" maxlength="60" placeholder="কোন পরীক্ষা (যেমন: মডেল টেস্ট · ইংরেজি ২য়)" value="${esc(A.examTitle)}" style="margin-top:8px">`}` : ''}
-          ${A.marked ? '<div class="mute small">উপস্থিতি সংরক্ষণ শুরু হয়ে গেছে, তাই আজকের ধরন আর বদলানো যাবে না।</div>' : ''}</div>`;
+          ${A.marked ? '<div class="mute small">উপস্থিতি সংরক্ষণ শুরু হয়ে গেছে, তাই আজকের ধরন আর বদলানো যাবে না।</div>' : Object.keys(bucket(keyNow()).saved).length ? '<div class="mute small">এই ক্লাসের উপস্থিতি আগে একবার নেওয়া হয়েছে। বদলাতে সারিতে চাপুন, কারণ লিখতে হবে।</div>' : ''}</div>`;
       let showRows = false;
       if (A.autoLine && !A.marked && !Object.keys(bucket().local).length) h += `<div class="mute small" style="margin:0 4px 8px">${esc(A.autoLine)}</div>`;
       if (A.session === 'exam' && !A.examScope) h += empty('note_edit', 'উপরে বেছে নিন: পরীক্ষা সব স্লটে, নাকি শুধু আপনার স্লটে।');
@@ -578,7 +579,7 @@
       const r = el.querySelector('#reload'); if (r) r.onclick = async () => { list = null; loadFailed = false; draw(); await load(); draw(); };
       const qi = el.querySelector('#aq'); if (qi) qi.addEventListener('input', () => { A.q = qi.value.slice(0, 40); drawRows(); });
     }
-    if (A.session && !(A.session === 'exam' && !A.examScope)) await load();
+    if (!(A.session === 'exam' && !A.examScope)) await load(); // load on open too, so the hint can see saved rows
     draw();
     let last = `${navigator.onLine}|${outbox.mine().length}|${contacts != null}`;
     const tick = setInterval(() => {
