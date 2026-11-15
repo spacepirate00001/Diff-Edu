@@ -191,7 +191,11 @@
     el.querySelector('#dsend').onclick = async () => {
       const subj = el.querySelector('#ds').value.trim(), body = el.querySelector('#db').value.trim();
       if (!subj || !body) return toast('বিষয় ও প্রশ্ন লেখো');
-      try { await ins('doubts', { coaching_id: S.me.coaching_id, student_id: st.id, class_level: st.class_level, subject: subj, body }, 'select=id'); toast('পাঠানো হয়েছে'); render(); } catch { toast('হয়নি'); }
+      try {
+        await ins('doubts', { coaching_id: S.me.coaching_id, student_id: st.id, class_level: st.class_level, subject: subj, body }, 'select=id'); toast('পাঠানো হয়েছে'); render();
+        // matching topic video plays inside the app; a failed lookup is silent
+        TopicVideos.videosOf(st.class_level).then(vids => { const m = TopicVideos.matchVideos(vids, subj, body); if (m.length) topicVideoSheet(m, subj); }).catch(() => {});
+      } catch { toast('হয়নি'); }
     };
   } };
 

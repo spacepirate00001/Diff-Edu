@@ -18,7 +18,7 @@
     return '';
   };
   window.ytId = ytId;
-  const norm = s => String(s || '').toLowerCase().replace(/[\s:：,.\-–—_()]+/g, ' ').trim();
+  const norm = s => String(s || '').toLowerCase().replace(/[\s:：,.\-–—_()?!।]+/g, ' ').trim();
 
   // ---------- the in-app player ----------
   // list: [{ id (youtube id), title, sub }], i: start index
@@ -31,11 +31,12 @@
       d.innerHTML = `<div class="vp-top"><button class="vp-x" data-x aria-label="বন্ধ করো">✕</button><div class="vp-t"><b>${esc(v.title)}</b>${v.sub ? `<span>${esc(v.sub)}</span>` : ''}</div></div>
         <div class="vp-box"><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.id)}?autoplay=1&rel=0&modestbranding=1&playsinline=1&fs=1" title="${esc(v.title)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
         ${list.length > 1 ? `<div class="vp-list"><div class="vp-h">এই টপিকের আরও ভিডিও (${bn(i + 1)}/${bn(list.length)})</div>${list.map((x, k) => `<button class="vp-i ${k === i ? 'on' : ''}" data-k="${k}"><img src="https://i.ytimg.com/vi/${encodeURIComponent(x.id)}/mqdefault.jpg" alt="" loading="lazy"><span>${esc(x.title)}</span></button>`).join('')}</div>` : ''}`;
-      d.querySelector('[data-x]').onclick = close;
+      d.querySelector('[data-x]').onclick = () => close();
       d.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { i = +b.dataset.k; draw(); });
     };
-    const close = () => { d.remove(); document.body.style.overflow = ''; window.removeEventListener('popstate', onPop); };
-    const onPop = () => close();
+    // closing with ✕ also drops the history entry pushed above, so the next back press leaves the page as usual
+    const close = (fromPop) => { d.remove(); document.body.style.overflow = ''; window.removeEventListener('popstate', onPop); if (!fromPop && history.state?.vp) history.back(); };
+    const onPop = () => close(true);
     history.pushState({ vp: 1 }, ''); window.addEventListener('popstate', onPop); // phone back button closes the player first
     document.body.style.overflow = 'hidden';
     document.body.appendChild(d); draw();
@@ -53,7 +54,9 @@
     return vids.filter(m => {
       if (s) { const a = norm(m.subject?.name), b = norm(m.subject?.name_bn); if (a !== s && b !== s && !(a && (s.includes(a) || a.includes(s)))) return false; }
       const c = norm(m.chapter); if (!c) return false;
-      return t.includes(c) || c.includes(t) || (norm(m.title) && t.includes(norm(m.title)));
+      // title counts only as whole words: a title "আলো" must not match the topic "আলোর প্রতিসরণ"
+      const tt = norm(m.title);
+      return t.includes(c) || c.includes(t) || (!!tt && (' ' + t + ' ').includes(' ' + tt + ' '));
     });
   }
   window.TopicVideos = { videosOf, matchVideos, toItem };
