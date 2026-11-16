@@ -403,8 +403,16 @@ const S = { access: null, refresh: store.get('rt'), uid: store.get('uid'), me: n
 const isOfflineErr = e => !e.status; // fetch threw: no internet / DNS / timeout
 
 async function raw(method, path, body, { auth = true, prefer, retried, headers } = {}) {
+  const signedIn = !!(S.refresh || S.uid);
   if (auth && !S.access && S.refresh) await refresh();
-  const h = { apikey: CFG.key, Accept: 'application/json', ...(headers || {}) };
+  // Still no token although a user is signed in: never fall through as anonymous (same as SupabaseHttp.kt).
+  // RLS would answer with an empty list, which the screens show as "no notices, 0/0".
+  if (auth && !S.access && signedIn) {
+    const e = new Error(S.refresh ? 'no session token' : 'session expired');
+    if (!S.refresh) e.status = 401; // the server refused the saved session (refresh() already signed out); otherwise it reads as offline
+    throw e;
+  }
+  const h ={ apikey: CFG.key, Accept: 'application/json', ...(headers || {}) };
   if (auth && S.access) h.Authorization = 'Bearer ' + S.access;
   if (body != null && !(body instanceof Blob)) h['Content-Type'] = 'application/json';
   if (prefer) h.Prefer = prefer;

@@ -115,7 +115,7 @@
     el.innerHTML = `${homeBanner(HOME_CFG)}${nh}<div id="snotes"></div>${pendingCard()}
       <div class="card"><div style="display:flex;align-items:center"><h3 style="flex:1">আজকের উপস্থিতি</h3><b class="tap" id="hreload" style="color:var(--teal-dark);font-size:14px">হালনাগাদ</b></div>
         <div class="mute small">শিফটে চাপলে তালিকা ও অভিভাবকের নম্বর</div>
-        <div class="shifts3">${SHIFTS.map((s, i) => { const live = s.id === now, v = perShift[i]; return `<button class="${live ? 'live' : ''}" data-go="t.shift:${s.id}"><span class="lic">${I(s.icon)}</span><small>${s.bn}${live ? ' · এখন' : ''}</small><b>${v ? `${bn(v[1])}/${bn(v[0])}` : '…'}</b><small>উপস্থিত</small></button>`; }).join('')}</div></div>
+        <div class="shifts3">${SHIFTS.map((s, i) => { const live = s.id === now, v = perShift[i]; return `<button class="${live ? 'live' : ''}" data-go="t.shift:${s.id}"><span class="lic">${I(s.icon)}</span><small>${s.bn}${live ? ' · এখন' : ''}</small><b>${v ? `${bn(v[1])}/${bn(v[0])}` : '—'}</b><small>উপস্থিত</small></button>`; }).join('')}</div></div>
       ${admin ? todoCard([['শিক্ষকের পরিবর্তনের অনুরোধ', todo[0], 't.requests'], ['অভিভাবকের নম্বর সংশোধন', todo[1], 'a.phones'], ['ছুটির আবেদন', todo[2], 't.leave'], ['পরিবর্তনের অনুরোধ', todo[3], link('a.requests', 'পরিবর্তনের অনুরোধ')]], false) : ''}
       <div class="grid2">${action('attendance', 'উপস্থিতি', 'ক্লাস বা পরীক্ষা', 't.att')}${action('star', 'ক্লাস রেটিং', 'আজকের স্কোর', 't.rate')}${action('numbers', 'নম্বর এন্ট্রি', 'মডেল টেস্ট', 't.marks')}${action('megaphone', 'নোটিশ', 'সবাইকে জানান', 't.notice')}</div>
       ${dashSection(scr, 'manage', 'users', 'ব্যবস্থাপনা', fix(manage), true)}
