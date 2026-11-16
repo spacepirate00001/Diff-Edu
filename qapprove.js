@@ -19,23 +19,44 @@
   const review = it => !!(it.review_note || it.needs_figure || it.qtype === 'math' || it.qtype === 'other' || mcqBad(it));
   const subjText = s => s ? (s.name_bn || s.name || '') : '';
   const subjLabel = s => subjText(s) || 'বিষয় নেই';
+  const norm = s => String(s ?? '').replace(/\s+/g, ' ').trim();
+  /** The AI readings in a review note: "AI-র পড়া উত্তর: <text> — ...", several joined with ' · '. */
+  const SUG_RE = /AI-র পড়া উত্তর: (.+?) — /g;
+  /** The option an MCQ's AI reading points at ({ idx, letter, text }), or null: not an mcq, answer already set, or no reading equal to an option. */
+  function suggestOf(it) {
+    if (it.qtype !== 'mcq' || norm(it.answer) !== '') return null;
+    const opts = (it.options || []).map(String);
+    for (const m of String(it.review_note ?? '').matchAll(SUG_RE)) {
+      const idx = opts.findIndex(o => norm(o) === norm(m[1]));
+      if (idx >= 0 && LAB[idx]) return { idx, letter: LAB[idx], text: opts[idx] };
+    }
+    return null;
+  }
+  window.qaSuggestOf = suggestOf;   // for the scratch tests
+  /** The note as shown: the reading that has a button becomes one short line; other notes stay in full. */
+  const noteShown = it => {
+    const sug = suggestOf(it);
+    if (!sug) return it.review_note || '';
+    return String(it.review_note).split(' · ').map(part => [...part.matchAll(SUG_RE)].some(m => norm(m[1]) === norm(sug.text))
+      ? `AI-র পরামর্শ: ${sug.text} — পাতার সাথে মিলিয়ে নিন` : part).join(' · ');
+  };
 
   const cardHtml = it => {
     const opts = it.options || [], ans = String(it.answer ?? '');
     const inOpts = ans !== '' && opts.includes(ans);
-    const id = esc(it.id);
+    const id = esc(it.id), sug = suggestOf(it);
     const ansLine = inOpts ? '' : (ans ? `<div class="mute">উত্তর: ${esc(ans)}</div>` : '') + (mcqBad(it) ? '<div class="mute small">উত্তর নেই বা অপশনের সাথে মিলছে না</div>' : ans ? '' : '<div class="mute small">উত্তর নেই</div>');
     return `<div class="card qa-card" data-card="${id}">
       <div class="mute small">${esc(QT[it.qtype] || it.qtype)}${it.marks != null ? ' · মান ' + esc(bn(it.marks)) : ''}</div>
       ${it.needs_figure || it.has_table ? `<div class="chips" style="margin-top:6px">${it.needs_figure ? '<span class="pill sun">চিত্র লাগবে</span>' : ''}${it.has_table ? '<span class="pill">ছক</span>' : ''}</div>` : ''}
       ${it.chapter_hint ? `<div class="mute small">অধ্যায়ের ইঙ্গিত: ${esc(it.chapter_hint)}</div>` : ''}
       ${it.topic_suggestion ? `<div class="mute small">বিষয়বস্তু: ${esc(it.topic_suggestion)}</div>` : ''}
-      ${it.review_note ? `<div class="attwarn">${esc(it.review_note)}</div>` : ''}
+      ${it.review_note ? `<div class="attwarn">${esc(noteShown(it))}</div>` : ''}
       <div class="qa-body" data-no-override>${esc(it.body)}</div>
-      ${opts.length ? `<ol class="qa-opts" data-no-override>${opts.map((o, i) => `<li><span class="qa-lab">${LAB[i] || esc(bn(i + 1))}</span><span>${ans !== '' && o === ans ? `<b>${esc(o)} ✓</b>` : esc(o)}</span></li>`).join('')}</ol>` : ''}
+      ${opts.length ? `<ol class="qa-opts" data-no-override>${opts.map((o, i) => `<li${sug && sug.idx === i ? ' class="qa-sug"' : ''}><span class="qa-lab">${LAB[i] || esc(bn(i + 1))}</span><span>${ans !== '' && o === ans ? `<b>${esc(o)} ✓</b>` : esc(o)}</span></li>`).join('')}</ol>` : ''}
       ${ansLine}
       ${it.source_ref ? `<div class="mute small">${esc(it.source_ref)}</div>` : ''}
-      <div class="qa-acts"><button class="btn good" data-a="ok" data-id="${id}">অনুমোদন</button><button class="link" data-a="edit" data-id="${id}">সম্পাদনা</button><button class="link" data-a="rej" data-id="${id}">বাতিল</button></div>
+      <div class="qa-acts">${sug ? `<button class="btn ghost" data-a="sug" data-id="${id}">AI-র উত্তর নিন (${sug.letter})</button>` : ''}<button class="btn good" data-a="ok" data-id="${id}">অনুমোদন</button><button class="link" data-a="edit" data-id="${id}">সম্পাদনা</button><button class="link" data-a="rej" data-id="${id}">বাতিল</button></div>
     </div>`;
   };
   const reasonsSheet = skipped => {
@@ -110,7 +131,7 @@
     subjIn = el.querySelector('#qa-subj');
 
     const subjectText = () => subj ? subjText(subj).trim() : (subjIn?.value || '').trim();
-    const shown = () => items.filter(it => (f === 'all' || (f === 'review' ? review(it) : it.qtype === f)) && (!ch || it.chapter_hint === ch));
+    const shown = () => items.filter(it => (f === 'all' || (f === 'review' ? review(it) : f === 'sug' ? !!suggestOf(it) : it.qtype === f)) && (!ch || it.chapter_hint === ch));
     const paintCh = () => {
       chSel.innerHTML = '<option value="">অধ্যায় ছাড়া (ইঙ্গিত অনুযায়ী)</option>' +
         chapters.map(c => `<option value="${esc(c.id)}">${esc(bn(c.number))}. ${esc(c.title)}</option>`).join('') +
@@ -126,9 +147,10 @@
     const refresh = () => {
       const hints = [...new Set(items.map(it => it.chapter_hint).filter(Boolean))];
       if (ch && !hints.includes(ch)) ch = '';
-      const sh = shown(), safe = sh.filter(it => !review(it)).length;
+      const sh = shown(), safe = sh.filter(it => !review(it)).length, nSug = items.filter(it => suggestOf(it)).length;
       infoEl.textContent = `ক্লাস ${src.class_level ? bn(src.class_level) : '—'} · ${subjectText() || 'বিষয় নেই'} · অপেক্ষায় ${bn(items.length)} টি`;
-      chipsEl.innerHTML = chipRow([['all', 'সব'], ['mcq', 'বহুনির্বাচনী'], ['short', 'সংক্ষিপ্ত'], ['creative', 'সৃজনশীল'], ['review', 'যাচাই দরকার']], f, 'data-qf') +
+      chipsEl.innerHTML = chipRow([['all', 'সব'], ['mcq', 'বহুনির্বাচনী'], ['short', 'সংক্ষিপ্ত'], ['creative', 'সৃজনশীল'], ['review', 'যাচাই দরকার'],
+        ...(nSug || f === 'sug' ? [['sug', `AI উত্তরের পরামর্শ (${bn(nSug)})`]] : [])], f, 'data-qf') +
         (hints.length > 1 ? chipRow([['', 'সব অধ্যায়'], ...hints.map(h => [h, 'অধ্যায় ' + h])], ch, 'data-qch') : '');
       bulkBtn.textContent = `দেখানো সব অনুমোদন (${bn(safe)})`;
       bulkBtn.disabled = bulkBusy || !safe;
@@ -173,6 +195,19 @@
       const ok = await confirmSheet('উত্তর ছাড়া অনুমোদন?', 'এই প্রশ্নের সঠিক উত্তর দেওয়া নেই। উত্তরপত্রে এটি ফাঁকা থাকবে।', 'অনুমোদন');
       busy.delete(it.id);
       if (ok) doApprove([it.id], btn);
+    };
+    /** The AI reading button: PATCH the answer (not from the source), then approve that one item through doApprove. */
+    const approveSuggested = async (it, btn, sug) => {
+      const card = btn.closest('.qa-card'), cardBtns = card ? [...card.querySelectorAll('button')] : [btn];
+      busy.add(it.id); cardBtns.forEach(x => { x.disabled = true; });
+      let r;
+      try { r = await upd('source_items', `id=eq.${enc(it.id)}&status=eq.pending`, { answer: sug.text, answer_in_source: false }); }
+      catch { busy.delete(it.id); cardBtns.forEach(x => { x.disabled = false; }); return toast(ERR); }
+      busy.delete(it.id);
+      if (!r?.length) { drop([it.id]); return toast('প্রশ্নটি আগেই নিষ্পত্তি হয়েছে'); }
+      Object.assign(it, { answer: sug.text, answer_in_source: false });
+      refresh();   // the card now shows the stored answer; its buttons are new, so the approve button is looked up again
+      await doApprove([it.id], [...listEl.querySelectorAll('[data-a="ok"]')].find(x => x.dataset.id === it.id) || null);
     };
     const doReject = async (id, btn) => {
       busy.add(id);   // taken before the confirm, so a second tap cannot open another one
@@ -267,6 +302,7 @@
       const it = items.find(x => x.id === id);
       if (!it) return;
       if (b.dataset.a === 'ok') return approveOne(it, b);
+      if (b.dataset.a === 'sug') { const sug = suggestOf(it); return sug && approveSuggested(it, b, sug); }
       if (b.dataset.a === 'rej') return doReject(id, b);
       if (b.dataset.a === 'edit') return openEdit(it);
     });

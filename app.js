@@ -644,7 +644,7 @@ async function render() {
 const rerender = () => render();
 
 const FAMILY_SCRIPTS = ['videos.js', 'family.js', 'play.js', 'comms.js', 'extras.js', 'reports.js', 'profile.js'];
-const STAFF_SCRIPTS = ['videos.js', 'search.js', 'callsheet.js', 'teacher.js','board.js', 'control.js', 'texts.js', 'office.js', 'play.js', 'comms.js', 'classroom.js', 'qapprove.js', 'extras.js', 'reports.js', 'people.js', 'profile.js'];
+const STAFF_SCRIPTS = ['videos.js', 'search.js', 'callsheet.js', 'teacher.js','board.js', 'control.js', 'texts.js', 'office.js', 'play.js', 'comms.js', 'classroom.js', 'qapprove.js', 'sourceup.js', 'extras.js', 'reports.js', 'people.js', 'profile.js'];
 const loaded = {};
 function loadScript(src) {
   return loaded[src] ||= new Promise((ok, fail) => {
@@ -771,7 +771,7 @@ SCREENS.consent = { title: 'সম্মতি', home: true, render: async (el) 
 
 // ---------- boot ----------
 $('#back').onclick = () => nav.back();
-window.addEventListener('online', () => { if (S.me) { flushOutbox(); render(); } });
+window.addEventListener('online', () => { if (S.me) { flushOutbox(); if (cur().r !== 't.sourceup') render(); } });   // the upload form keeps what is typed in it
 window.addEventListener('popstate', () => {});
 
 (async function boot() {

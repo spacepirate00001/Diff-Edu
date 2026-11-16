@@ -491,6 +491,10 @@ button.pill::after,a.pill::after{content:"";position:absolute;inset:-11px -4px}
 .qa-opts li span:last-child{min-width:0;overflow-wrap:anywhere}
 .qa-card h3,.card.tap h3{overflow-wrap:anywhere}
 .qa-card .mute{overflow-wrap:anywhere}
+/* AI reading of a circled answer: only a suggestion, so a dashed outline and a "?" (not the ✓ of a stored answer) */
+.qa-opts li.qa-sug{outline:2px dashed var(--teal-dark);outline-offset:2px;border-radius:8px}
+.qa-sug::after{content:"?";flex:none;margin-left:auto;font-weight:700;color:var(--teal-dark)}
+.qa-acts .btn.ghost{width:auto;border:2px dashed var(--teal-dark)}
 
 /* in-app video player (videos.js) */
 .vp{position:fixed;inset:0;z-index:40;background:#14091a;color:#fff;display:flex;flex-direction:column;overflow:auto;padding-top:env(safe-area-inset-top)}
@@ -504,3 +508,13 @@ button.pill::after,a.pill::after{content:"";position:absolute;inset:-11px -4px}
 .vp-i{display:flex;gap:10px;align-items:center;text-align:left;border:0;border-radius:12px;background:#ffffff14;color:#fff;padding:6px;cursor:pointer}
 .vp-i.on{background:#7E4B8799}.vp-i img{width:104px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;flex:none;background:#000}
 .vp-play{width:36px;height:36px;border-radius:50%;background:var(--teal);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex:none;cursor:pointer}
+
+/* teacher file upload → questions (sourceup.js) */
+.su-form{display:flex;flex-direction:column;gap:12px}
+.su-chk{display:flex;gap:10px;align-items:flex-start;padding:8px 4px;font-size:15px;line-height:1.6;font-weight:600;color:var(--ink)}
+.su-chk input{flex:none;width:22px;height:22px;margin-top:3px}
+.su-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.su-acts .btn{width:auto;min-height:48px;padding:0 18px}
+.su-acts .link{min-height:48px}
+.su-card .su-acts{margin-top:8px}
+.su-run{display:flex;flex-direction:column;gap:8px}
