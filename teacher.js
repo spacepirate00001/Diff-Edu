@@ -107,7 +107,7 @@
     const daily = [['attendance', 'উপস্থিতি গ্রহণ', 't.att'], ['check_list', 'আজ কার হাজিরা', 't.board'], ['star', 'ক্লাস রেটিং', 't.rate'], ['signal', 'শিক্ষার্থীদের সংকেত', 't.signals'], ['question', 'প্রশ্ন বক্স', 't.doubts'], ['mic', 'ভয়েস ও মুখস্থ পড়া', 't.voice'], ['camera', 'CCTV যাচাই', 't.gate']];
     const exams = [['numbers', 'নম্বর এন্ট্রি', 't.marks'], ['document', 'রিপোর্ট কার্ড ও টপার', 'a.reports'], ['calendar', 'পরীক্ষার রুটিন', 't.routine'], ['calendar', 'পরীক্ষার পরিকল্পনা', 't.exams'],
       ['archive', 'প্রশ্ন ব্যাংক', 't.qbank'], ['check_list', 'প্রশ্ন অনুমোদন', 't.qapprove'], ['ai_spark', 'AI প্রশ্নপত্র তৈরি', 't.aipaper'], ['note_edit', 'AI খাতা মূল্যায়ন', 't.grading'], ['seat', 'সিট প্ল্যান', 't.seat']];
-    const progress = [['alert', 'ঝুঁকিতে থাকা শিক্ষার্থী', 't.risk'], ['chart', 'ব্যাচ তুলনা', 't.compare'], ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 't.challenges'], ['book', 'সিলেবাস ট্র্যাকার', 'syllabus:6'], ['flashcards', 'ফ্ল্যাশকার্ড', 'flash:6'], ['book', 'শিক্ষা উপকরণ', 'materials:5']];
+    const progress = [['alert', 'ঝুঁকিতে থাকা শিক্ষার্থী', 't.risk'], ['chart', 'ব্যাচ তুলনা', 't.compare'], ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 't.challenges'], ['book', 'সিলেবাস ট্র্যাকার', 'syllabus:6'], ['flashcards', 'ফ্ল্যাশকার্ড', 'flash:6'], ['book', 'শিক্ষা উপকরণ', 'materials:5'], ['camera', 'অনলাইন ক্লাস ভিডিও', 'online:6'], ['camera', 'ভিডিও লিংক যোগ', 't.videos']];
     const talk = [['megaphone', 'নোটিশ পাঠান', 't.notice'], ['bell', 'সকল নোটিশ', 'notices'], ['chat', 'অভিভাবকদের বার্তা', 'chats'], ['handshake', 'অভিভাবক মিটিং', 'meetings'], ['mic', 'পরিচালকের বার্তা', 'director']];
     const office = [['palm', 'ছুটি ও বদলি', 't.leave', admin ? badge(todo[2]) : null], ...(admin ? [] : [['money', 'আমার সম্মানী', 't.honorarium'], ['question', 'আমার অনুরোধ', 't.requests', badge(todo[0])]]), ['lock', 'পিন বদলান', 'pin']];
     const fix = l => l.map(([ic, t, r, b]) => [ic, t, link(r, t), b]);
@@ -695,7 +695,7 @@
     el.innerHTML = chipRow(CLASSES.map(c => [c, 'ক্লাস ' + bn(c)]), cls) +
       (ms.map(m => `<div class="card tap" data-url="${esc(safeUrl(m.url))}" style="display:flex;gap:12px;align-items:center">${chip(m.kind === 'pdf' ? 'document' : 'book', 40)}<div><h3>${esc(m.title)}</h3><div class="mute small">${esc(m.subject?.name || '')}${m.chapter ? ' · ' + esc(m.chapter) : ''}</div></div></div>`).join('') || empty('book', 'এই ক্লাসের জন্য এখনো কোনো উপকরণ নেই।'));
     el.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => nav.replace('materials', b.dataset.chip));
-    el.querySelectorAll('[data-url]').forEach(b => b.onclick = () => b.dataset.url ? window.open(b.dataset.url, '_blank', 'noopener') : toast('লিংক নেই'));
+    el.querySelectorAll('[data-url]').forEach(b => b.onclick = () => ytId(b.dataset.url) ? playVideo([{ id: ytId(b.dataset.url), title: b.querySelector('h3').textContent }]) : b.dataset.url ? window.open(b.dataset.url, '_blank', 'noopener') : toast('লিংক নেই'));
   } };
   SCREENS.soon = { title: p => p || 'শীঘ্রই', render: async (el) => {
     el.innerHTML = `<div class="card">${empty('ai_spark', 'এই অংশটি শীঘ্রই ওয়েবে আসছে।' + (isAndroid ? ' ততদিন অ্যান্ড্রয়েড অ্যাপে ব্যবহার করুন।' : ''))}</div>${apkBanner()}`;
