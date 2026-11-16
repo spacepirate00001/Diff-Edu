@@ -480,3 +480,14 @@ button.pill::after,a.pill::after{content:"";position:absolute;inset:-11px -4px}
 .txt-orig,.txt-new{font-weight:700;line-height:24px;overflow-wrap:anywhere}
 .txt-ta{width:100%;min-height:72px;box-sizing:border-box;padding:10px 12px;font:inherit;font-size:16px;line-height:24px;border:1px solid var(--line);border-radius:var(--r-s);background:#fff;resize:vertical}
 .txt-item .btn{min-height:48px}
+/* question approval (qapprove.js) */
+.qa-card .qa-body{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:6px;font-size:15px;line-height:1.6}
+.qa-opts{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.qa-opts li{display:flex;gap:8px;align-items:baseline}
+.qa-lab{flex:none;min-width:22px;font-weight:700;color:var(--teal-dark)}
+.qa-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.qa-acts .btn{width:auto;min-height:48px;padding:0 18px}
+.qa-acts .link{min-height:48px}
+.qa-opts li span:last-child{min-width:0;overflow-wrap:anywhere}
+.qa-card h3,.card.tap h3{overflow-wrap:anywhere}
+.qa-card .mute{overflow-wrap:anywhere}
