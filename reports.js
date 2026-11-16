@@ -29,7 +29,8 @@
       <div style="margin-top:6px">${lines.map(l => `<div class="row"><span>${esc(l.s)}</span><b>${l.o == null ? 'অনুপস্থিত' : `${num(l.o)} / ${num(l.f)} · ${grade(100 * l.o / l.f)}`}</b></div>`).join('')}
       ${lines.length ? `<div class="row"><span>মোট</span><b>${num(got)} / ${num(full)}${pct != null ? ' · ' + grade(pct) : ''}</b></div>` : ''}</div>
       <div class="mute small" style="margin-top:6px">রেটিং ${d.rating == null ? '—' : d1(d.rating)}/১০ · উপস্থিতি ${bn(d.present || 0)}/${bn(d.days || 0)} দিন</div>`;
-    const awardTxt = c.award === 'topper' ? '★ ক্লাস টপার' : c.award === 'improved' ? '↑ সবচেয়ে উন্নতি' : '';
+    const nr = !!c.noRank;   // printed without the class position
+    const awardTxt = nr ? '' : c.award === 'topper' ? '★ ক্লাস টপার' : c.award === 'improved' ? '↑ সবচেয়ে উন্নতি' : '';
     const first = (d.name || '').trim().split(/\s+/)[0] || 'তুমি';
     const prevSum = lines.reduce((s, l) => s + (+l.p || 0), 0), hasPrev = weekly && lines.some(l => l.p != null);
     const msg = cheer(pct, hasPrev && got > prevSum, first);
@@ -45,9 +46,9 @@
           ${d.b != null && lines.length <= 4 ? `<div class="rb"><div class="rh">${weekly ? 'এই সপ্তাহের' : 'এই সময়ের'} ক্লাস রেটিং <small>(প্রতিদিনের গড়)</small></div>${[['আচরণ', d.b, 3], ['বাড়ির কাজ', d.h, 3], ['ক্লাসের পারফরম্যান্স', d.pe, 4]].map(([k, v, m]) => `<div class="rr"><span>${k}</span><div class="rt"><i style="width:${v == null ? 0 : Math.min(100, 100 * v / m)}%"></i></div><b>${v == null ? '—' : d1(v)}<small>/${bn(m)}</small></b></div>`).join('')}<div class="rn">মোট স্কোর = পরীক্ষার নম্বর ৬০% + ক্লাস রেটিং ৪০%</div></div>` : ''}
           <div class="gp">${[['bulb', 30, -14, -4], ['ruler', 24, 18, 4], ['atom', 28, 6, -3], ['book', 24, -8, 4], ['globe', 30, -4, -2], ['pencil', 24, 24, 3], ['flask', 27, 10, -4]].map(([n, w, r, y]) => doodle(n, `width:${w}px;height:${w}px;transform:translateY(${y}px) rotate(${r}deg)`)).join('')}</div>
           <div class="sx">${field('রেটিং', d.rating == null ? '—' : d1(d.rating) + '<em>/১০</em>')}${field('উপস্থিতি', `${bn(d.present || 0)}<em>/${bn(d.days || 0)} দিন</em>`)}${field('মোট স্কোর', d1(d.score))}</div></div>
-        <div class="sd"><div class="rk"><small>ক্লাসে অবস্থান</small><b>${c.rank ? rankBn(c.rank) : '—'}</b><span>${bn(c.class_size || 0)} জনের মধ্যে</span>${awardTxt ? `<em>${awardTxt}</em>` : ''}</div>
+        <div class="sd">${nr ? '' : `<div class="rk"><small>ক্লাসে অবস্থান</small><b>${c.rank ? rankBn(c.rank) : '—'}</b><span>${bn(c.class_size || 0)} জনের মধ্যে</span>${awardTxt ? `<em>${awardTxt}</em>` : ''}</div>`}
           <div class="stp"><small>গ্রেড</small><b>${g}</b></div>${doodle('star', 'width:20px;height:20px;transform:rotate(14deg);opacity:.55;align-self:flex-end;margin-right:8px')}</div></div>
-      <div class="ms">${msg}${doodle('cap', 'position:absolute;right:190px;top:-4px;width:30px;height:30px;transform:rotate(-10deg);opacity:.5')}${doodle('calc', 'position:absolute;right:150px;top:4px;width:22px;height:22px;transform:rotate(12deg);opacity:.5')}</div>
+      ${msg ? `<div class="ms">${msg}${doodle('cap', 'position:absolute;right:190px;top:-4px;width:30px;height:30px;transform:rotate(-10deg);opacity:.5')}${doodle('calc', 'position:absolute;right:150px;top:4px;width:22px;height:22px;transform:rotate(12deg);opacity:.5')}</div>` : ''}
       <div class="tn"><span>শিক্ষকের মন্তব্য</span><i></i></div>
       <div class="sg"><span>শ্রেণি শিক্ষক</span>${doodle('compass', 'transform:rotate(-12deg)')}<span>পরিচালক</span>${doodle('abc', 'transform:rotate(8deg)')}<span>অভিভাবকের স্বাক্ষর</span></div>
       <div class="ft"><img src="${LOGO()}" alt=""><b>ডিফারেন্ট একাডেমিক অ্যান্ড এক্সাম কেয়ার</b><u></u><span>Every child is Different.</span></div>
@@ -55,8 +56,9 @@
   }
   // Little encouragement printed on every card (kind, never harsh).
   function cheer(pct, up, name) {
-    const base = pct == null ? 'পরের সপ্তাহের জন্য শুভকামনা!' : pct >= 80 ? 'দারুণ করেছ! এভাবেই এগিয়ে চলো।' : pct >= 60 ? 'ভালো করেছ! আরেকটু চেষ্টায় আরও ভালো হবে।' : pct >= 40 ? 'চেষ্টা চালিয়ে যাও, তুমি পারবে।' : 'মন খারাপ কোরো না, আমরা সবসময় তোমার পাশে আছি।';
-    return `<b>${esc(name)},</b> ${base}${up ? ' গত সপ্তাহের চেয়ে এগিয়েছ ↑' : ''}`;
+    const base = pct >= 80 ? 'দারুণ করেছ! এভাবেই এগিয়ে চলো।' : pct >= 60 ? 'ভালো করেছ! আরেকটু চেষ্টায় আরও ভালো হবে।' : '';
+    if (!base && !up) return '';   // nothing to say is better than a sad line
+    return `<b>${esc(name)},</b> ${base || 'গত সপ্তাহের চেয়ে এগিয়েছ ↑'}${base && up ? ' গত সপ্তাহের চেয়ে এগিয়েছ ↑' : ''}`;
   }
   // Line-art study things (24 x 24, stroke only) sprinkled on the card and lined up along its foot.
   const ICONS = {
@@ -111,9 +113,11 @@
     .sg{display:flex;justify-content:space-between;align-items:flex-end;padding:12px 26px 4px}.sg svg{width:24px;height:24px;opacity:.5;margin-bottom:2px}.sg span{border-top:1px solid #000;width:26%;text-align:center;font-size:9.5px;padding-top:2px}
     .ft{display:flex;align-items:center;justify-content:center;gap:7px;margin:0 16px;padding:3px 0 5px;border-top:.8px solid #000;font-size:10px;position:relative}.ft img{height:17px;filter:brightness(0)}.ft b{font-size:10.5px}.ft u{width:4px;height:4px;border-radius:50%;background:#000}.ft span{font-style:italic;letter-spacing:.3px}
     .rb{border:1px solid #000;border-radius:10px;padding:5px 12px 4px;display:flex;flex-direction:column;gap:3px;background:rgba(255,255,255,.9)}.rh{font-weight:700;font-size:11.5px}.rh small{font-size:9.5px}
-    .rr{display:flex;align-items:center;gap:10px}.rr span{width:120px;font-size:11px}.rt{flex:1;height:10px;border:1.3px solid #000;border-radius:6px;overflow:hidden}.rt i{display:block;height:100%;background:#000}.rr b{width:52px;text-align:right;font-size:12.5px}.rr b small{font-size:9.5px}.rn{font-size:9.5px;text-align:right}`;
+    .rr{display:flex;align-items:center;gap:10px}.rr span{width:120px;font-size:11px}.rt{flex:1;height:10px;border:1.3px solid #000;border-radius:6px;overflow:hidden}.rt i{display:block;height:100%;background:#000}.rr b{width:52px;text-align:right;font-size:12.5px}.rr b small{font-size:9.5px}.rn{font-size:9.5px;text-align:right}
+    .rb+.gp{display:none}.rb{padding:4px 12px 3px;gap:2px}.rr{gap:8px}.rr span{font-size:10.5px}.rt{height:9px}.rn{font-size:9px}`;
   // Two cards per A4 sheet (each card is one A5 half), with a cut line. The print dialog also offers "Save as PDF".
-  async function printCards(cards, title) {
+  async function printCards(cards, title, noRank = false) {
+    if (noRank) cards = cards.map(c => ({ ...c, noRank: true }));
     const w = window.open('', '_blank');
     if (!w) return toast('পপআপ বন্ধ আছে, প্রিন্ট খোলা যায়নি');
     await loadLogo();
@@ -226,7 +230,8 @@
     h += `<div class="card ${gaps.length || !d.exams.length ? 'sun' : 'teal'}">${!d.exams.length ? `এই সময়ে ক্লাস ${bn(cls)} এর কোনো পরীক্ষা পাওয়া যায়নি। কার্ড শুধু রেটিং দিয়ে হবে। পরীক্ষা যোগ করতে: নম্বর ইনপুট।`
       : `<div>পরীক্ষা ${bn(d.exams.length)} টি: ${esc(d.exams.map(e => e.subject || e.exam.title).join(', '))}</div>${gaps.length ? gaps.map(([s, n]) => `<div>• ${esc(s)}: ${bn(n)} জনের নম্বর এখনো দেওয়া হয়নি</div>`).join('') : '<div>সব নম্বর দেওয়া আছে, কার্ড তৈরি।</div>'}`}</div>`;
     const canPub = cards.some(c => c.score != null);
-    h += `<button class="btn" id="pall" ${cards.length ? '' : 'disabled'}>সব কার্ড প্রিন্ট করুন (এক পাতায় ২টি)</button>
+    h += `<button class="btn" id="pall" ${cards.length ? '' : 'disabled'}>ক্লাসে অবস্থানসহ প্রিন্ট করুন (এক পাতায় ২টি)</button>
+      <button class="btn ghost" id="pall2" ${cards.length ? '' : 'disabled'}>ক্লাসে অবস্থান ছাড়া প্রিন্ট করুন (এক পাতায় ২টি)</button>
       ${isAdmin() ? `<button class="btn sun" id="pub" ${canPub ? '' : 'disabled'}>অভিভাবকদের অ্যাপে প্রকাশ করুন</button>` : ''}`;
     if (pub.length) { const seen = pub.filter(p => p.seen_at); h += `<div class="card"><h3>অভিভাবক দেখেছেন: ${bn(seen.length)} / ${bn(pub.length)} জন</h3>${pub.length > seen.length ? `<div class="mute small">এখনো দেখেননি: ${esc(pub.filter(p => !p.seen_at).map(p => p.data?.name || '').join(', '))}</div>` : ''}</div>`; }
     if (isAdmin()) h += '<div id="rem"></div>';
@@ -242,6 +247,7 @@
     if (rf) rf.onchange = () => { if (rf.value) { RP.from = rf.value; render(); } };
     if (rt) rt.onchange = () => { if (rt.value) { RP.to = rt.value; render(); } };
     el.querySelector('#pall').onclick = () => printCards(cards.map(c => asCard(c, RP.kind, from, to, cls)), 'রিপোর্ট কার্ড · ক্লাস ' + bn(cls));
+    el.querySelector('#pall2').onclick = () => printCards(cards.map(c => asCard(c, RP.kind, from, to, cls)), 'রিপোর্ট কার্ড · ক্লাস ' + bn(cls), true);
     const pb = el.querySelector('#pub');
     if (pb) pb.onclick = async () => {
       const rows = cards.filter(c => c.score != null || c.lines.length).map(c => ({ coaching_id: S.me.coaching_id, student_id: c.student_id, ...asCard(c, RP.kind, from, to, cls), published_by: S.uid }));
@@ -257,12 +263,12 @@
       const per = {}; rows.forEach(r => { const k = `${r.kind}|${r.period_from}|${r.period_to}`; const x = per[k] ||= { kind: r.kind, from: r.period_from, to: r.period_to, n: 0, seen: 0 }; x.n++; if (r.seen_at) x.seen++; });
       const list = Object.values(per);
       box.innerHTML = section(`আগের প্রকাশিত রিপোর্ট · ক্লাস ${bn(cls)}`) + (list.map(p => `<div class="card"><div class="mute small">${KIND[p.kind]} · দেখেছেন ${bn(p.seen)}/${bn(p.n)}</div><h3>${range(p.from, p.to)}</h3>
-        <div class="chips"><button class="pill teal" data-open="${p.kind}|${p.from}|${p.to}">খুলুন</button><button class="pill" data-reprint="${p.kind}|${p.from}|${p.to}">আবার প্রিন্ট</button></div></div>`).join('') || empty('document', 'এই ক্লাসের কোনো রিপোর্ট এখনো প্রকাশ হয়নি।'));
+        <div class="chips"><button class="pill teal" data-open="${p.kind}|${p.from}|${p.to}">খুলুন</button><button class="pill" data-reprint="${p.kind}|${p.from}|${p.to}">আবার প্রিন্ট</button><button class="pill" data-reprint2="${p.kind}|${p.from}|${p.to}">অবস্থান ছাড়া প্রিন্ট</button></div></div>`).join('') || empty('document', 'এই ক্লাসের কোনো রিপোর্ট এখনো প্রকাশ হয়নি।'));
       box.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { const [k, f, t] = b.dataset.open.split('|'); RP.kind = k; if (k === 'weekly') RP.fri = t; else { RP.from = f; RP.to = t; } render(); });
-      box.querySelectorAll('[data-reprint]').forEach(b => b.onclick = async () => {
-        const [k, f, t] = b.dataset.reprint.split('|');
+      box.querySelectorAll('[data-reprint],[data-reprint2]').forEach(b => b.onclick = async () => {
+        const [k, f, t] = (b.dataset.reprint || b.dataset.reprint2).split('|');
         const cs = await sel('report_cards', `select=${COLS}&class_level=eq.${cls}&kind=eq.${k}&period_from=eq.${f}&period_to=eq.${t}&limit=500`).catch(() => []);
-        printCards(cs.sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9)), 'রিপোর্ট কার্ড · ক্লাস ' + bn(cls));
+        printCards(cs.sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9)), 'রিপোর্ট কার্ড · ক্লাস ' + bn(cls), 'reprint2' in b.dataset);
       });
     };
     if (isAdmin()) reminderCard(el.querySelector('#rem'));
