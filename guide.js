@@ -188,11 +188,44 @@
   const WELCOME = { kind: 'welcome', pic: 'welcome', alt: 'ডিফ এডু লোগো', title: 'ডিফ এডু অ্যাপ নিন' };
   const LANDING = { kind: 'landing', alt: 'ডিফারেন্ট এডুকেশন সেন্টার' };
 
-  /** The first screen: a small landing page about the coaching, with the app-download options. Static text only. */
+  const WA = '8801716057167';            // WhatsApp / phone of the coaching
+  const CALL_NO = '01716057167';         // (not PHONE: that name is the phone-outline picture helper above)
+  const CLASSES = [
+    { name: '১ম শ্রেণি', size: 'প্রতি ব্যাচে ১৫ জন', text: 'আপনার স্নেহের সোনামণিকে স্নেহ ও ভালোবাসার পরশে হাতে-কলমে আনন্দের সঙ্গে পাঠদান।' },
+    { name: '২য় শ্রেণি', size: 'প্রতি ব্যাচে ১৫ জন', text: 'জিলা, গার্লস ও পুলিশ <span class="ld-sys">লাইন্স</span> স্কুলে ভর্তি পরীক্ষার উপযোগী পাঠদান। পাঠ্যবইয়ের প্রতিটি লাইন বিশ্লেষণ করে বাংলা, ইংরেজি ও গণিতের শিটের মাধ্যমে পাঠদান। মার্চ–এপ্রিলের মধ্যেই সম্পূর্ণ বোর্ড বই শেষ করা হবে, এরপর সারা বছর রিভিশন ও পরীক্ষা।' },
+    { name: '৩য় – ৫ম শ্রেণি', size: 'প্রতি ব্যাচে ২০ জন', text: 'স্কুল সিলেবাস অনুযায়ী পাঠ্যবইয়ের প্রতিটি লাইন বিশ্লেষণ করে পাঠদান। বৃত্তি পরীক্ষার্থীদের আলাদা ব্যাচে জুলাই মাসের মধ্যেই পাঠ্যবই সম্পূর্ণ শেষ করানো হবে, এরপর রিভিশন ও নিয়মিত পরীক্ষা।' },
+    { name: '৬ষ্ঠ – ৮ম শ্রেণি', size: 'প্রতি ব্যাচে ২০ জন', text: 'স্কুল সিলেবাস অনুযায়ী পাঠ্যবইয়ের প্রতিটি লাইন বিশ্লেষণ করে পাঠদান। বৃত্তি পরীক্ষার্থীদের আলাদা ব্যাচে জুলাই মাসের মধ্যেই পাঠ্যবই সম্পূর্ণ শেষ করানো হবে, এরপর রিভিশন ও নিয়মিত পরীক্ষা।' },
+  ];
+  const BATCHES = [
+    { name: 'প্রভাতি ব্যাচ', chip: 'সকাল', text: 'সকালবেলার ব্যাচ — সতেজ মনে দিনের পড়া শুরু।' },
+    { name: 'দিবা ব্যাচ', chip: 'দিন', text: 'দিনের ব্যাচ — স্কুল শেষে নিশ্চিন্তে পড়ার সুযোগ।' },
+    { name: 'সন্ধ্যাকালীন ব্যাচ', chip: 'সন্ধ্যা', text: 'সন্ধ্যা ৬টা থেকে রাত ১০টা — স্পেশাল ম্যারাথন ব্যাচ। স্কুলের পড়া এখানেই সম্পূর্ণ করিয়ে দেওয়া হয়।' },
+  ];
+  /** days left of the 50% admission offer (until the end of 31 December 2026); negative = over */
+  const offerDaysLeft = () => Math.ceil((new Date(2026, 11, 31, 23, 59, 59).getTime() - Date.now()) / 86400000);
+
+  /** The first screen: the chalkboard hero, notebook Q&A, batch finder, app preview, facts, programs, contact. Static text only. */
   function landingHtml(c) {
     const ticks = items => `<ul class="ld-ticks">${items.map(t => `<li>${t}</li>`).join('')}</ul>`;
-    const prog = (name, pill, text) => `<div class="ld-prog"><div class="ld-prog-h"><b>${name}</b><span class="ld-pill">${pill}</span></div><p>${text}</p></div>`;
-    const MID = 'স্কুল সিলেবাস অনুযায়ী পাঠ্যবইয়ের প্রতিটি লাইন বিশ্লেষণ করে পাঠদান। বৃত্তি পরীক্ষার্থীদের আলাদা ব্যাচে জুলাই মাসের মধ্যেই পাঠ্যবই সম্পূর্ণ শেষ করানো হবে, এরপর রিভিশন ও নিয়মিত পরীক্ষা।';
+    const left = offerDaysLeft();
+    const cls = c.cls ? CLASSES[c.cls - 1] : null;
+    const bt = c.bt ? BATCHES[c.bt - 1] : null;
+    const chips = (list, key) => list.map((x, i) =>
+      `<button class="ld-chip${c[key] === i + 1 ? ' on' : ''}" data-gd="${key}:${i + 1}" aria-pressed="${c[key] === i + 1}">${x.label}</button>`).join('');
+    const clsChips = chips(CLASSES.map(k => ({ label: k.name })), 'cls');
+    const btChips = chips(BATCHES.map(b => ({ label: `${b.chip} · ${b.name}` })), 'bt');
+    const msg = cls && bt ? 'আসসালামু আলাইকুম। আমি আমার সন্তানকে ' + cls.name + 'র ' + bt.name + 'ে ভর্তি করাতে আগ্রহী। অনুগ্রহ করে বিস্তারিত জানাবেন।' : '';
+    const result = cls && bt
+      ? `<div class="ld-result-card"><div class="ld-kicker">আপনার সন্তানের জন্য উপযুক্ত</div>` +
+        `<div class="ld-pick">${cls.name} · ${bt.name}</div>` +
+        `<p>${cls.text}</p>` +
+        `<p><b>${bt.name}:</b> ${bt.text}</p>` +
+        `<div class="ld-pill">${cls.size}</div>` +
+        (c.cls >= 3 ? `<p class="ld-hl">৫ম ও ৮ম শ্রেণির বৃত্তি পরীক্ষার্থীদের একই বেতনে আলাদা ব্যাচ।</p>` : '') +
+        (left >= 0 ? `<p class="ld-hl">এখনই ভর্তি হলে ভর্তিতে ৫০% ছাড়।</p>` : '') +
+        `<a class="gd-btn gold" href="https://wa.me/${WA}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp-এ ভর্তির কথা বলুন</a>` +
+        `<a class="gd-btn ghost" href="tel:${CALL_NO}">কল করুন</a></div>`
+      : `<div class="gd-small">শ্রেণি আর সময় বেছে নিন — ব্যাচের পুরো বিবরণ এখানেই দেখতে পাবেন।</div>`;
     const appBtns = c.plat === 'android'
       ? '<button class="gd-btn gold" data-gd="flow:apk">অ্যাপ ডাউনলোড করুন (Android)</button>' +
         '<button class="gd-link" data-gd="flow:home">ডাউনলোড ছাড়া হোম স্ক্রিনে রাখুন</button>' +
@@ -203,54 +236,97 @@
         : '<div class="gd-small">এই পাতাটি ফোনে খুলুন:</div>' + addrBox(c) +
           '<button class="gd-link" data-gd="flow:apk">অ্যান্ড্রয়েড ফোনের ধাপ দেখুন</button>' +
           '<button class="gd-link" data-gd="flow:ios">iPhone-এর ধাপ দেখুন</button>';
-    return `<section class="ld-hero">` +
-        `<img class="ld-logo" src="logo.svg" alt="">` +
-        `<div class="ld-badge">ভর্তি চলছে!</div>` +
-        `<h1 class="ld-name" tabindex="-1">ডিফারেন্ট এডুকেশন সেন্টার</h1>` +
-        `<div class="ld-tag">প্রতিটি শিশুই আলাদা</div>` +
-        `<div class="ld-sub">স্পেশাল একাডেমিক এন্ড এক্সাম কেয়ার · ১ম–৮ম শ্রেণি</div>` +
-        `<div class="ld-row"><a class="gd-btn gold" href="tel:01716057167">কল করুন</a>` +
-        `<button class="gd-btn ghost" data-gd="toapp">অ্যাপ নিন</button></div>` +
+    return `<section class="ld-board">
+  <i class="ld-screw s1"></i><i class="ld-screw s2"></i><i class="ld-screw s3"></i><i class="ld-screw s4"></i>
+  <div class="ld-dust" aria-hidden="true"></div>
+  <span class="ld-dd d1" aria-hidden="true">A B C</span>
+  <span class="ld-dd d2" aria-hidden="true">ক খ গ</span>
+  <span class="ld-dd d3" aria-hidden="true">১ + ১ = ২</span>
+  <span class="ld-dd d4" aria-hidden="true">২ × ৩ = ৬</span>
+  <span class="ld-dd d5" aria-hidden="true">a² + b² = c²</span>
+  <svg class="ld-ds s-circle" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" pathLength="100"/></svg>
+  <svg class="ld-ds s-tri" viewBox="0 0 44 40" aria-hidden="true"><path d="M4 36 L40 36 L40 4 Z" pathLength="100"/></svg>
+  <svg class="ld-ds s-star" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3 L25 15 L38 15 L27.5 23 L31.5 36 L20 28 L8.5 36 L12.5 23 L2 15 L15 15 Z" pathLength="100"/></svg>
+  <svg class="ld-ds s-tick" viewBox="0 0 40 30" aria-hidden="true"><path d="M3 16 L14 27 L37 3" pathLength="100"/></svg>
+  <div class="ld-badge">ভর্তি চলছে!</div>
+  <img class="ld-logo" src="logo.svg" alt="">
+  <h1 class="ld-name" tabindex="-1">ডিফারেন্ট এডুকেশন সেন্টার</h1>
+  <svg class="ld-uline" viewBox="0 0 220 12" preserveAspectRatio="none" aria-hidden="true"><path d="M3 8 C 50 3, 110 11, 160 5 S 210 6, 217 4" pathLength="100"/></svg>
+  <div class="ld-chalk">প্রতিটি শিশুই আলাদা</div>
+  <div class="ld-sub">স্পেশাল একাডেমিক এন্ড এক্সাম কেয়ার · ১ম–৮ম শ্রেণি</div>
+  <div class="ld-tray" aria-hidden="true"><b class="ld-duster"></b><i></i><i></i><i></i></div>
+</section>` +
+      `<section class="ld-note ld-rv">` +
+        `<div class="ld-q"><b>প্রশ্ন</b></div>` +
+        `<div>১। আপনি কি সন্তানের পড়ালেখা নিয়ে চিন্তিত?</div>` +
+        `<div>২। সন্তানকে পর্যাপ্ত সময় দিতে পারছেন না?</div>` +
+        `<div>৩। সন্তান কি পড়ালেখায় অমনোযোগী?</div>` +
+        `<div class="ld-a"><b>উত্তর</b></div>` +
+        `<div class="ld-ans">ডিফারেন্ট এডুকেশন সেন্টার</div>` +
       `</section>` +
-      `<section class="ld-result"><b>১২ জন</b><span>গত বছর বৃত্তি পেয়েছে</span></section>` +
-      `<section class="ld-card ld-red"><div class="ld-kicker">বৃত্তি স্পেশাল</div>` +
+      (left >= 0
+        ? `<section class="ld-offer ld-rv"><div>ডিসেম্বর ২০২৬-এর মধ্যে ভর্তি হলেই</div><b>ভর্তিতে ৫০% ছাড়!</b><span class="ld-days">অফার শেষ হতে আর ${bn(left)} দিন</span></section>`
+        : '') +
+      `<section class="ld-note ld-finder ld-rv" id="ld-finder">` +
+        `<h2 class="ld-h2">আপনার সন্তানের জন্য সঠিক ব্যাচটি খুঁজে নিন</h2>` +
+        `<div class="ld-step">১. সন্তান কোন শ্রেণিতে পড়ে?</div>` +
+        `<div class="ld-chips">${clsChips}</div>` +
+        `<div class="ld-step">২. কোন সময়টা আপনার জন্য সুবিধাজনক?</div>` +
+        `<div class="ld-chips">${btChips}</div>` +
+        result +
+      `</section>` +
+      `<section class="ld-card ld-app ld-rv" id="ld-app"><h2 class="ld-h2">সন্তান কোচিংয়ে পৌঁছাল কি না, জানুন সঙ্গে সঙ্গে</h2>` +
+        `<div class="ld-lead">Diff Edu অ্যাপে অভিভাবকের ফোনে যেমন বার্তা আসে</div>` +
+        `<div class="ld-msg ld-m1"><b>কোচিংয়ে পৌঁছেছে</b><span>আপনার সন্তান বিকাল ৪:০২-এ কোচিংয়ে প্রবেশ করেছে</span></div>` +
+        `<div class="ld-msg ld-m2"><b>রিপোর্ট কার্ড</b><span>এ সপ্তাহের ফলাফল প্রকাশিত হয়েছে</span></div>` +
+        `<div class="ld-msg ld-m3"><b>নোটিশ</b><span>এ শুক্রবার সাপ্তাহিক পরীক্ষা</span></div>` +
+        ticks(['প্রবেশ ও প্রস্থানের সঙ্গে সঙ্গে বার্তা', 'পরীক্ষার ফল ও সাপ্তাহিক রিপোর্ট কার্ড', 'বেতন, নোটিশ ও পরীক্ষার রুটিন — সব এক জায়গায়', 'শিক্ষার্থীদের জন্য প্রশ্নব্যাংক, ধাঁধা ও দৈনিক রেটিং']) +
+        appBtns +
+        `<button class="gd-link" data-gd="close">অ্যাপ ছাড়াই ব্রাউজারে লগইন করুন</button>` +
+      `</section>` +
+      `<section class="ld-card ld-red ld-rv"><div class="ld-kicker">বৃত্তি স্পেশাল</div>` +
         `<div class="ld-big">৫ম ও ৮ম শ্রেণির বৃত্তি পরীক্ষার্থীদের একই বেতনে আলাদা ব্যাচ।</div></section>` +
-      `<section class="ld-facts">` +
+      `<section class="ld-facts ld-rv">` +
         `<div class="ld-fact"><b>৬ দিন</b><span>সপ্তাহে ক্লাস</span></div>` +
         `<div class="ld-fact"><b>৩ ঘণ্টা</b><span>প্রতিদিন পাঠদান</span></div>` +
         `<div class="ld-fact"><b>প্রতিদিন</b><span>গণিত ও ইংরেজি</span></div>` +
         `<div class="ld-fact"><b>শুক্রবার</b><span>সাপ্তাহিক পরীক্ষা</span></div>` +
       `</section>` +
-      `<section class="ld-card"><h2 class="ld-h2">ব্যাচের সময়</h2>` +
-        `<div class="ld-time"><span>সকাল ব্যাচ</span><b>সকাল ৬টা – ৯টা</b></div>` +
-        `<div class="ld-time"><span>বিকাল ব্যাচ</span><b>বিকাল ৩:৪৫ – ৬:৪৫</b></div>` +
+      `<section class="ld-rv"><h2 class="ld-h2">আমাদের প্রোগ্রাম</h2>` +
+        CLASSES.map(k => `<div class="ld-prog"><div class="ld-prog-h"><b>${k.name}</b><span class="ld-pill">${k.size}</span></div><p>${k.text}</p></div>`).join('') +
       `</section>` +
-      `<section><h2 class="ld-h2">আমাদের প্রোগ্রাম</h2>` +
-        prog('১ম শ্রেণি', 'প্রতি ব্যাচে ১৫ জন', 'আপনার স্নেহের সোনামণিকে স্নেহ ও ভালোবাসার পরশে হাতে-কলমে আনন্দের সঙ্গে পাঠদান।') +
-        prog('২য় শ্রেণি', 'প্রতি ব্যাচে ১৫ জন', 'জিলা, গার্লস ও পুলিশ লাইন্স স্কুলে ভর্তি পরীক্ষার উপযোগী পাঠদান। পাঠ্যবইয়ের প্রতিটি লাইন বিশ্লেষণ করে বাংলা, ইংরেজি ও গণিতের শিটের মাধ্যমে পাঠদান। মার্চ–এপ্রিলের মধ্যেই সম্পূর্ণ বোর্ড বই শেষ করা হবে, এরপর সারা বছর রিভিশন ও পরীক্ষা।') +
-        prog('৩য় – ৫ম শ্রেণি', 'প্রতি ব্যাচে ২০ জন', MID) +
-        prog('৬ষ্ঠ – ৮ম শ্রেণি', 'প্রতি ব্যাচে ২০ জন', MID) +
+      `<section class="ld-card ld-green ld-rv"><h2 class="ld-h2">কেন ডিফারেন্ট?</h2>` +
+        ticks(['প্রতি ব্যাচে সীমিত শিক্ষার্থী', 'দীর্ঘ সময় ধরে যত্ন নিয়ে পাঠদান', 'সিসি ক্যামেরায় প্রতিটি ক্লাস পর্যবেক্ষণ', 'হোয়াটসঅ্যাপ গ্রুপে প্রতিদিনের পড়ার খবর অভিভাবকের কাছে']) +
+        `<p class="ld-hl">ফাঁকি দেওয়ার সুযোগ নেই — না শিক্ষকের, না শিক্ষার্থীর।</p>` +
       `</section>` +
-      `<section class="ld-card ld-green"><h2 class="ld-h2">কেন ডিফারেন্ট?</h2>` +
-        ticks(['অল্পসংখ্যক শিক্ষার্থী', 'দীর্ঘ সময় পাঠদান', 'CC ক্যামেরায় ক্লাস পর্যবেক্ষণ', 'হোয়াটসঅ্যাপ গ্রুপে অভিভাবকদের কাছে প্রতিদিনের পড়ার আপডেট']) +
-        `<p class="ld-hl">তাই শিক্ষক ও শিক্ষার্থীদের ফাঁকি দেওয়ার সুযোগ নেই।</p>` +
-      `</section>` +
-      `<section class="ld-card ld-app" id="ld-app"><h2 class="ld-h2">Diff Edu অ্যাপ</h2>` +
-        `<div class="ld-lead">সন্তানের শিক্ষার খবর এখন আপনার মুঠোয়</div>` +
-        ticks(['প্রবেশ ও ত্যাগ করলেই মেসেজ', 'ফলাফল ও সাপ্তাহিক রিপোর্ট কার্ড', 'ফি, নোটিশ ও পরীক্ষার রুটিন', 'প্রশ্নব্যাংক, ধাঁধা, দৈনিক রেটিং']) +
-        appBtns +
-        `<button class="gd-link" data-gd="close">অ্যাপ ছাড়া ব্রাউজারেই লগইন করি</button>` +
-      `</section>` +
-      `<section class="ld-card"><h2 class="ld-h2">ঠিকানা</h2>` +
+      `<section class="ld-card ld-rv"><h2 class="ld-h2">আমাদের ঠিকানা</h2>` +
         `<p>আর.সি.আর.সি স্ট্রিট, কোর্টপাড়া, কুষ্টিয়া<br>মেহেরজান ডাইনের বিপরীতে</p>` +
-        `<a class="gd-btn ghost" href="https://maps.google.com/?q=23.905835,89.127338" target="_blank" rel="noopener">গুগল ম্যাপে দেখুন</a>` +
+        `<a class="gd-btn ghost" href="https://maps.google.com/?q=23.905835,89.127338" target="_blank" rel="noopener">গুগল ম্যাপে লোকেশন দেখুন</a>` +
       `</section>` +
-      `<section class="ld-card ld-contact"><h2 class="ld-h2">যোগাযোগ</h2>` +
+      `<section class="ld-card ld-contact ld-rv"><h2 class="ld-h2">যোগাযোগ করুন</h2>` +
+        `<div class="ld-role">পরিচালক</div>` +
         `<div class="ld-who">মোঃ রাশেদুজ্জামান সানি</div>` +
         `<a class="ld-tel" href="tel:01716057167">০১৭১৬-০৫৭১৬৭</a>` +
         `<a class="ld-tel" href="tel:01711678818">০১৭১১-৬৭৮৮১৮</a>` +
       `</section>` +
-      `<div class="ld-foot">© ডিফারেন্ট এডুকেশন সেন্টার, কুষ্টিয়া</div>`;
+      `<div class="ld-foot"><img class="ld-footlogo" src="logo.svg" alt=""><div>© ডিফারেন্ট এডুকেশন সেন্টার, কুষ্টিয়া</div></div>`;
+  }
+
+  /** Scroll reveal for the landing page. first = true on the first paint (animate as sections come into view);
+   *  on later repaints (chip taps) everything is shown at once so nothing replays. */
+  function ldReveal(root, first) {
+    const main = root.querySelector('.gd-main.ld');
+    if (!main) return;
+    const items = main.querySelectorAll('.ld-rv');
+    if (!first || !('IntersectionObserver' in window)) {
+      main.classList.add('ld-again');
+      items.forEach(el => el.classList.add('in'));
+      return;
+    }
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, { root: main, threshold: 0.15 });
+    items.forEach(el => io.observe(el));
   }
 
   function sizeMb(c) {
@@ -270,7 +346,7 @@
   function show() {
     return new Promise(resolve => {
       const plat = platform();
-      const c = { plat, safari: isSafariIos(), addr: pageAddress(), version: '', size: 0, used: false };
+      const c = { plat, safari: isSafariIos(), addr: pageAddress(), version: '', size: 0, used: false, cls: 0, bt: 0 };
       const stack = [{ flow: 'landing', i: 0 }];
       const ov = document.createElement('div');
       ov.id = 'guide';
@@ -298,11 +374,12 @@
         if (s.kind === 'landing') {
           // landing page: its own top bar (no progress bar), the page, and a sticky download button
           const lhead = `<div class="gd-top ld-top"><div class="gd-in"><div class="gd-top-row">` +
-            `<div class="gd-count">${LANDING.alt}</div>` +
-            `<button class="gd-x" data-gd="close">অ্যাপে লগইন</button></div></div></div>`;
-          const lfoot = c.plat === 'android' ? `<footer class="gd-nav"><div class="gd-in"><button class="gd-btn gold" data-gd="flow:apk">অ্যাপ ডাউনলোড করুন (Android)</button></div></footer>`
-            : c.plat === 'ios' ? `<footer class="gd-nav"><div class="gd-in"><button class="gd-btn gold" data-gd="flow:ios">iPhone-এ অ্যাপ নিন</button></div></footer>`
-            : '';
+            `<div class="gd-count ld-brand"><img class="ld-toplogo" src="logo.svg" alt="">${LANDING.alt}</div>` +
+            `<button class="gd-x" data-gd="close">লগইন</button></div></div></div>`;
+          const lfoot = `<footer class="gd-nav ld-bar"><div class="gd-in"><div class="ld-bar-row">` +
+            `<a class="ld-b ld-b1" href="tel:${CALL_NO}">কল করুন</a>` +
+            `<a class="ld-b ld-b2" href="https://wa.me/${WA}" target="_blank" rel="noopener">WhatsApp</a>` +
+            `<button class="ld-b ld-b3" data-gd="tofinder">ভর্তি হোন</button></div></div></footer>`;
           return lhead + `<main class="gd-main ld"><div class="gd-in">${landingHtml(c)}</div></main>` + lfoot;
         }
         const steps = list.filter(x => x.kind === 'step').length;
@@ -366,6 +443,7 @@
         const main = ov.querySelector('.gd-main');
         if (main) main.scrollTop = focus ? 0 : y;
         if (focus) ov.querySelector('.gd-h1, .ld-name')?.focus({ preventScroll: true });
+        ldReveal(ov, focus);
       }
       const go = (flow, i = 0) => { stack.push({ flow, i }); paint(true); };
 
@@ -448,10 +526,12 @@
         if (a === 'close') close();
         else if (a === 'start') go(plat === 'ios' ? 'ios' : 'apk');
         else if (a.startsWith('flow:')) go(a.slice(5));
+        else if (a.startsWith('cls:')) { c.cls = +a.slice(4); paint(false); }
+        else if (a.startsWith('bt:')) { c.bt = +a.slice(3); paint(false); }
+        else if (a === 'tofinder') ov.querySelector('#ld-finder')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         else if (a === 'next') { const tp = top(); stack.push({ flow: tp.flow, i: tp.i + 1 }); paint(true); }
         else if (a === 'prev') { if (stack.length > 1) { stack.pop(); paint(true); } }
         else if (a === 'install') installNow();
-        else if (a === 'toapp') ov.querySelector('#ld-app')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         else if (a === 'copy') copyAddress();
       });
 
@@ -467,7 +547,7 @@
       // Published app version (and APK size); fails silently, the page works without it.
       fetch(CFG.url + '/storage/v1/object/public/app-updates/version.json', { cache: 'no-store' })
         .then(r => r.json())
-        .then(v => { c.version = v?.versionName || ''; c.size = +v?.size || 0; if (ov.isConnected) paint(false); })
+        .then(v => { c.version = v?.versionName || ''; c.size = +v?.size || 0; if (ov.isConnected && top().flow !== 'landing') paint(false); })
         .catch(() => {});
     });
   }
