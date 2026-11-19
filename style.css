@@ -701,6 +701,9 @@ button.pill::after,a.pill::after{content:"";position:absolute;inset:-11px -4px}
 .ld-progress i{display:block;height:100%;width:0;background:#FFBB23;border-radius:2px}
 .ld-bar{transition:transform .3s ease}
 .ld-bar.ld-hide{transform:translateY(110%)}
+.gd-ov.ld-on{background:#FBF8EC}
+.ld-bar{position:absolute;left:0;right:0;bottom:0;z-index:5}
+.gd-main.ld .gd-in{padding-bottom:84px}
 /* landing: scroll reveal (.in is added by ldReveal in guide.js) */
 .ld-rv{opacity:0;transform:translateY(26px);transition:opacity .6s ease-out,transform .6s ease-out}
 .ld-rv.in{opacity:1;transform:none}
@@ -746,6 +749,7 @@ button.pill::after,a.pill::after{content:"";position:absolute;inset:-11px -4px}
 
 /* ---------- landing: dark mode (follows the phone's setting): charcoal night, gold accents ---------- */
 @media (prefers-color-scheme: dark){
+.gd-ov.ld-on{background:#111513}
 .gd-main.ld{background:#111513;color:#EEEAE0}
 .gd-main.ld .ld-note{background-color:#1A1F1C;background-image:repeating-linear-gradient(#1A1F1C 0 29px,#262D29 29px 30px);color:#EEEAE0;border-left-color:#E5484D;box-shadow:0 0 0 1px #262D29}
 .gd-main.ld .ld-q b,.gd-main.ld .ld-ans,.gd-main.ld .ld-role{color:#FF7A7E}

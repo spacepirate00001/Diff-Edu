@@ -364,6 +364,7 @@
    *  the progress line under the top bar, and the bottom bar hiding while scrolling down. */
   function ldReveal(root, first) {
     const main = root.querySelector('.gd-main.ld');
+    root.classList.toggle('ld-on', !!main);   // landing colours for the overlay itself (corners behind the top bar, area under the bottom bar)
     if (!main) return;
     const items = main.querySelectorAll('.ld-rv');
     let raf = 0, lastY = main.scrollTop;
