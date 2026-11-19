@@ -318,7 +318,7 @@
   function ldNotify(app) {
     const n = app.querySelector('.ld-phone-n'), ph = app.querySelector('.ld-phone');
     if (!n || !ph) return;
-    [200, 1400, 2600].forEach((t, i) => setTimeout(() => {
+    [200, 900, 1600].forEach((t, i) => setTimeout(() => {
       n.textContent = bn(i + 1);
       n.classList.remove('bump'); void n.offsetWidth; n.classList.add('bump');
       ph.classList.remove('shake'); void ph.offsetWidth; ph.classList.add('shake');
@@ -330,7 +330,7 @@
     box.querySelectorAll('b[data-n]').forEach(b => {
       const to = +b.dataset.n, t0 = performance.now();
       const tick = now => {
-        const k = Math.min(1, (now - t0) / 1300);
+        const k = Math.min(1, (now - t0) / 1000);
         b.textContent = bn(Math.round(to * k)) + (b.dataset.u || '');
         if (k < 1) requestAnimationFrame(tick);
       };
@@ -407,13 +407,13 @@
           if (ph) {
             const io2 = new IntersectionObserver(es => {
               if (es.some(x => x.isIntersecting)) { io2.disconnect(); ph.classList.add('go'); ldNotify(el); }
-            }, { root: main, threshold: 0.7 });
+            }, { root: main, threshold: 0.5 });
             io2.observe(ph);
           }
         }
         if (el.classList.contains('ld-facts')) ldCount(el);
       });
-    }, { root: main, threshold: 0.12, rootMargin: '0px 0px -22% 0px' });   // reveal a little after a section enters, so the motion is seen
+    }, { root: main, threshold: 0.12, rootMargin: '0px 0px -12% 0px' });   // reveal a little after a section enters, so the motion is seen
     items.forEach(el => io.observe(el));
   }
 
