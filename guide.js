@@ -7,6 +7,7 @@
   'use strict';
   const UA = navigator.userAgent || '';
   const OFFICE_PHONE = '01404793202';
+  const REDUCED = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } })();
 
   const isStandaloneNow = () => { try { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch { return false; } };
   const platform = () => /Android/i.test(UA) ? 'android' : /iPhone|iPad|iPod/i.test(UA) ? 'ios' : 'other';
@@ -188,7 +189,7 @@
   const WELCOME = { kind: 'welcome', pic: 'welcome', alt: 'ডিফ এডু লোগো', title: 'ডিফ এডু অ্যাপ নিন' };
   const LANDING = { kind: 'landing', alt: 'ডিফারেন্ট এডুকেশন সেন্টার' };
 
-  const WA = '8801716057167';            // WhatsApp / phone of the coaching
+  const WA = '8801307198356';            // WhatsApp / phone of the coaching
   const CALL_NO = '01716057167';         // (not PHONE: that name is the phone-outline picture helper above)
   const CLASSES = [
     { name: '১ম শ্রেণি', size: 'প্রতি ব্যাচে ১৫ জন', text: 'আপনার স্নেহের সোনামণিকে স্নেহ ও ভালোবাসার পরশে হাতে-কলমে আনন্দের সঙ্গে পাঠদান।' },
@@ -250,7 +251,7 @@
   <svg class="ld-ds s-tick" viewBox="0 0 40 30" aria-hidden="true"><path d="M3 16 L14 27 L37 3" pathLength="100"/></svg>
   <div class="ld-badge">ভর্তি চলছে!</div>
   <img class="ld-logo" src="logo.svg" alt="">
-  <h1 class="ld-name" tabindex="-1">ডিফারেন্ট এডুকেশন সেন্টার</h1>
+  <h1 class="ld-name" tabindex="-1">ডিফারেন্ট এডুকেশন সেন্টার<i class="ld-stick" aria-hidden="true"></i><b class="ld-crumb" aria-hidden="true"></b><b class="ld-crumb" aria-hidden="true"></b><b class="ld-crumb" aria-hidden="true"></b><b class="ld-crumb" aria-hidden="true"></b><b class="ld-crumb" aria-hidden="true"></b><b class="ld-crumb" aria-hidden="true"></b></h1>
   <svg class="ld-uline" viewBox="0 0 220 12" preserveAspectRatio="none" aria-hidden="true"><path d="M3 8 C 50 3, 110 11, 160 5 S 210 6, 217 4" pathLength="100"/></svg>
   <div class="ld-chalk">প্রতিটি শিশুই আলাদা</div>
   <div class="ld-sub">স্পেশাল একাডেমিক এন্ড এক্সাম কেয়ার · ১ম–৮ম শ্রেণি</div>
@@ -262,7 +263,7 @@
         `<div>২। সন্তানকে পর্যাপ্ত সময় দিতে পারছেন না?</div>` +
         `<div>৩। সন্তান কি পড়ালেখায় অমনোযোগী?</div>` +
         `<div class="ld-a"><b>উত্তর</b></div>` +
-        `<div class="ld-ans">ডিফারেন্ট এডুকেশন সেন্টার</div>` +
+        `<div class="ld-ans">ডিফারেন্ট এডুকেশন সেন্টার<i class="ld-pencil" aria-hidden="true"></i></div>` +
       `</section>` +
       (left >= 0
         ? `<section class="ld-offer ld-rv"><div>ডিসেম্বর ২০২৬-এর মধ্যে ভর্তি হলেই</div><b>ভর্তিতে ৫০% ছাড়!</b><span class="ld-days">অফার শেষ হতে আর ${bn(left)} দিন</span></section>`
@@ -277,9 +278,10 @@
       `</section>` +
       `<section class="ld-card ld-app ld-rv" id="ld-app"><h2 class="ld-h2">সন্তান কোচিংয়ে পৌঁছাল কি না, জানুন সঙ্গে সঙ্গে</h2>` +
         `<div class="ld-lead">Diff Edu অ্যাপে অভিভাবকের ফোনে যেমন বার্তা আসে</div>` +
+        `<div class="ld-phone" aria-hidden="false"><div class="ld-phone-top"><span class="ld-phone-time">৪:০২</span><span class="ld-phone-app">Diff Edu</span><b class="ld-phone-n" aria-label="নতুন বার্তা">০</b></div><div class="ld-phone-screen">` +
         `<div class="ld-msg ld-m1"><b>কোচিংয়ে পৌঁছেছে</b><span>আপনার সন্তান বিকাল ৪:০২-এ কোচিংয়ে প্রবেশ করেছে</span></div>` +
         `<div class="ld-msg ld-m2"><b>রিপোর্ট কার্ড</b><span>এ সপ্তাহের ফলাফল প্রকাশিত হয়েছে</span></div>` +
-        `<div class="ld-msg ld-m3"><b>নোটিশ</b><span>এ শুক্রবার সাপ্তাহিক পরীক্ষা</span></div>` +
+        `<div class="ld-msg ld-m3"><b>নোটিশ</b><span>এ শুক্রবার সাপ্তাহিক পরীক্ষা</span></div></div></div>` +
         ticks(['প্রবেশ ও প্রস্থানের সঙ্গে সঙ্গে বার্তা', 'পরীক্ষার ফল ও সাপ্তাহিক রিপোর্ট কার্ড', 'বেতন, নোটিশ ও পরীক্ষার রুটিন — সব এক জায়গায়', 'শিক্ষার্থীদের জন্য প্রশ্নব্যাংক, ধাঁধা ও দৈনিক রেটিং']) +
         appBtns +
         `<button class="gd-link" data-gd="close">অ্যাপ ছাড়াই ব্রাউজারে লগইন করুন</button>` +
@@ -287,8 +289,8 @@
       `<section class="ld-card ld-red ld-rv"><div class="ld-kicker">বৃত্তি স্পেশাল</div>` +
         `<div class="ld-big">৫ম ও ৮ম শ্রেণির বৃত্তি পরীক্ষার্থীদের একই বেতনে আলাদা ব্যাচ।</div></section>` +
       `<section class="ld-facts ld-rv">` +
-        `<div class="ld-fact"><b>৬ দিন</b><span>সপ্তাহে ক্লাস</span></div>` +
-        `<div class="ld-fact"><b>৩ ঘণ্টা</b><span>প্রতিদিন পাঠদান</span></div>` +
+        `<div class="ld-fact"><b data-n="6" data-u=" দিন">৬ দিন</b><span>সপ্তাহে ক্লাস</span></div>` +
+        `<div class="ld-fact"><b data-n="3" data-u=" ঘণ্টা">৩ ঘণ্টা</b><span>প্রতিদিন পাঠদান</span></div>` +
         `<div class="ld-fact"><b>প্রতিদিন</b><span>গণিত ও ইংরেজি</span></div>` +
         `<div class="ld-fact"><b>শুক্রবার</b><span>সাপ্তাহিক পরীক্ষা</span></div>` +
       `</section>` +
@@ -312,19 +314,95 @@
       `<div class="ld-foot"><img class="ld-footlogo" src="logo.svg" alt=""><div>© ডিফারেন্ট এডুকেশন সেন্টার, কুষ্টিয়া</div></div>`;
   }
 
+  /** Landing app preview: each notification bumps the badge and shakes the phone. */
+  function ldNotify(app) {
+    const n = app.querySelector('.ld-phone-n'), ph = app.querySelector('.ld-phone');
+    if (!n || !ph) return;
+    [0, 600, 1200].forEach((t, i) => setTimeout(() => {
+      n.textContent = bn(i + 1);
+      n.classList.remove('bump'); void n.offsetWidth; n.classList.add('bump');
+      ph.classList.remove('shake'); void ph.offsetWidth; ph.classList.add('shake');
+    }, t + 150));
+  }
+
+  /** Landing fact tiles: count from 0 up to data-n. */
+  function ldCount(box) {
+    box.querySelectorAll('b[data-n]').forEach(b => {
+      const to = +b.dataset.n, t0 = performance.now();
+      const tick = now => {
+        const k = Math.min(1, (now - t0) / 700);
+        b.textContent = bn(Math.round(to * k)) + (b.dataset.u || '');
+        if (k < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+
+  /** Confetti inside the result card (#ld-finder), when a class and a batch are both picked. */
+  function ldConfetti(root) {
+    const f = root.querySelector('#ld-finder');
+    if (!f) return;
+    const COLS = ['#015D36', '#C12026', '#FFBB23', '#ffffff'];
+    for (let k = 0; k < 28; k++) {
+      const el = document.createElement('i');
+      el.className = 'ld-conf';
+      el.style.left = (Math.random() * 100) + '%';
+      el.style.background = COLS[k % COLS.length];
+      el.style.width = (6 + Math.random() * 4) + 'px';
+      el.style.height = (10 + Math.random() * 4) + 'px';
+      el.style.animationDelay = (Math.random() * 0.25) + 's';
+      el.style.setProperty('--x', (Math.random() * 120 - 60).toFixed(1) + 'px');
+      el.style.setProperty('--r', (180 + Math.random() * 540).toFixed(0) + 'deg');
+      f.appendChild(el);
+      setTimeout(() => el.remove(), 1600);
+    }
+  }
+
   /** Scroll reveal for the landing page. first = true on the first paint (animate as sections come into view);
-   *  on later repaints (chip taps) everything is shown at once so nothing replays. */
+   *  on later repaints (chip taps) everything is shown at once so nothing replays.
+   *  One throttled scroll handler per paint (the main element is new each time): parallax for the chalk doodles,
+   *  the progress line under the top bar, and the bottom bar hiding while scrolling down. */
   function ldReveal(root, first) {
     const main = root.querySelector('.gd-main.ld');
     if (!main) return;
     const items = main.querySelectorAll('.ld-rv');
-    if (!first || !('IntersectionObserver' in window)) {
+    let raf = 0, lastY = main.scrollTop;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const y = main.scrollTop, max = main.scrollHeight - main.clientHeight;
+        const board = main.querySelector('.ld-board');
+        if (board && !REDUCED && y < 900) board.style.setProperty('--py', Math.round(y * 0.18) + 'px');
+        const bar = root.querySelector('.ld-progress i');
+        if (bar) bar.style.width = (max > 0 ? Math.min(100, y / max * 100) : 0) + '%';
+        const foot = root.querySelector('.ld-bar');
+        const dy = y - lastY;
+        if (foot && !REDUCED) {
+          if (dy > 6 && y > 240) foot.classList.add('ld-hide');
+          else if (dy < -6 || y < 120) foot.classList.remove('ld-hide');
+        }
+        lastY = y;
+      });
+    };
+    main.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    if (!first || REDUCED || !('IntersectionObserver' in window)) {
       main.classList.add('ld-again');
       items.forEach(el => el.classList.add('in'));
+      const pn = main.querySelector('.ld-phone-n');
+      if (pn) pn.textContent = bn(3);
       return;
     }
     const io = new IntersectionObserver(entries => {
-      entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+      entries.forEach(en => {
+        if (!en.isIntersecting) return;
+        const el = en.target;
+        el.classList.add('in');
+        io.unobserve(el);
+        if (el.classList.contains('ld-app')) ldNotify(el);
+        if (el.classList.contains('ld-facts')) ldCount(el);
+      });
     }, { root: main, threshold: 0.15 });
     items.forEach(el => io.observe(el));
   }
@@ -375,7 +453,7 @@
           // landing page: its own top bar (no progress bar), the page, and a sticky download button
           const lhead = `<div class="gd-top ld-top"><div class="gd-in"><div class="gd-top-row">` +
             `<div class="gd-count ld-brand"><img class="ld-toplogo" src="logo.svg" alt="">${LANDING.alt}</div>` +
-            `<button class="gd-x" data-gd="close">লগইন</button></div></div></div>`;
+            `<button class="gd-x" data-gd="close">লগইন</button></div><div class="ld-progress" aria-hidden="true"><i></i></div></div></div>`;
           const lfoot = `<footer class="gd-nav ld-bar"><div class="gd-in"><div class="ld-bar-row">` +
             `<a class="ld-b ld-b1" href="tel:${CALL_NO}">কল করুন</a>` +
             `<a class="ld-b ld-b2" href="https://wa.me/${WA}" target="_blank" rel="noopener">WhatsApp</a>` +
@@ -519,6 +597,43 @@
         }
       }
 
+      // Tapping the chalkboard: a dust burst; every 3rd tap also writes a doodle. Taps closer than 120 ms are ignored.
+      const DOODLES = ['★', '১ + ১ = ২', 'A', 'ক', '✓', '৫ × ২ = ১০'];
+      let taps = 0, lastTap = 0;
+      ov.addEventListener('pointerdown', e => {
+        const b = e.target.closest?.('.ld-board');
+        if (!b || REDUCED) return;
+        const now = performance.now();
+        if (now - lastTap < 120) return;
+        lastTap = now;
+        const rect = b.getBoundingClientRect();
+        // positions are inside the border (clientLeft/clientTop = border width)
+        const x = e.clientX - rect.left - b.clientLeft, y = e.clientY - rect.top - b.clientTop;
+        for (let k = 0; k < 10; k++) {
+          const el = document.createElement('i');
+          el.className = 'ld-puff';
+          el.style.left = x + 'px';
+          el.style.top = y + 'px';
+          el.style.setProperty('--dx', (Math.random() * 76 - 38).toFixed(1) + 'px');
+          el.style.setProperty('--dy', (Math.random() * 76 - 38).toFixed(1) + 'px');
+          b.appendChild(el);
+          setTimeout(() => el.remove(), 700);
+        }
+        taps++;
+        if (taps % 3 === 0) {
+          const d = document.createElement('span');
+          d.className = 'ld-tapdoodle';
+          d.textContent = DOODLES[(taps / 3 - 1) % DOODLES.length];
+          d.style.left = x + 'px';
+          d.style.top = y + 'px';
+          d.style.setProperty('--r', (Math.random() * 24 - 12).toFixed(1) + 'deg');
+          b.appendChild(d);
+          setTimeout(() => d.remove(), 1600);
+        }
+      });
+      // a short vibration on a chip tap (where the phone supports it)
+      const tap = () => { if (REDUCED) return; try { navigator.vibrate?.(12); } catch { /* not supported */ } };
+
       ov.addEventListener('click', e => {
         const t = e.target.closest?.('[data-gd]');
         if (!t) return;
@@ -526,8 +641,8 @@
         if (a === 'close') close();
         else if (a === 'start') go(plat === 'ios' ? 'ios' : 'apk');
         else if (a.startsWith('flow:')) go(a.slice(5));
-        else if (a.startsWith('cls:')) { c.cls = +a.slice(4); paint(false); }
-        else if (a.startsWith('bt:')) { c.bt = +a.slice(3); paint(false); }
+        else if (a.startsWith('cls:')) { c.cls = +a.slice(4); tap(); paint(false); if (c.cls && c.bt && !REDUCED) ldConfetti(ov); }
+        else if (a.startsWith('bt:')) { c.bt = +a.slice(3); tap(); paint(false); if (c.cls && c.bt && !REDUCED) ldConfetti(ov); }
         else if (a === 'tofinder') ov.querySelector('#ld-finder')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         else if (a === 'next') { const tp = top(); stack.push({ flow: tp.flow, i: tp.i + 1 }); paint(true); }
         else if (a === 'prev') { if (stack.length > 1) { stack.pop(); paint(true); } }
