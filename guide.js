@@ -1,5 +1,5 @@
 // Diff Edu PWA — installation guide (Bangla, shown before login).
-// Opens on ?install=1 (the printed QR code) and ?guide=1. Not shown when the app already runs installed.
+// Opens on ?install=1 (the printed QR code) and ?guide=1. Inside the installed app only ?install=1 opens it (the landing page, without the install steps).
 // A step-by-step wizard: one step per screen, big text, plain Bangla.
 // Loaded before app.js: everything is inside one IIFE and only the global `window.DeGuide` is exported.
 // It uses app.js globals at call time only (esc, bn, store, toast, CFG, APK_URL, deferredInstall).
@@ -14,11 +14,13 @@
   const isSafariIos = () => !/CriOS|FxiOS|EdgiOS|OPiOS/.test(UA);
   const pageAddress = () => location.origin + location.pathname;
 
-  /** Does the guide open on this visit? (installed app: never) */
+  /** Does the guide open on this visit? (installed app: only for the printed QR, ?install=1) */
   function wanted() {
-    if (isStandaloneNow()) return false;
     try {
       const q = new URLSearchParams(location.search);
+      // the printed QR (?install=1) shows the coaching landing page even inside the installed app
+      // (Android opens the link in the installed PWA); the install steps (?guide=1) only make sense in the browser
+      if (isStandaloneNow()) return q.get('install') === '1';
       return q.get('install') === '1' || q.get('guide') === '1';
     } catch { return false; }
   }
@@ -227,7 +229,10 @@
         `<a class="gd-btn gold" href="https://wa.me/${WA}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp-এ ভর্তির কথা বলুন</a>` +
         `<a class="gd-btn ghost" href="tel:${CALL_NO}">কল করুন</a></div>`
       : `<div class="gd-small">শ্রেণি আর সময় বেছে নিন — ব্যাচের পুরো বিবরণ এখানেই দেখতে পাবেন।</div>`;
-    const appBtns = c.plat === 'android'
+    const appBtns = c.installed
+      ? '<div class="gd-small">Diff Edu অ্যাপটি আপনার ফোনে আগে থেকেই আছে।</div>' +
+        '<button class="gd-btn gold" data-gd="close">অ্যাপে প্রবেশ করুন</button>'
+      : c.plat === 'android'
       ? '<button class="gd-btn gold" data-gd="flow:apk">অ্যাপ ডাউনলোড করুন (Android)</button>' +
         '<button class="gd-link" data-gd="flow:home">ডাউনলোড না করে হোম স্ক্রিনে যোগ করুন</button>' +
         '<button class="gd-link" data-gd="flow:ios">iPhone-এ ইনস্টল করার নিয়ম দেখুন</button>'
@@ -284,7 +289,7 @@
         `<div class="ld-msg ld-m3"><b>নোটিশ</b><span>এ শুক্রবার সাপ্তাহিক পরীক্ষা</span></div></div></div>` +
         ticks(['প্রবেশ ও প্রস্থানের সঙ্গে সঙ্গে বার্তা', 'পরীক্ষার ফল ও সাপ্তাহিক রিপোর্ট কার্ড', 'বেতন, নোটিশ ও পরীক্ষার রুটিন — সব এক জায়গায়', 'শিক্ষার্থীদের জন্য প্রশ্নব্যাংক, ধাঁধা ও দৈনিক রেটিং']) +
         appBtns +
-        `<button class="gd-link" data-gd="close">অ্যাপ ছাড়াই ব্রাউজারে লগইন করুন</button>` +
+        (c.installed ? '' : `<button class="gd-link" data-gd="close">অ্যাপ ছাড়াই ব্রাউজারে লগইন করুন</button>`) +
       `</section>` +
       `<section class="ld-card ld-red ld-rv"><div class="ld-kicker">বৃত্তি স্পেশাল</div>` +
         `<div class="ld-big">৫ম ও ৮ম শ্রেণির বৃত্তি পরীক্ষার্থীদের একই বেতনে আলাদা ব্যাচ।</div></section>` +
@@ -434,7 +439,7 @@
   function show() {
     return new Promise(resolve => {
       const plat = platform();
-      const c = { plat, safari: isSafariIos(), addr: pageAddress(), version: '', size: 0, used: false, cls: 0, bt: 0 };
+      const c = { plat, installed: isStandaloneNow(), safari: isSafariIos(), addr: pageAddress(), version: '', size: 0, used: false, cls: 0, bt: 0 };
       const stack = [{ flow: 'landing', i: 0 }];
       const ov = document.createElement('div');
       ov.id = 'guide';
@@ -463,7 +468,7 @@
           // landing page: its own top bar (no progress bar), the page, and a sticky download button
           const lhead = `<div class="gd-top ld-top"><div class="gd-in"><div class="gd-top-row">` +
             `<div class="gd-count ld-brand"><img class="ld-toplogo" src="logo.svg" alt="">${LANDING.alt}</div>` +
-            `<button class="gd-x" data-gd="close">লগইন</button></div><div class="ld-progress" aria-hidden="true"><i></i></div></div></div>`;
+            `<button class="gd-x" data-gd="close">${c.installed ? 'অ্যাপে যান' : 'লগইন'}</button></div><div class="ld-progress" aria-hidden="true"><i></i></div></div></div>`;
           const lfoot = `<footer class="gd-nav ld-bar"><div class="gd-in"><div class="ld-bar-row">` +
             `<a class="ld-b ld-b1" href="tel:${CALL_NO}">কল করুন</a>` +
             `<a class="ld-b ld-b2" href="https://wa.me/${WA}" target="_blank" rel="noopener">WhatsApp</a>` +
