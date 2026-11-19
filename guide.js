@@ -189,7 +189,7 @@
   const WELCOME = { kind: 'welcome', pic: 'welcome', alt: 'ডিফ এডু লোগো', title: 'ডিফ এডু অ্যাপ নিন' };
   const LANDING = { kind: 'landing', alt: 'ডিফারেন্ট এডুকেশন সেন্টার' };
 
-  const WA = '8801307198356';            // WhatsApp / phone of the coaching
+  const WA = '8801517103656';            // WhatsApp / phone of the coaching
   const CALL_NO = '01716057167';         // (not PHONE: that name is the phone-outline picture helper above)
   const CLASSES = [
     { name: '১ম শ্রেণি', size: 'প্রতি ব্যাচে ১৫ জন', text: 'আপনার স্নেহের সোনামণিকে স্নেহ ও ভালোবাসার পরশে হাতে-কলমে আনন্দের সঙ্গে পাঠদান।' },
