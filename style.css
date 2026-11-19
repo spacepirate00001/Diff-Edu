@@ -678,7 +678,7 @@ button.pill::after,a.pill::after{content:"";position:absolute;inset:-11px -4px}
 .ld-crumb:nth-of-type(5){left:74%;animation-delay:1s}
 .ld-crumb:nth-of-type(6){left:90%;animation-delay:1.15s}
 /* landing: the red line under the answer is drawn by a pencil */
-.ld-pencil{position:absolute;left:0;bottom:-4px;width:46px;height:9px;border-radius:2px;transform-origin:0 100%;transform:translate(-2px,0) rotate(-28deg);background:linear-gradient(90deg,#3a2a12 0 5px,#f1d3a3 5px 11px,#FFBB23 11px 38px,#C12026 38px 46px);clip-path:polygon(0 50%,11px 0,100% 0,100% 100%,11px 100%);opacity:0;transition:left .7s .9s ease-out,opacity .2s .8s;pointer-events:none}
+.ld-pencil{position:absolute;left:0;bottom:-4px;width:46px;height:9px;border-radius:2px;transform-origin:0 100%;transform:translate(-2px,0) rotate(-28deg);background:linear-gradient(90deg,#3a2a12 0 5px,#f1d3a3 5px 11px,#FFBB23 11px 38px,#C12026 38px 46px);clip-path:polygon(0 50%,11px 0,100% 0,100% 100%,11px 100%);opacity:0;transition:left 1.1s 1.7s ease-in-out,opacity .3s 1.5s;pointer-events:none}
 .ld-note.in .ld-pencil{left:100%;opacity:1}
 /* landing: parallax (ldReveal sets --py on the board) */
 .ld-ds,.ld-dust{translate:0 var(--py,0px)}
@@ -705,33 +705,34 @@ button.pill::after,a.pill::after{content:"";position:absolute;inset:-11px -4px}
 .ld-bar{position:absolute;left:0;right:0;bottom:0;z-index:5}
 .gd-main.ld .gd-in{padding-bottom:84px}
 /* landing: scroll reveal (.in is added by ldReveal in guide.js) */
-.ld-rv{opacity:0;transform:translateY(26px);transition:opacity .6s ease-out,transform .6s ease-out}
+.ld-rv{opacity:0;transform:translateY(40px);transition:opacity .9s ease-out,transform .9s cubic-bezier(.2,.7,.2,1)}
 .ld-rv.in{opacity:1;transform:none}
-.ld-msg{opacity:0;transform:translateY(-14px);transition:opacity .5s ease-out,transform .5s ease-out}
-.ld-app.in .ld-msg{opacity:1;transform:none}
-.ld-app.in .ld-m1{transition-delay:0s}
-.ld-app.in .ld-m2{transition-delay:.6s}
-.ld-app.in .ld-m3{transition-delay:1.2s}
-.ld-note:not(.ld-finder) > div{opacity:0;transform:translateX(-12px);transition:opacity .4s,transform .4s}
+.ld-msg{opacity:0;transform:translateY(-18px);transition:opacity .7s ease-out,transform .7s cubic-bezier(.2,.8,.2,1.2)}
+.ld-phone.go .ld-msg{opacity:1;transform:none}
+.ld-phone.go .ld-m1{transition-delay:.2s}
+.ld-phone.go .ld-m2{transition-delay:1.4s}
+.ld-phone.go .ld-m3{transition-delay:2.6s}
+.ld-note:not(.ld-finder) > div{opacity:0;transform:translateX(-16px);transition:opacity .6s,transform .6s}
 .ld-note.in > div{opacity:1;transform:none}
-.ld-note.in > div:nth-child(2){transition-delay:.15s}
-.ld-note.in > div:nth-child(3){transition-delay:.3s}
-.ld-note.in > div:nth-child(4){transition-delay:.45s}
-.ld-note.in > div:nth-child(5){transition-delay:.6s}
-.ld-note.in > div:nth-child(6){transition-delay:.75s}
-.ld-ans::after{content:"";position:absolute;left:0;bottom:-2px;height:3px;width:0;background:#C12026;border-radius:2px;transition:width .7s .9s ease-out}
+.ld-note.in > div:nth-child(2){transition-delay:.3s}
+.ld-note.in > div:nth-child(3){transition-delay:.6s}
+.ld-note.in > div:nth-child(4){transition-delay:.9s}
+.ld-note.in > div:nth-child(5){transition-delay:1.2s}
+.ld-note.in > div:nth-child(6){transition-delay:1.4s}
+.ld-ans::after{content:"";position:absolute;left:0;bottom:-2px;height:3px;width:0;background:#C12026;border-radius:2px;transition:width 1.1s 1.7s ease-in-out}
 .ld-note.in .ld-ans::after{width:100%}
-.ld-fact{opacity:0;transform:scale(.9);transition:opacity .4s,transform .4s}
+.ld-fact{opacity:0;transform:scale(.85);transition:opacity .6s,transform .6s cubic-bezier(.2,.8,.2,1.3)}
 .ld-facts.in .ld-fact{opacity:1;transform:none}
-.ld-facts.in .ld-fact:nth-child(2){transition-delay:.1s}
-.ld-facts.in .ld-fact:nth-child(3){transition-delay:.2s}
-.ld-facts.in .ld-fact:nth-child(4){transition-delay:.3s}
+.ld-facts.in .ld-fact:nth-child(2){transition-delay:.25s}
+.ld-facts.in .ld-fact:nth-child(3){transition-delay:.5s}
+.ld-facts.in .ld-fact:nth-child(4){transition-delay:.75s}
 /* landing: a repaint (chip tap) shows everything at once, so nothing replays */
 .ld-again .ld-name,.ld-again .ld-chalk,.ld-again .ld-sub,.ld-again .ld-logo,.ld-again .ld-dd,.ld-again .ld-uline path,.ld-again .ld-ds *{animation:none !important;opacity:1;clip-path:none;stroke-dashoffset:0}
 .ld-again .ld-dd{animation:ldFloat 5s ease-in-out infinite !important}
 .ld-again .ld-rv,.ld-again .ld-msg,.ld-again .ld-note > div,.ld-again .ld-fact{transition:none !important}
 .ld-again .ld-stick,.ld-again .ld-crumb{display:none}
 .ld-again .ld-pencil{transition:none;left:100%;opacity:1}
+.ld-again .ld-phone .ld-msg{opacity:1;transform:none;transition:none}
 @media (prefers-reduced-motion: reduce){
   .gd-main.ld *,.ld-b2::after{animation:none !important;transition:none !important}
   .ld-rv,.ld-msg,.ld-note:not(.ld-finder) > div,.ld-fact{opacity:1 !important;transform:none !important;clip-path:none !important}

@@ -229,14 +229,14 @@
       : `<div class="gd-small">শ্রেণি আর সময় বেছে নিন — ব্যাচের পুরো বিবরণ এখানেই দেখতে পাবেন।</div>`;
     const appBtns = c.plat === 'android'
       ? '<button class="gd-btn gold" data-gd="flow:apk">অ্যাপ ডাউনলোড করুন (Android)</button>' +
-        '<button class="gd-link" data-gd="flow:home">ডাউনলোড ছাড়া হোম স্ক্রিনে রাখুন</button>' +
-        '<button class="gd-link" data-gd="flow:ios">আমার iPhone আছে</button>'
+        '<button class="gd-link" data-gd="flow:home">ডাউনলোড না করে হোম স্ক্রিনে যোগ করুন</button>' +
+        '<button class="gd-link" data-gd="flow:ios">iPhone-এ ইনস্টল করার নিয়ম দেখুন</button>'
       : c.plat === 'ios'
         ? '<button class="gd-btn gold" data-gd="flow:ios">iPhone-এ অ্যাপ নিন</button>' +
-          '<button class="gd-link" data-gd="flow:apk">আমার Android আছে</button>'
+          '<button class="gd-link" data-gd="flow:apk">Android ফোনে ইনস্টল করার নিয়ম দেখুন</button>'
         : '<div class="gd-small">এই পাতাটি ফোনে খুলুন:</div>' + addrBox(c) +
-          '<button class="gd-link" data-gd="flow:apk">অ্যান্ড্রয়েড ফোনের ধাপ দেখুন</button>' +
-          '<button class="gd-link" data-gd="flow:ios">iPhone-এর ধাপ দেখুন</button>';
+          '<button class="gd-link" data-gd="flow:apk">Android ফোনে ইনস্টল করার নিয়ম দেখুন</button>' +
+          '<button class="gd-link" data-gd="flow:ios">iPhone-এ ইনস্টল করার নিয়ম দেখুন</button>';
     return `<section class="ld-board">
   <i class="ld-screw s1"></i><i class="ld-screw s2"></i><i class="ld-screw s3"></i><i class="ld-screw s4"></i>
   <div class="ld-dust" aria-hidden="true"></div>
@@ -318,11 +318,11 @@
   function ldNotify(app) {
     const n = app.querySelector('.ld-phone-n'), ph = app.querySelector('.ld-phone');
     if (!n || !ph) return;
-    [0, 600, 1200].forEach((t, i) => setTimeout(() => {
+    [200, 1400, 2600].forEach((t, i) => setTimeout(() => {
       n.textContent = bn(i + 1);
       n.classList.remove('bump'); void n.offsetWidth; n.classList.add('bump');
       ph.classList.remove('shake'); void ph.offsetWidth; ph.classList.add('shake');
-    }, t + 150));
+    }, t + 250));
   }
 
   /** Landing fact tiles: count from 0 up to data-n. */
@@ -330,7 +330,7 @@
     box.querySelectorAll('b[data-n]').forEach(b => {
       const to = +b.dataset.n, t0 = performance.now();
       const tick = now => {
-        const k = Math.min(1, (now - t0) / 700);
+        const k = Math.min(1, (now - t0) / 1300);
         b.textContent = bn(Math.round(to * k)) + (b.dataset.u || '');
         if (k < 1) requestAnimationFrame(tick);
       };
@@ -401,10 +401,19 @@
         const el = en.target;
         el.classList.add('in');
         io.unobserve(el);
-        if (el.classList.contains('ld-app')) ldNotify(el);
+        if (el.classList.contains('ld-app')) {
+          // the phone gets its own, later trigger: notifications start when the phone itself is well in view
+          const ph = el.querySelector('.ld-phone');
+          if (ph) {
+            const io2 = new IntersectionObserver(es => {
+              if (es.some(x => x.isIntersecting)) { io2.disconnect(); ph.classList.add('go'); ldNotify(el); }
+            }, { root: main, threshold: 0.7 });
+            io2.observe(ph);
+          }
+        }
         if (el.classList.contains('ld-facts')) ldCount(el);
       });
-    }, { root: main, threshold: 0.15 });
+    }, { root: main, threshold: 0.12, rootMargin: '0px 0px -22% 0px' });   // reveal a little after a section enters, so the motion is seen
     items.forEach(el => io.observe(el));
   }
 
@@ -477,15 +486,15 @@
           pic = PIC.welcome(); title = WELCOME.title;
           lead = `${bn(plat === 'ios' ? 4 : 6)}টি ছোট ধাপ। ২ মিনিট লাগবে।`;
           body = plat === 'ios'
-            ? '<button class="gd-link" data-gd="flow:apk">আমার Android আছে</button>'
-            : '<button class="gd-link" data-gd="flow:ios">আমার iPhone আছে</button>' +
+            ? '<button class="gd-link" data-gd="flow:apk">Android ফোনে ইনস্টল করার নিয়ম দেখুন</button>'
+            : '<button class="gd-link" data-gd="flow:ios">iPhone-এ ইনস্টল করার নিয়ম দেখুন</button>' +
               '<button class="gd-link" data-gd="flow:home">হোম স্ক্রিনে রাখুন (ডাউনলোড ছাড়া)</button>';
           body += '<button class="gd-link" data-gd="close">অ্যাপ ছাড়া ব্রাউজারেই দেখি</button>';
         } else if (s.kind === 'desk') {
           pic = PIC.desk(); title = DESK.title; lead = DESK.lead;
           body = `<div class="gd-look">${addrBox(c)}</div>` +
-            '<div class="gd-links"><button class="gd-link" data-gd="flow:apk">অ্যান্ড্রয়েড ফোনের ধাপ দেখুন</button>' +
-            '<button class="gd-link" data-gd="flow:ios">iPhone-এর ধাপ দেখুন</button></div>';
+            '<div class="gd-links"><button class="gd-link" data-gd="flow:apk">Android ফোনে ইনস্টল করার নিয়ম দেখুন</button>' +
+            '<button class="gd-link" data-gd="flow:ios">iPhone-এ ইনস্টল করার নিয়ম দেখুন</button></div>';
         } else if (s.kind === 'final') {
           pic = PIC.check(); title = 'হয়ে গেছে! এবার লগইন';
           lead = 'অফিস থেকে আইডি এবং পিন জেনে নিন। প্রথমবার নিজের একটা পিন বানাতে হবে।';
