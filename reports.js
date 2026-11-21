@@ -255,8 +255,11 @@
           if (JSON.stringify(next) === JSON.stringify(lines)) return close();
           try {
             await raw('PATCH', `/rest/v1/report_cards?id=eq.${c.id}&status=eq.published`, { data: { ...c.data, lines: next } }, { prefer: 'return=minimal' });
-            close(); toast('সংশোধন হয়েছে। অভিভাবকদের জানানো হবে।'); render();
-          } catch { toast('সংশোধন করা যায়নি। আবার চেষ্টা করুন।'); }
+          } catch { return toast('সংশোধন করা যায়নি। আবার চেষ্টা করুন।'); }
+          // Refresh score and rank of the published card (24-report-correction, admin only).
+          try { await rpc('recompute_corrected_report', { p_report_id: c.id }); close(); toast('সংশোধন হয়েছে। অভিভাবকদের জানানো হবে।'); }
+          catch { close(); toast('নম্বর বদলেছে, কিন্তু স্কোর ও র‍্যাংক হালনাগাদ হয়নি। আবার চেষ্টা করুন।'); }
+          render();
         };
       });
     });

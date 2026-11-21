@@ -184,7 +184,7 @@
       <div class="formrow"><button class="pill good" data-inv="${r.id}" data-yes="1">যোগ দাও</button><button class="pill coral" data-inv="${r.id}" data-yes="0">না</button></div></div>`).join('');
     if (team) {
       const rows = members.filter(m => m.team_id === team.id);
-      html += section(esc(team.name)) + `<div class="card"><div class="mute small">${bn(rows.length)} জন সদস্য${isLead ? ' · তুমি দলনেতা' : ''}</div>
+      html += section(team.name) + `<div class="card"><div class="mute small">${bn(rows.length)} জন সদস্য${isLead ? ' · তুমি দলনেতা' : ''}</div>
         ${rows.map(m => `<div class="row"><span>${esc(name(m.student_id))}${m.student_id === st.id ? ' (তুমি)' : ''}${m.student_id === team.lead_id ? ' ★' : ''}</span></div>`).join('')}
         <button class="btn ghost" id="tleave" style="margin-top:8px">দল ছাড়ো</button></div>`;
       if (isLead) {
