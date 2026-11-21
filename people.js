@@ -232,7 +232,7 @@
   SCREENS['a.routine'] = { title: 'ক্লাস রুটিন', sub: 'কোন সময়ে কোন শিক্ষক কোন ক্লাস নেবেন', render: async (el) => {
     const [routine, staff, studs] = await Promise.all([
       sel('class_periods', 'select=shift,slot,class_level,teacher_id,teacher:teacher_id(full_name)&order=shift,slot,class_level'),
-      cached('staff', () => sel('profiles', 'select=id,full_name,role&role=in.(admin,teacher)&order=full_name')),
+      cached('staff', () => sel('staff_public', 'select=id,full_name,role&order=full_name')),
       T.rosterOf(RT.shift),
     ]);
     const rows = routine.filter(p => p.shift === RT.shift);
