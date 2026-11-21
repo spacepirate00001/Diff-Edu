@@ -367,16 +367,16 @@
   } };
 
   // ---------- চ্যাট রিপোর্ট (admin only): reported student chat messages (P4-T4, plan C10) ----------
-  // ASSUMED until 41-chat-reports.sql exists: table chat_reports(id, coaching_id, message_id, reason, status 'open'|'resolved',
-  // created_at, resolved_at); chat_messages(id, phrase_id) with phrases(text) (40-chat-phrases.sql). Admin RLS and the
-  // update policy are assumed too. Only phrases and stickers exist in chat, so there is no free text to show.
+  // Reads the view chat_report_queue (41-chat-reports.sql: open reports only); closes with rpc resolve_chat_report.
+  // Only phrases and stickers exist in chat, so the queue shows the phrase label, never free text.
+  const CHAT_REASON = { rude: 'খারাপ কথা', unsafe: 'বিপজ্জনক', personal_info: 'ব্যক্তিগত তথ্য', other: 'অন্য' };
   SCREENS['a.chatreports'] = { title: 'চ্যাট রিপোর্ট', sub: 'রিপোর্ট করা বার্তা', render: async (el) => {
-    const rows = await sel('chat_reports', 'select=id,reason,created_at,message:chat_messages(phrase:phrases(text))&status=eq.open&order=created_at.desc&limit=100');
+    const rows = await sel('chat_report_queue', 'select=report_id,reason,reported_at,phrase_label&order=reported_at.desc&limit=100');
     el.innerHTML = `<div class="ctl-hint">শিক্ষার্থী বা অভিভাবক যে বার্তা রিপোর্ট করেছেন, সেগুলো এখানে। দেখে "ঠিক আছে" চাপুন।</div>`
-      + (rows.map(r => `<div class="card coral"><div class="mute small">${fmtDate(r.created_at)}${r.reason ? ' · ' + esc(r.reason) : ''}</div><h3>${esc(r.message?.phrase?.text || '—')}</h3><button class="pill good" data-rep="${r.id}" style="margin-top:6px">ঠিক আছে</button></div>`).join('') || empty('alert', 'এখন কোনো রিপোর্ট নেই।'));
+      + (rows.map(r => `<div class="card coral"><div class="mute small">${fmtDate(r.reported_at)} · ${esc(CHAT_REASON[r.reason] || r.reason)}</div><h3>${esc(r.phrase_label || '—')}</h3><button class="pill good" data-rep="${esc(r.report_id)}" style="margin-top:6px">ঠিক আছে</button></div>`).join('') || empty('alert', 'এখন কোনো রিপোর্ট নেই।'));
     el.querySelectorAll('[data-rep]').forEach(b => b.onclick = async () => {
       b.disabled = true;
-      try { await upd('chat_reports', `id=eq.${b.dataset.rep}&select=id`, { status: 'resolved', resolved_at: new Date().toISOString() }); toast('ঠিক আছে হিসেবে বন্ধ হয়েছে।'); SCREENS['a.chatreports'].render(el); }
+      try { await rpc('resolve_chat_report', { p_report: b.dataset.rep }); toast('ঠিক আছে হিসেবে বন্ধ হয়েছে।'); SCREENS['a.chatreports'].render(el); }
       catch { b.disabled = false; toast('হয়নি'); }
     });
   } };
