@@ -170,7 +170,7 @@
       const m = +b.dataset.mood;
       try { await upsert('mood_checkins', { coaching_id: S.me.coaching_id, student_id: st.id, day: dhakaToday(), mood: m, note: null }, 'student_id,day'); } catch { return toast('সংরক্ষণ হয়নি'); }
       const box = el.querySelector('#mood');
-      box.innerHTML = moodDone(m) + (m <= 2 ? '<input id="mnote" maxlength="200" placeholder="চাইলে লিখো কী হয়েছে (শুধু শিক্ষক দেখবেন)" style="margin-top:8px"><button class="btn" id="msend" style="margin-top:8px;background:var(--plum400)" disabled>পাঠাও</button>' : '');
+      box.innerHTML = moodDone(m) + (m <= 2 ? '<input id="mnote" maxlength="200" placeholder="চাইলে লিখো কী হয়েছে (শুধু তোমার শিক্ষক ও পরিচালক দেখবেন)" style="margin-top:8px"><button class="btn" id="msend" style="margin-top:8px;background:var(--plum400)" disabled>পাঠাও</button>' : '');
       const n = box.querySelector('#mnote'), sb = box.querySelector('#msend');
       if (n) {
         n.oninput = () => { sb.disabled = !n.value.trim(); };
