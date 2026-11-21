@@ -306,4 +306,61 @@
       b.querySelector('.help-a').hidden = !open;
     }));
   } };
+
+  // ---------- mascot, frame, backdrop and stickers (P4-T10) ----------
+  // Store and display only: the items come from student_stickers (granted by the office). Nothing is bought here.
+  // shortcut: no purchase flow yet, upgrade: later step (stars_price in sticker_catalog)
+  // A classmate sees a card with name, class, mascot and badges only (student_card in 45-profile-decor.sql).
+  window.renderDecorCard = async (studentId) => {
+    const [c] = await rpc('student_card', { p_student_id: studentId }).catch(() => []);
+    if (!c) return '';
+    const cat = await cached('sticker_catalog', () => sel('sticker_catalog', 'select=key,emoji&active=eq.true'));
+    const emoji = cat.find(x => x.key === c.mascot)?.emoji || '🙂';
+    const badges = (c.badges || []).slice(0, 6).map(b => pill(typeof b === 'string' ? b : b?.label || '')).join('');
+    return `<div class="card center"><div style="font-size:46px">${emoji}</div><b>${esc(c.full_name || 'শিক্ষার্থী')}</b>
+      <div class="mute small">ক্লাস ${bn(c.class_level)}</div><div>${badges}</div></div>`;
+  };
+
+  SCREENS['s.decor'] = { title: 'আমার মাসকট ও স্টিকার', sub: 'তোমার পাওয়া জিনিস দিয়ে সাজাও', render: async (el) => {
+    const st = (await sel('students', `select=id&profile_id=eq.${S.uid}&limit=1`))[0];
+    if (!st) return;
+    const [cat, owned, look] = await Promise.all([
+      sel('sticker_catalog', 'select=key,kind,label,emoji&active=eq.true'),
+      sel('student_stickers', `select=sticker_key&student_id=eq.${st.id}`),
+      sel('student_decor', `select=mascot,frame,backdrop,placed&student_id=eq.${st.id}`),
+    ]);
+    const mine = cat.filter(c => owned.some(o => o.sticker_key === c.key));
+    if (!mine.length) { el.innerHTML = empty('gift', 'এখনো কোনো মাসকট বা স্টিকার নেই। নতুন জিনিস পেলে এখানে সাজাতে পারবে।'); return; }
+    const cur = look[0] || {};
+    const s = { mascot: cur.mascot || null, frame: cur.frame || null, backdrop: cur.backdrop || null, placed: [...(cur.placed || [])] };
+    const emojiOf = k => cat.find(c => c.key === k)?.emoji || '';
+    const chipsFor = kind => [`<button class="rq-chip${!s[kind] ? ' on' : ''}" data-kind="${kind}" data-v="">কিছু না</button>`]
+      .concat(mine.filter(c => c.kind === kind).map(c => `<button class="rq-chip${s[kind] === c.key ? ' on' : ''}" data-kind="${kind}" data-v="${esc(c.key)}">${esc(c.emoji)} ${esc(c.label)}</button>`))
+      .join('');
+    const draw = () => {
+      el.innerHTML = `<div class="card center"><div style="font-size:64px">${emojiOf(s.mascot) || '🙂'}</div>
+          <div style="font-size:26px">${s.placed.map(emojiOf).join(' ')}</div></div>
+        ${section('মাসকট')}<div class="card">${chipsFor('mascot')}</div>
+        ${section('ফ্রেম')}<div class="card">${chipsFor('frame')}</div>
+        ${section('পেছনের রং')}<div class="card">${chipsFor('backdrop')}</div>
+        ${section(`স্টিকার (সর্বোচ্চ ৬টি · ${bn(s.placed.length)})`)}<div class="card">${mine.filter(c => c.kind === 'sticker').map(c =>
+          `<button class="rq-chip${s.placed.includes(c.key) ? ' on' : ''}" data-sticker="${esc(c.key)}">${esc(c.emoji)} ${esc(c.label)}</button>`).join('')}</div>
+        <button class="btn" id="dsave">সংরক্ষণ করো</button>`;
+      el.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { s[b.dataset.kind] = b.dataset.v || null; draw(); });
+      el.querySelectorAll('[data-sticker]').forEach(b => b.onclick = () => {
+        const k = b.dataset.sticker;
+        if (s.placed.includes(k)) s.placed = s.placed.filter(x => x !== k);
+        else if (s.placed.length >= 6) return toast('সর্বোচ্চ ৬টি স্টিকার');
+        else s.placed.push(k);
+        draw();
+      });
+      el.querySelector('#dsave').onclick = async () => {
+        try {
+          await rpc('set_decor', { p_student_id: st.id, p_mascot: s.mascot, p_frame: s.frame, p_backdrop: s.backdrop, p_stickers: s.placed });
+          toast('সংরক্ষিত হয়েছে');
+        } catch { toast('সংরক্ষণ হয়নি। আবার চেষ্টা করো।'); }
+      };
+    };
+    draw();
+  } };
 })();
