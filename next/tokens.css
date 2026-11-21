@@ -17,7 +17,7 @@
   --ink:#1B171E;--ink-soft:#5F5765;--line:#E6E1E8;--surface:#FFFFFF;
   /* roles of the colours */
   --bg:var(--gold-50);
-  --brand:var(--plum-700);--brand-hover:var(--plum-600);--brand-ink:#FFFFFF;--brand-soft:var(--plum-100);
+  --brand:var(--plum-700);--brand-hover:var(--plum-600);--brand-ink:#FFFFFF;--brand-ink-soft:#FFFFFFD9;--brand-soft:var(--plum-100);
   --accent:var(--gold-400);--focus:var(--gold-700);
   /* spacing (multiples of 4) */
   --s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-6:24px;

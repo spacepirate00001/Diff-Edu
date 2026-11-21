@@ -8,11 +8,15 @@ self.addEventListener('install', e => {
   e.waitUntil(caches.open(V).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  // Delete only this app's old caches; other apps on the same origin (/next/) keep theirs.
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('diffedu-pwa-') && k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;
+  // /next/ is a separate app: return without respondWith so the browser loads it as if no worker existed
+  const next = new URL('next/', self.registration.scope).pathname;
+  if (u.pathname.startsWith(next) || u.pathname === next.slice(0, -1)) return;
   // network first (revalidated, never a stale HTTP-cache copy) so updates show up; cache only when offline
   e.respondWith(
     fetch(e.request, { cache: 'no-cache' }).then(r => {

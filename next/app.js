@@ -87,6 +87,7 @@ async function doRefresh() {
   if (!used) return false;
   try {
     const s = await api('POST', '/auth/v1/token?grant_type=refresh_token', { refresh_token: used }, { auth: false });
+    if (!session) return false;   // signed out while the refresh was in flight: do not bring the session back
     session = { ...session, access: s.access_token, refresh: s.refresh_token, uid: s.user.id };
     writeSession();
     return true;
@@ -141,7 +142,8 @@ async function flushOutbox() {
     for (const item of outbox.mine()) {
       try { await api(item.method, item.path, item.body, { prefer: item.prefer }); }
       catch (e) {
-        if (!e.status || e.status === 401) return;   // still offline or signed out: keep the queue
+        // Offline, signed out, server busy: keep the queue and retry later. Other 4xx: the server refused the row, drop it.
+        if (!e.status || e.status >= 500 || [401, 408, 429].includes(e.status)) return;
         console.warn('outbox dropped', item.path, e.status);
       }
       outbox.save(outbox.all().filter(x => x.id !== item.id));
@@ -259,8 +261,8 @@ async function boot() {
   if (session?.access) {
     try { await loadMe(); }
     catch (e) {
-      // Offline: keep the cached profile and show the last-seen screen. A refused session is cleared by api().
-      if (e.status) clearSession();
+      // Offline or server down: keep the cached profile and show the last-seen screen. Only a refused login clears it.
+      if (e.status === 401 || e.status === 403) clearSession();
     }
   }
   if (session && !session.me) clearSession();   // no profile and no network: ask to log in again

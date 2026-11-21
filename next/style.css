@@ -15,7 +15,7 @@ svg{width:24px;height:24px;flex:none}
 .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);padding:var(--s-3) var(--s-4);background:var(--brand);color:var(--brand-ink)}
 .brand{display:flex;align-items:center;gap:var(--s-3);min-width:0}
 .brand h1{font-size:var(--fs-18);line-height:1.4}
-.brand .muted{color:#FFFFFFD9}
+.brand .muted{color:var(--brand-ink-soft)}
 .mark{flex:none;width:var(--tap);height:var(--tap);border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--plum-800);border:3px solid var(--accent);font-size:var(--fs-18);font-weight:700;color:var(--brand-ink)}
 
 /* status: always icon + word */
