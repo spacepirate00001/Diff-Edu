@@ -8,7 +8,7 @@
   const monthLabel = m => `${MONTHS[+m.slice(5, 7) - 1]} ${bn(m.slice(0, 4))}`;
   const dayLabel = d => d === dhakaToday() ? 'আজ' : d === daysAgo(1) ? 'গতকাল' : `${fmtDate(d)} · ${DAYS[new Date(d + 'T00:00:00').getDay()]}`;
   const monthSwitch = (m, attr = 'data-month') => `<div style="display:flex;align-items:center;gap:8px"><button class="pill teal" ${attr}="${shiftMonth(m, -1)}">‹ আগের মাস</button><b style="flex:1;text-align:center">${monthLabel(m)}</b>${m < thisMonth() ? `<button class="pill teal" ${attr}="${shiftMonth(m, 1)}">পরের মাস ›</button>` : '<span style="width:88px"></span>'}</div>`;
-  const staffList = () => cached('staff', () => sel('profiles', 'select=id,full_name,role&role=in.(admin,teacher)&order=full_name'));
+  const staffList = () => cached('staff', () => sel('staff_public', 'select=id,full_name,role&order=full_name'));
 
   // ---------- marks entry ----------
   // New exam(s) for a class, one exam per picked subject (MarksRepository.createExams). Past dates are fine.
@@ -296,15 +296,18 @@
   } };
 
   // ---------- leave & substitute ----------
-  const LEAVE_COLS = 'id,teacher_id,day_from,day_to,reason,status,substitute_id,admin_note,teacher:profiles!leave_requests_teacher_id_fkey(full_name),substitute:profiles!leave_requests_substitute_id_fkey(full_name)';
+  const LEAVE_COLS = 'id,teacher_id,day_from,day_to,reason,status,substitute_id,admin_note';
+  // Attach teacher and substitute names from the staff list (staff_public has no foreign keys to embed).
+  const withNames = (rows, staff) => { const nm = Object.fromEntries(staff.map(x => [x.id, x.full_name])); return rows.map(l => ({ ...l, teacher: { full_name: nm[l.teacher_id] || '' }, substitute: l.substitute_id ? { full_name: nm[l.substitute_id] || '' } : null })); };
   const ST = { pending: ['অপেক্ষমাণ', 'sun'], approved: ['অনুমোদিত', 'good'], rejected: ['বাতিল', 'bad'] };
   const range = l => l.day_from === l.day_to ? fmtDate(l.day_from) : `${fmtDate(l.day_from)} – ${fmtDate(l.day_to)}`;
   SCREENS['t.leave'] = { title: 'ছুটি ও বদলি', sub: () => isAdmin() ? 'আবেদন অনুমোদন' : 'ছুটির আবেদন', render: async (el) => {
     if (isAdmin()) {
-      const [pending, decided, staff] = await Promise.all([
+      const [pendingRaw, decidedRaw, staff] = await Promise.all([
         sel('leave_requests', `select=${LEAVE_COLS}&status=eq.pending&order=day_from&limit=200`),
         sel('leave_requests', `select=${LEAVE_COLS}&status=neq.pending&order=day_from.desc&limit=40`), staffList(),
       ]);
+      const pending = withNames(pendingRaw, staff), decided = withNames(decidedRaw, staff);
       const card = l => `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><div><h3>${esc(l.teacher?.full_name || '')}</h3><div class="mute small">${range(l)}</div></div>${pill(ST[l.status][0], ST[l.status][1])}</div>
         <div style="margin-top:4px">${esc(l.reason)}</div>${l.substitute ? `<div class="mute small">বদলি: ${esc(l.substitute.full_name)}</div>` : ''}${l.admin_note ? `<div class="mute small">নোট: ${esc(l.admin_note)}</div>` : ''}
         ${l.status === 'pending' ? `<div class="chips" style="margin-top:8px"><button class="pill good" data-ok="${l.id}">অনুমোদন</button><button class="pill bad" data-no="${l.id}">বাতিল</button></div>` : ''}</div>`;
@@ -320,7 +323,8 @@
       el.querySelectorAll('[data-ok]').forEach(b => b.onclick = () => decide(b.dataset.ok, true));
       el.querySelectorAll('[data-no]').forEach(b => b.onclick = () => decide(b.dataset.no, false));
     } else {
-      const mine = await sel('leave_requests', `select=${LEAVE_COLS}&teacher_id=eq.${S.uid}&order=day_from.desc&limit=30`);
+      const [mineRaw, staff] = await Promise.all([sel('leave_requests', `select=${LEAVE_COLS}&teacher_id=eq.${S.uid}&order=day_from.desc&limit=30`), staffList()]);
+      const mine = withNames(mineRaw, staff);
       el.innerHTML = `<div class="card"><h3>ছুটির আবেদন</h3><div class="formrow"><div><label>শুরু</label><input id="lf" type="date" value="${dhakaToday()}"></div><div><label>শেষ</label><input id="lt" type="date" value="${dhakaToday()}"></div></div>
         <label>কারণ</label><input id="lr" maxlength="200"><button class="btn" id="lsend">আবেদন পাঠান</button><div class="mute small">অনুমোদন হলে আপনার ক্লাসের অভিভাবকরা বদলি শিক্ষকের খবর পাবেন।</div></div>
         ${section('আমার আবেদন')}
@@ -383,20 +387,20 @@
 
   // ---------- admin: fees (FeeScreens) ----------
   let F = { month: null, cls: null, filter: 'due' };
-  const FEE_COLS = 'id,student_id,month,amount,paid_amount,method,trx_id,student:students(class_level,roll,profile:profiles!students_profile_id_fkey(full_name))';
+  const FEE_COLS = 'id,student_id,month,amount,paid_amount,status,method,trx_id,student:students(class_level,roll,profile:profiles!students_profile_id_fkey(full_name))';
   SCREENS['a.fees'] = { title: 'ফি ব্যবস্থাপনা', sub: () => monthLabel(F.month || thisMonth()), render: async (el) => {
     F.month ||= thisMonth();
     const rows = (await sel('fees', `select=${FEE_COLS}&month=eq.${F.month}-01&limit=1000`)).sort((a, b) => (a.student?.class_level - b.student?.class_level) || (parseInt(ascii(a.student?.roll)) || 0) - (parseInt(ascii(b.student?.roll)) || 0));
     const total = rows.reduce((s, r) => s + +r.amount, 0), got = rows.reduce((s, r) => s + +r.paid_amount, 0);
     const classes = [...new Set(rows.map(r => r.student?.class_level))].sort((a, b) => a - b);
-    const shown = rows.filter(r => (F.cls == null || r.student?.class_level === F.cls) && (F.filter === 'all' || (F.filter === 'due' ? +r.paid_amount < +r.amount : +r.paid_amount >= +r.amount)));
+    const shown = rows.filter(r => (F.cls == null || r.student?.class_level === F.cls) && (F.filter === 'all' || (F.filter === 'due' ? r.status !== 'paid' : r.status === 'paid')));
     el.innerHTML = monthSwitch(F.month) + `<div class="card"><div class="stats"><div><b>${taka(total)}</b><span class="mute small">মোট</span></div><div><b class="ok">${taka(got)}</b><span class="mute small">আদায়</span></div><div><b class="bad">${taka(total - got)}</b><span class="mute small">বাকি</span></div></div><div style="margin-top:8px">${bar(total ? got / total : 0)}</div></div>
       ${!rows.length ? `<div class="card sun"><h3>${monthLabel(F.month)}-এর ফি এখনো তৈরি হয়নি</h3>` : '<div class="card"><h3>নতুন শিক্ষার্থীর ফি যোগ</h3>'}
         <div class="formrow"><div><label>ক্লাস</label><select id="gc"><option value="">সব ক্লাস</option>${CLASSES.map(c => `<option value="${c}">ক্লাস ${bn(c)}</option>`).join('')}</select></div><div><label>টাকা</label><input id="ga" inputmode="numeric" placeholder="৮০০"></div></div>
         <button class="btn" id="gen">মাসের ফি তৈরি করুন</button><div class="mute small">যাদের এই মাসের ফি আগে থেকে আছে, তাদের বাদ রাখা হয়।</div></div>
       ${rows.length ? `${chipRow([['due', 'বাকি'], ['paid', 'পরিশোধিত'], ['all', 'সব']], F.filter, 'data-f')}${classes.length > 1 ? chipRow([['', 'সব ক্লাস'], ...classes.map(c => [c, 'ক্লাস ' + bn(c)])], F.cls ?? '', 'data-fc') : ''}` : ''}
-      ${shown.map(r => { const due = +r.amount - +r.paid_amount; return `<div class="card" style="display:flex;align-items:center;gap:10px"><div style="flex:1"><h3>${esc(r.student?.profile?.full_name || r.student?.roll)}</h3><div class="mute small">ক্লাস ${bn(r.student?.class_level)} · রোল ${esc(bn(r.student?.roll || '—'))} · ${taka(r.amount)}${+r.paid_amount ? ' · জমা ' + taka(r.paid_amount) : ''}</div></div>
-        ${due > 0 ? `<button class="pill sun" data-pay="${r.id}">জমা নিন</button>` : pill('পরিশোধিত', 'good')}</div>`; }).join('')}`;
+      ${shown.map(r => { return `<div class="card" style="display:flex;align-items:center;gap:10px"><div style="flex:1"><h3>${esc(r.student?.profile?.full_name || r.student?.roll)}</h3><div class="mute small">ক্লাস ${bn(r.student?.class_level)} · রোল ${esc(bn(r.student?.roll || '—'))} · ${taka(r.amount)}${+r.paid_amount ? ' · জমা ' + taka(r.paid_amount) : ''}</div></div>
+        ${r.status !== 'paid' ? `<button class="pill sun" data-pay="${r.id}">জমা নিন</button>` : pill('পরিশোধিত', 'good')}</div>`; }).join('')}`;
     el.querySelectorAll('[data-month]').forEach(b => b.onclick = () => { F.month = b.dataset.month; setSub(monthLabel(F.month)); render(); });
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { F.filter = b.dataset.f; render(); });
     el.querySelectorAll('[data-fc]').forEach(b => b.onclick = () => { F.cls = b.dataset.fc === '' ? null : +b.dataset.fc; render(); });
@@ -420,12 +424,11 @@
         s.querySelectorAll('[data-m]').forEach(x => x.onclick = () => { method = x.dataset.m; s.querySelectorAll('[data-m]').forEach(y => y.classList.toggle('on', y === x)); });
         s.querySelector('#ps').onclick = async () => {
           const add = +ascii(s.querySelector('#pa').value); if (!(add > 0)) return toast('টাকা দিন');
-          const paid = Math.min(+r.amount, +r.paid_amount + add);
           try {
-            const done = await upd('fees', `id=eq.${r.id}&paid_amount=eq.${r.paid_amount}&select=id`, { paid_amount: paid, status: paid >= +r.amount ? 'paid' : 'partial', method, trx_id: s.querySelector('#pt').value.trim() || r.trx_id || null, paid_at: new Date().toISOString() });
-            if (!done.length) { toast('এর মধ্যে অন্য কেউ বদলেছে, আবার দেখুন'); close(); render(); return; }
+            // The ledger checks the amount against what is still due and sets the fee's paid amount and status.
+            await rpc('record_payment', { p_method: method, p_trx_id: s.querySelector('#pt').value.trim() || null, p_amount: add, p_allocations: [{ fee_id: r.id, amount: add }] });
             close(); toast('জমা সংরক্ষিত ✓'); render();
-          } catch { toast('সংরক্ষণ হয়নি'); }
+          } catch (e) { toast(/more than the fee/.test(e.body || '') ? 'বাকির চেয়ে বেশি জমা নেওয়া যাবে না' : 'সংরক্ষণ হয়নি'); }
         };
       });
     });
@@ -716,7 +719,7 @@
     const sids = [...new Set(rows.map(studentIdOf).filter(Boolean))];
     // Two plain lookups for names. If one fails, names show as "অজানা" and the list still loads.
     const [users, studs] = await Promise.all([
-      uids.length ? sel('profiles', `select=id,full_name&id=${inList(uids)}`).catch(() => []) : [],
+      uids.length ? sel('staff_public', `select=id,full_name&id=${inList(uids)}`).catch(() => []) : [],
       sids.length ? sel('students', `select=id,profile:profiles!students_profile_id_fkey(full_name)&id=${inList(sids)}`).catch(() => []) : [],
     ]);
     const userName = Object.fromEntries(users.map(u => [u.id, u.full_name || '']));
