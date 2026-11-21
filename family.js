@@ -327,18 +327,47 @@
   } };
 
   // ---------- my data & privacy ----------
+  // Per child, per purpose (student_consents, P1-T6). The switch shows the effective answer: on only when
+  // no linked guardian (or the office) says no. Tapping sets this guardian's own answer.
+  const PURPOSES = [
+    ['face_gate', 'অফিসের গেটে মুখ চিনে হাজিরা', 'অফিসের গেটের ক্যামেরা মুখ চিনে হাজিরা নেয়। না বললে কার্ড বা হাতে হাজিরা হবে।'],
+    ['classroom_face', 'ক্লাসরুমে মুখ চিনে হাজিরা', 'ক্লাসরুমের ক্যামেরা মুখ চিনে হাজিরা নেয়।'],
+    ['photo_publish', 'ছবি ব্যবহার', 'অনুষ্ঠান ও নোটিশে সন্তানের ছবি ব্যবহার হবে।'],
+    ['voice', 'ভয়েস রেকর্ডিং', 'মুখস্থ পড়া ও শিক্ষকের ভয়েস মেসেজ রেকর্ড হবে।'],
+    ['merit_list', 'মেধা তালিকায় নাম', 'মেধা তালিকায় সন্তানের নাম দেখানো হবে। ডিফল্ট: বন্ধ।'],
+    ['ai_tutor', 'AI পড়ার সহায়ক', 'প্রশ্ন Google Gemini AI-তে যায়; নাম বা ফোন নম্বর যায় না।'],
+    ['ai_grading', 'AI দিয়ে খাতা দেখা', 'খাতার লেখা বা ছবি AI-তে যায়; চূড়ান্ত নম্বর শিক্ষক দেন।'],
+    ['student_chat', 'বন্ধুর সাথে চ্যাট', 'একই ক্লাসের বন্ধুর সাথে শুধু নির্দিষ্ট বাক্য ও স্টিকারে কথা।'],
+  ];
+  const consentOf = async id => {
+    const [on, mine] = await Promise.all([
+      Promise.all(PURPOSES.map(([p]) => rpc('student_consent_on', { p_student: id, p_purpose: p }))),
+      sel('student_consents', `select=purpose&student_id=eq.${id}&by_profile=eq.${S.uid}&granted=is.true`),
+    ]);
+    return { on: PURPOSES.map((_, i) => on[i] === true), mine: mine.map(r => r.purpose) };
+  };
   SCREENS.mydata = { title: 'আমার তথ্য ও গোপনীয়তা', render: async (el) => {
-    const c = (await sel('consents', `select=app_terms,cctv,ai_tutor,ai_grading,photos&profile_id=eq.${S.uid}`).catch(() => []))[0] || {};
-    const items = [['cctv', 'CCTV-তে মুখ চিনে হাজিরা', 'মুখের তথ্য শুধু কোচিংয়ের কম্পিউটারে থাকে'], ['ai_tutor', 'AI পড়ার সহায়ক', 'প্রশ্ন Google Gemini-তে যায়'], ['ai_grading', 'AI দিয়ে খাতা মূল্যায়ন', 'খাতার ছবি Google Gemini-তে যায়'], ['photos', 'অনুষ্ঠানের ছবি', 'কোচিংয়ের নোটিশে ছবি ব্যবহার']];
+    await loadKids();
+    const list = kids || [];
+    const states = await Promise.all(list.map(k => consentOf(k.id)));
+    const c = list.map((k, n) => {
+      const st = states[n];
+      return section(nm(k)) + PURPOSES.map(([p, t, d], i) => {
+        const on = st.on[i];
+        return `<div class="card" style="display:flex;gap:12px;align-items:center"><div style="flex:1"><h3>${t}</h3><div class="mute small">${d}</div>${!on && st.mine.includes(p) ? '<div class="mute small">অন্য অভিভাবক বা অফিস না বলেছেন, তাই এখনো বন্ধ।</div>' : ''}</div><button class="pill ${on ? 'good' : ''}" data-cs="${k.id}|${p}" data-on="${on ? 1 : 0}">${on ? 'চালু' : 'বন্ধ'}</button></div>`;
+      }).join('');
+    }).join('');
     el.innerHTML = `<div class="card"><h2>${esc(S.me.full_name)}</h2><div class="mute">লগইন আইডি: ${esc(bn(S.me.login_id))}</div></div>
-      ${section('সম্মতি')}
-      ${items.map(([k, t, d]) => `<div class="card" style="display:flex;gap:12px;align-items:center"><div style="flex:1"><h3>${t}</h3><div class="mute small">${d}</div></div><button class="pill ${c[k] ? 'good' : ''}" data-c="${k}">${c[k] ? 'চালু' : 'বন্ধ'}</button></div>`).join('')}
+      ${section('সন্তানের সম্মতি')}
+      <div class="card"><div class="small">প্রতিটি সন্তানের জন্য আলাদাভাবে হ্যাঁ বা না দিন। অফিসের গেটের ক্যামেরা এবং ক্লাসরুমের ক্যামেরা, দুটোই মুখ চিনে হাজিরা নেয়। দুজন অভিভাবকের একজনও যদি না বলেন, উত্তর না-ই থাকবে। না বললে পড়াশোনায় কোনো পার্থক্য হবে না।</div></div>
+      ${list.length ? c : empty('user', 'কোনো সন্তানের তথ্য পাওয়া যায়নি।')}
       <div class="mute small" style="margin:6px 0 10px">ভিডিও দেখার সময় Google YouTube-এর প্লেয়ার ব্যবহার হয়; তখন ডিভাইসের আইপি ঠিকানা ও ডিভাইসের তথ্য Google-এর কাছে যায়।</div>
       <button class="btn ghost" data-go="pin">পিন বদলান</button>
       <div class="card coral"><h3>তথ্য মুছে ফেলার অনুরোধ</h3><div class="mute">অনুরোধ করলে কোচিং অফিস ৩০ দিনের মধ্যে আপনার ও সন্তানের তথ্য মুছে দেবে।</div><button class="btn coral" id="delreq" style="margin-top:10px">অনুরোধ পাঠান</button></div>`;
-    el.querySelectorAll('[data-c]').forEach(b => b.onclick = async () => {
-      const k = b.dataset.c; c[k] = !c[k];
-      try { await upsert('consents', { profile_id: S.uid, coaching_id: S.me.coaching_id, app_terms: true, [k]: c[k], updated_at: new Date().toISOString() }, 'profile_id'); render(); } catch { toast('সংরক্ষণ হয়নি'); }
+    el.querySelectorAll('[data-cs]').forEach(b => b.onclick = async () => {
+      const [id, p] = b.dataset.cs.split('|'), on = b.dataset.on === '1';
+      b.disabled = true;
+      try { await rpc('set_student_consent', { p_student_id: id, p_purpose: p, p_granted: !on }); render(); } catch { b.disabled = false; toast('সংরক্ষণ হয়নি'); }
     });
     el.querySelector('#delreq').onclick = async () => {
       if (!await confirmSheet('তথ্য মুছে ফেলা', 'অনুরোধ পাঠালে অফিস যোগাযোগ করে আপনার সব তথ্য মুছে দেবে। পাঠাবেন?', 'অনুরোধ পাঠান', true)) return;
