@@ -338,6 +338,8 @@
     } catch (e) {
       // 36-legal-signoff.sql refuses silent_mode=false until the legal sign-off is recorded.
       if (patch.silent_mode === false && /legal sign-off/i.test(e.body || '')) return toast('আইনি সম্মতি (legal sign-off) এখনো নেওয়া হয়নি। তাই খবর লাইভ করা যাবে না।');
+      // 36 also refuses when the last 14 days miss the thresholds (its text: "silent-mode thresholds not met ...").
+      if (patch.silent_mode === false && /silent-mode thresholds not met/i.test(e.body || '')) return toast('গত ১৪ দিনের শর্ত পূরণ হয়নি (কমপক্ষে ২০০ হাজিরা, ভুল শিশু শূন্য, বাদ ২%-এর নিচে)। খবর চুপচাপ মোডেই থাকবে।');
       return toast('সংরক্ষণ হয়নি। নেট দেখে আবার চেষ্টা করুন।');
     }
     toast(msg);
