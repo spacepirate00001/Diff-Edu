@@ -167,11 +167,11 @@
       ${dashSection('student', 'study', 'book', 'পড়া ও ফলাফল', [['document', 'রিপোর্ট কার্ড', 'myreports:' + st.id], ['star', 'আমার রেটিং ও কার্ড', 'progress:' + st.id], ['trophy', 'কুইজ ও লিডারবোর্ড', 's.quiz'],
         ['camera', 'অনলাইন ক্লাস (ভিডিও)', 'online:' + st.class_level], ['book', 'সিলেবাস ও বইয়ের পৃষ্ঠা', 'syllabus:' + st.class_level], ['book', 'শিক্ষা উপকরণ', 'materials:' + st.class_level], ['ai_spark', 'AI পড়ার সহায়ক', 's.tutor'],
         ['question', 'প্রশ্ন বক্স', 's.doubts'], ['notebook', 'ভুলের খাতা', 's.mistakes'], ['flashcards', 'ফ্ল্যাশকার্ড', 'flash:' + st.class_level]], true)}
-      ${dashSection('student', 'play', 'gamepad', 'খেলা ও অভ্যাস', [['timer', 'ফোকাস টাইমার', 'focus'], ['swords', 'কুইজ ডুয়েল', 's.duel'], ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 's.challenges'],
-        ['letters', 'শব্দ ও বানান', 's.spelling'], ['gamepad', 'শিক্ষামূলক খেলা', 's.games'], ['puzzle', 'দৈনিক ধাঁধা', 's.puzzle'], ['shop_bag', 'পয়েন্টের দোকান', 's.shop'],
-        ...(+st.class_level >= 5 ? [['chat', 'বন্ধুর সাথে চ্যাট', 's.chat']] : [])], true)}
+      ${dashSection('student', 'play', 'gamepad', 'খেলা ও অভ্যাস', [['timer', 'ফোকাস টাইমার', 'focus'], ...(+st.class_level >= 5 ? [['swords', 'কুইজ ডুয়েল', 's.duel']] : []), ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 's.challenges'],
+        ['letters', 'শব্দ ও বানান', 's.spelling'], ['gamepad', 'শিক্ষামূলক খেলা', 's.games'], ['gamepad', 'শেখার খেলা', 's.learn'], ['puzzle', 'দৈনিক ধাঁধা', 's.puzzle'], ['shop_bag', 'পয়েন্টের দোকান', 's.shop'],
+        ...(+st.class_level >= 5 ? [['chat', 'বন্ধুর সাথে চ্যাট', 's.chat'], ['users', 'আমার দল', 's.team']] : [])], true)}
       ${dashSection('student', 'me', 'target', 'আমার জিনিস', [['target', 'আমার লক্ষ্য', 's.goals'], ['trophy', 'সার্টিফিকেট', 'certs'], ['mic', 'মুখস্থ পড়া ও ভয়েস', 'voicebox'],
-        ['bell', 'সব নোটিশ', 'notices:students'], ['search', big ? 'বড় লেখা: চালু' : 'বড় লেখা: বন্ধ', null], ['lock', 'পিন বদলাও', 'pin']], false)}
+        ['bell', 'সব নোটিশ', 'notices:students'], ['search', big ? 'বড় লেখা: চালু' : 'বড় লেখা: বন্ধ', null], ['gift', 'আমার মাসকট', 's.decor'], ['lock', 'পিন বদলাও', 'pin']], false)}
       ${apkBanner()}`;
     bindDash(el);
     // The big-text tile has no route: it toggles in place (Appearance.setBigText).

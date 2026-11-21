@@ -651,7 +651,7 @@ async function render() {
 }
 const rerender = () => render();
 
-const FAMILY_SCRIPTS = ['videos.js', 'family.js', 'play.js', 'comms.js', 'extras.js', 'reports.js', 'profile.js'];
+const FAMILY_SCRIPTS = ['videos.js', 'family.js', 'chat.js', 'play.js', 'games.js', 'comms.js', 'extras.js', 'reports.js', 'profile.js'];
 const STAFF_SCRIPTS = ['videos.js', 'search.js', 'callsheet.js', 'teacher.js','board.js', 'control.js', 'texts.js', 'office.js', 'play.js', 'comms.js', 'classroom.js', 'qapprove.js', 'sourceup.js', 'extras.js', 'reports.js', 'people.js', 'profile.js'];
 const loaded = {};
 function loadScript(src) {

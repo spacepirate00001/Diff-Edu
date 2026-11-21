@@ -122,11 +122,16 @@
   // ---------- weekly challenges ----------
   SCREENS['s.challenges'] = { title: 'সাপ্তাহিক চ্যালেঞ্জ', render: async (el) => {
     const st = await me();
-    const list = await sel('weekly_challenges', `select=id,class_level,week_start,title,body,stars&week_start=gte.${daysAgo(28)}&or=(class_level.is.null,class_level.eq.${st.class_level})&order=week_start.desc,created_at.desc`);
+    const list = await sel('weekly_challenges', `select=id,class_level,week_start,title,body,stars,tournament&week_start=gte.${daysAgo(28)}&or=(class_level.is.null,class_level.eq.${st.class_level})&order=week_start.desc,created_at.desc`);
     const mine = list.length ? Object.fromEntries((await sel('challenge_entries', `select=challenge_id,status&student_id=eq.${st.id}`)).map(x => [x.challenge_id, x.status])) : {};
+    // Weekly tournament (class 5+ only, 42-weekly-tournament): the board is the class's approved entries, first come first.
+    const boards = Object.fromEntries(await Promise.all(list.filter(c => c.tournament && +st.class_level >= 5)
+      .map(async c => [c.id, await rpc('weekly_tournament_board', { p_challenge_id: c.id }).catch(() => null)])));
     const L = { pending: ['স্যার দেখবেন', 'sun'], approved: ['স্টার পেয়েছ!', 'good'], rejected: ['আবার চেষ্টা করো', 'bad'] };
-    el.innerHTML = list.map(c => `<div class="card"><div class="mute small">${fmtDate(c.week_start)} সপ্তাহ · ${bn(c.stars)} স্টার</div><h3>${esc(c.title)}</h3><div>${esc(c.body)}</div>
-      <div style="margin-top:8px">${mine[c.id] ? pill(L[mine[c.id]][0], L[mine[c.id]][1]) : `<button class="pill teal" data-done="${c.id}">করেছি, জানাও</button>`}</div></div>`).join('') || empty('target', 'এই সপ্তাহে কোনো চ্যালেঞ্জ নেই।');
+    el.innerHTML = list.map(c => { const b = boards[c.id];
+      return `<div class="card"><div class="mute small">${fmtDate(c.week_start)} সপ্তাহ · ${bn(c.stars)} স্টার</div><h3>${esc(c.title)}</h3><div>${esc(c.body)}</div>
+      <div style="margin-top:8px">${mine[c.id] ? pill(L[mine[c.id]][0], L[mine[c.id]][1]) : `<button class="pill teal" data-done="${c.id}">করেছি, জানাও</button>`}</div>
+      ${b ? `${pill('সাপ্তাহিক টুর্নামেন্ট', 'coral')}<div style="margin-top:8px">${b.length ? b.map(r => `<div class="row" style="${r.student_id === st.id ? 'font-weight:700;color:var(--teal-dark)' : ''}"><span>${bn(r.rank)}. ${esc(r.display_name)}${r.student_id === st.id ? ' (তুমি)' : ''}</span><span class="mute small">${fmtTime(r.submitted_at)}</span></div>`).join('') : '<div class="mute small">এখনো কেউ জমা দেয়নি।</div>'}</div>` : ''}</div>`; }).join('') || empty('target', 'এই সপ্তাহে কোনো চ্যালেঞ্জ নেই।');
     el.querySelectorAll('[data-done]').forEach(b => b.onclick = () => sheet(`<h2>কী করেছ লেখো</h2><textarea id="cn" maxlength="500"></textarea><button class="btn" id="cs">পাঠাও</button><button class="link" data-close>বাতিল</button>`, (s, close) => {
       s.querySelector('#cs').onclick = async () => { try { await ins('challenge_entries', { challenge_id: b.dataset.done, student_id: st.id, coaching_id: S.me.coaching_id, note: s.querySelector('#cn').value.trim() }); close(); toast('পাঠানো হয়েছে'); render(); } catch { toast('হয়নি'); } };
     }));
@@ -135,6 +140,7 @@
   // ---------- quiz duel ----------
   SCREENS['s.duel'] = { title: 'কুইজ ডুয়েল', sub: 'বন্ধুকে চ্যালেঞ্জ করো', render: async (el) => {
     const st = await me();
+    if (+st.class_level < 5) return el.innerHTML = empty('swords', 'কুইজ ডুয়েল ৫ম শ্রেণি থেকে।');  // plan C42; server refuses too
     const duels = await sel('quiz_duels', `select=id,quiz_title,subject,questions,challenger_id,opponent_id,challenger_name,opponent_name,challenger_score,opponent_score,created_at&or=(challenger_id.eq.${st.id},opponent_id.eq.${st.id})&order=created_at.desc&limit=30`);
     el.innerHTML = `<button class="btn" id="nd">নতুন ডুয়েল</button>` + (duels.map(d => {
       const iAmC = d.challenger_id === st.id, mine = iAmC ? d.challenger_score : d.opponent_score, theirs = iAmC ? d.opponent_score : d.challenger_score;
@@ -157,6 +163,49 @@
         s.querySelector('#dc').onclick = async () => { try { await rpc('create_duel', { p_student_id: st.id, p_opponent_id: s.querySelector('#dm').value, p_quiz_id: s.querySelector('#dq').value }); close(); render(); } catch { toast('হয়নি'); } };
       });
     };
+  } };
+
+  // ---------- teams (class 5+; only inside the child's own class, 43-battle-own-class) ----------
+  SCREENS['s.team'] = { title: 'আমার দল', sub: 'একই ক্লাসের বন্ধুদের সাথে দল', render: async (el) => {
+    const st = await me();
+    if (+st.class_level < 5) return el.innerHTML = empty('users', 'দল ৫ম শ্রেণি থেকে।');
+    const [mates, teams, members, pending] = await Promise.all([
+      rpc('class_mates', { p_student_id: st.id }).catch(() => []),
+      sel('teams', `select=id,name,lead_id&class_level=eq.${st.class_level}&order=created_at`),
+      sel('team_members', 'select=team_id,student_id,joined_at&order=joined_at'),
+      sel('team_join_requests', `select=id,team_id,via&student_id=eq.${st.id}&status=eq.pending`),
+    ]);
+    const name = id => mates.find(m => m.student_id === id)?.display_name || 'বন্ধু';
+    const mine = members.find(m => m.student_id === st.id), team = mine && teams.find(t => t.id === mine.team_id);
+    const isLead = !!team && team.lead_id === st.id;
+    const reqs = isLead ? await sel('team_join_requests', `select=id,student_id&team_id=eq.${team.id}&via=eq.request&status=eq.pending`) : [];
+    const act = async (fn, okMsg) => { try { await fn(); toast(okMsg); render(); } catch (e) { toast(/full/.test(e.body || '') ? 'দল ভর্তি (৬ জন)' : 'হয়নি'); } };
+    let html = pending.filter(r => r.via === 'invite').map(r => `<div class="card sun"><h3>${esc(teams.find(t => t.id === r.team_id)?.name || 'দল')} থেকে আমন্ত্রণ</h3>
+      <div class="formrow"><button class="pill good" data-inv="${r.id}" data-yes="1">যোগ দাও</button><button class="pill coral" data-inv="${r.id}" data-yes="0">না</button></div></div>`).join('');
+    if (team) {
+      const rows = members.filter(m => m.team_id === team.id);
+      html += section(esc(team.name)) + `<div class="card"><div class="mute small">${bn(rows.length)} জন সদস্য${isLead ? ' · তুমি দলনেতা' : ''}</div>
+        ${rows.map(m => `<div class="row"><span>${esc(name(m.student_id))}${m.student_id === st.id ? ' (তুমি)' : ''}${m.student_id === team.lead_id ? ' ★' : ''}</span></div>`).join('')}
+        <button class="btn ghost" id="tleave" style="margin-top:8px">দল ছাড়ো</button></div>`;
+      if (isLead) {
+        const free = mates.filter(m => m.student_id !== st.id && !members.some(x => x.student_id === m.student_id));
+        html += section('যোগদানের অনুরোধ') + (reqs.map(r => `<div class="card"><h3>${esc(name(r.student_id))}</h3>
+          <div class="formrow"><button class="pill good" data-req="${r.id}" data-yes="1">নাও</button><button class="pill coral" data-req="${r.id}" data-yes="0">না</button></div></div>`).join('') || '<div class="mute small">এখন কোনো অনুরোধ নেই।</div>');
+        html += section('বন্ধুকে আমন্ত্রণ') + (free.length ? `<div class="card"><select id="tinv">${free.map(m => `<option value="${m.student_id}">${esc(m.display_name)}</option>`).join('')}</select>
+          <button class="btn" id="tinvbtn" style="margin-top:8px">আমন্ত্রণ পাঠাও</button></div>` : empty('users', 'ক্লাসে যাদের দল নেই, তাদের আমন্ত্রণ দেওয়া যাবে।'));
+      }
+    } else {
+      html += section('নতুন দল') + `<div class="card"><input id="tname" maxlength="40" placeholder="দলের নাম"><button class="btn" id="tcreate" style="margin-top:8px">দল গড়ো</button></div>`;
+      html += section('দল খুঁজো') + (teams.map(t => { const n = members.filter(m => m.team_id === t.id).length, asked = pending.some(r => r.team_id === t.id && r.via === 'request');
+        return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3>${esc(t.name)}</h3><span class="mute small">${bn(n)} / ৬</span></div>
+        ${n >= 6 ? '' : asked ? pill('অনুরোধ পাঠানো হয়েছে', 'sun') : `<button class="pill teal" data-join="${t.id}">যোগ দিতে চাই</button>`}</div>`; }).join('') || empty('users', 'ক্লাসে এখনো কোনো দল নেই।'));
+    }
+    el.innerHTML = html;
+    el.querySelectorAll('[data-inv],[data-req]').forEach(b => b.onclick = () => act(() => rpc('respond_team_join', { p_request_id: b.dataset.inv || b.dataset.req, p_actor_id: st.id, p_accept: b.dataset.yes === '1' }), 'হয়েছে'));
+    el.querySelectorAll('[data-join]').forEach(b => b.onclick = () => act(() => rpc('request_team_join', { p_student_id: st.id, p_team_id: b.dataset.join }), 'অনুরোধ পাঠানো হয়েছে'));
+    el.querySelector('#tcreate')?.addEventListener('click', () => { const n = el.querySelector('#tname').value.trim(); if (!n) return toast('দলের নাম লেখো'); act(() => rpc('create_team', { p_student_id: st.id, p_name: n }), 'দল তৈরি হয়েছে'); });
+    el.querySelector('#tinvbtn')?.addEventListener('click', () => act(() => rpc('invite_to_team', { p_lead_id: st.id, p_student_id: el.querySelector('#tinv').value }), 'আমন্ত্রণ পাঠানো হয়েছে'));
+    el.querySelector('#tleave')?.addEventListener('click', async () => { if (await confirmSheet('দল ছাড়বে?', team.name, 'হ্যাঁ, ছাড়বো', true)) act(() => rpc('leave_team', { p_student_id: st.id }), 'দল ছেড়েছ'); });
   } };
 
   // ---------- flashcards ----------
