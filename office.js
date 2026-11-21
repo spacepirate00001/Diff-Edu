@@ -404,12 +404,9 @@
       const amt = +ascii(el.querySelector('#ga').value); if (!(amt > 0)) return toast('টাকার পরিমাণ দিন');
       const c = el.querySelector('#gc').value;
       try {
-        const studs = await sel('students', `select=id&active=eq.true${c ? '&class_level=eq.' + c : ''}&limit=2000`);
-        const have = new Set(rows.map(r => r.student_id));
-        const fresh = studs.filter(s => !have.has(s.id)).map(s => ({ coaching_id: S.me.coaching_id, student_id: s.id, month: F.month + '-01', amount: amt }));
-        if (!fresh.length) return toast('নতুন কারো ফি তৈরি করার নেই');
-        await raw('POST', '/rest/v1/fees?on_conflict=student_id,month', fresh, { prefer: 'return=minimal,resolution=ignore-duplicates' });
-        toast(`${bn(fresh.length)} জনের ফি তৈরি হয়েছে`); render();
+        const n = await rpc('generate_monthly_fees', { p_month: F.month + '-01', p_amount: amt, p_class_level: c ? +c : null });
+        if (!n) return toast('নতুন কারো ফি তৈরি করার নেই');
+        toast(`${bn(n)} জনের ফি তৈরি হয়েছে`); render();
       } catch { toast('তৈরি করা যায়নি'); }
     };
     el.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => {
