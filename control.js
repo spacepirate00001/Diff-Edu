@@ -243,4 +243,126 @@
     el.querySelector('#ctl-secs').innerHTML = secsHtml();
     preview(el);
   }
+
+  // ---------- "অভিভাবক-খবর ও ছুটি" (admin only): live/silent switch, silent-mode result, "আজ ছুটি", camera health ----------
+  // Reads sender_settings (13-sender-config.sql; attendance_paused from 13b-holiday-switch.sql), silent_mode_report
+  // (32-silent-mode.sql, P3-T3) and gate_cameras (30-gate-heartbeat.sql). The refusal to go live must also be enforced in SQL
+  // (P3-T3/P3-T9); this screen only mirrors it.
+  const NS_MIN_SAMPLE = 200;        // marks in the report window; default, owner to confirm (P3-T3)
+  const NS_MISS_MAX = 2;            // missed arrivals must stay below 2 %
+  const NS_CAM_OFFLINE_MS = 2 * 60000; // one camera heartbeat threshold (C24 proposal)
+  const NS_LIVE = [['silent', 'চুপচাপ (খবর যায় না)'], ['live', 'লাইভ (খবর যায়)']];
+  const NS_HOLIDAY = [['off', 'বন্ধ'], ['on', 'ছুটি চালু']];
+  let NS = null;
+
+  // Settled read: one failed section does not hide the others.
+  const settle = p => p.then(v => ({ v }), e => ({ e }));
+
+  // Shape of silent_mode_report rows as this screen reads them: wrong_child, missed, marks (to confirm with P3-T3).
+  function nsVerdict(rep) {
+    const marks = +rep?.marks || 0;
+    const wrong = +rep?.wrong_child || 0;
+    const missPct = marks ? (+rep.missed || 0) / marks * 100 : null;
+    const ok = marks >= NS_MIN_SAMPLE && wrong === 0 && missPct < NS_MISS_MAX;
+    return { ok, marks, wrong, missPct, insufficient: marks < NS_MIN_SAMPLE };
+  }
+
+  async function nsOpen(el) {
+    el.innerHTML = skel(3);
+    const coaching = S.me?.coaching_id;
+    const [s, r, c] = await Promise.all([
+      settle(sel('sender_settings', `select=silent_mode,attendance_paused&coaching_id=eq.${coaching}`)),
+      settle(rpc('silent_mode_report', { p_from: daysAgo(14), p_to: dhakaToday() })),
+      settle(sel('gate_cameras', 'select=camera_name,last_seen_at&order=camera_name')),
+    ]);
+    const cfg = s.v?.[0];
+    NS = {
+      settingsErr: !!s.e,
+      silent: cfg ? cfg.silent_mode !== false : true,   // no row = the safe default (silent)
+      paused: !!cfg?.attendance_paused,
+      rep: r.e ? undefined : (Array.isArray(r.v) ? r.v[0] : r.v),
+      repErr: !!r.e,
+      cams: c.v || null,
+      camsErr: !!c.e,
+      now: Date.now(),
+    };
+    nsPaint(el);
+  }
+
+  function nsPaint(el) {
+    const v = NS.rep ? nsVerdict(NS.rep) : null;
+    let rep;
+    if (NS.repErr) rep = `<div class="mute">ফল আনা যায়নি।</div>`;
+    else if (!v) rep = `<div class="mute">এখনো ফল নেই।</div>`;
+    else rep = `
+      <div>ভুল-শিশু মিল: <b class="${v.wrong === 0 ? 'ok' : 'bad'}">${bn(v.wrong)}</b> <span class="mute small">(লক্ষ্য ০)</span></div>
+      <div>মিস করা আসা: <b class="${v.missPct !== null && v.missPct < NS_MISS_MAX ? 'ok' : 'bad'}">${v.missPct === null ? '—' : bn(v.missPct.toFixed(1)) + '%'}</b> <span class="mute small">(লক্ষ্য ${bn(NS_MISS_MAX)}%-এর কম)</span></div>
+      <div class="mute small">নমুনা: ${bn(v.marks)} হাজিরা${v.insufficient ? ` · অপর্যাপ্ত, অন্তত ${bn(NS_MIN_SAMPLE)} লাগবে` : ''}</div>
+      <div class="small"><b class="${v.ok ? 'ok' : 'bad'}">${v.ok ? 'শর্ত পূরণ হয়েছে' : 'শর্ত এখনো পূরণ হয়নি'}</b></div>`;
+
+    let cams;
+    if (NS.camsErr) cams = `<div class="mute">ক্যামেরার খবর আনা যায়নি।</div>`;
+    else if (!NS.cams?.length) cams = `<div class="mute">এখনো কোনো ক্যামেরার খবর আসেনি।</div>`;
+    else cams = NS.cams.map(x => {
+      const on = NS.now - new Date(x.last_seen_at).getTime() <= NS_CAM_OFFLINE_MS;
+      return `<div class="row-line"><span>${esc(x.camera_name)}</span><span class="small mute">${esc(fmtTime(x.last_seen_at))}</span> <b class="${on ? 'ok' : 'bad'}">${on ? 'চালু' : 'সাড়া নেই'}</b></div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="ctl-hint">অভিভাবকদের ফোনে খবর যাবে কিনা, এখান থেকে ঠিক হয়।</div>
+      ${NS.settingsErr ? '<div class="card"><div class="mute">সেটিং আনা যায়নি। নেট দেখে আবার চেষ্টা করুন।</div></div>' : ''}
+      <div class="section">অভিভাবক-খবর</div>
+      <div class="card">
+        <h3>খবর কীভাবে যাবে</h3>
+        <div class="mute small">চুপচাপ মোডে হাজিরার খবর যায় না, শুধু লগে থাকে। লাইভ করতে হলে নিচের "চুপচাপ মোডের ফল" শর্ত পূরণ হতে হবে।</div>
+        <div class="chips" role="group" aria-label="খবর চালু বা বন্ধ">${chipRow(NS_LIVE, NS.silent ? 'silent' : 'live', 'data-live')}</div>
+      </div>
+      <div class="section">চুপচাপ মোডের ফল (শেষ ১৪ দিন)</div>
+      <div class="card" id="ns-report">${rep}</div>
+      <div class="section">আজ ছুটি</div>
+      <div class="card">
+        <div class="mute small">"ছুটি চালু" থাকলে হাজিরার স্বয়ংক্রিয় খবর (এসেছে, অনুপস্থিত, দেরি, বের হয়েছে) যাবে না। জরুরি নোটিশ যাবে।</div>
+        <div class="chips" role="group" aria-label="আজ ছুটি">${chipRow(NS_HOLIDAY, NS.paused ? 'on' : 'off', 'data-holiday')}</div>
+      </div>
+      <div class="section">ক্যামেরা</div>
+      <div class="card"><div class="mute small">২ মিনিটের বেশি সাড়া না পেলে ক্যামেরা "সাড়া নেই"।</div>${cams}</div>
+      <button class="btn ghost" id="ns-reload">আবার দেখুন</button>`;
+    el.querySelectorAll('button[data-live],button[data-holiday]').forEach(b => { if (NS.settingsErr) b.disabled = true; });
+  }
+
+  async function nsSave(el, patch, msg) {
+    const coaching = S.me?.coaching_id;
+    if (!coaching) return toast('আবার লগইন করে চেষ্টা করুন।');
+    try {
+      await upsert('sender_settings', { coaching_id: coaching, ...patch }, 'coaching_id');
+    } catch {
+      return toast('সংরক্ষণ হয়নি। নেট দেখে আবার চেষ্টা করুন।');
+    }
+    toast(msg);
+    nsOpen(el);
+  }
+
+  async function nsSetLive(el, live) {
+    if (live === !NS.silent) return;
+    if (live) {
+      if (!NS.rep || !nsVerdict(NS.rep).ok) return toast('শর্ত পূরণ হয়নি। খবর চুপচাপ মোডেই থাকবে।');
+      const yes = await confirmSheet('অভিভাবক-খবর চালু করবেন?', 'এরপর হাজিরার খবর সত্যিই অভিভাবকদের ফোনে যাবে।', 'হ্যাঁ, চালু করুন');
+      if (!yes) return nsOpen(el);
+    }
+    nsSave(el, { silent_mode: !live }, live ? 'খবর চালু হয়েছে।' : 'চুপচাপ মোডে ফেরানো হয়েছে।');
+  }
+
+  SCREENS['a.notices'] = { title: 'অভিভাবক-খবর ও ছুটি', sub: 'খবর চালু বা বন্ধ, ক্যামেরা', render: async (el) => {
+    el.onclick = e => {
+      const b = e.target.closest('button');
+      if (!b || !NS) return;
+      if (b.id === 'ns-reload') return nsOpen(el);
+      if (b.dataset.live != null) return nsSetLive(el, b.dataset.live === 'live');
+      if (b.dataset.holiday != null) {
+        const on = b.dataset.holiday === 'on';
+        if (on !== NS.paused) nsSave(el, { attendance_paused: on }, on ? 'আজ ছুটি চালু হয়েছে।' : 'আজ ছুটি বন্ধ হয়েছে।');
+      }
+    };
+    await nsOpen(el);
+  } };
 })();

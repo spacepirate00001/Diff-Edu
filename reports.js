@@ -218,7 +218,8 @@
     h += `<button class="btn ghost" id="oldb">আগের প্রকাশিত রিপোর্ট দেখুন (ক্লাস ${bn(cls)})</button><div id="old"></div>`;
     h += section('ক্লাসে অবস্থান') + (sorted.map(c => { const x = c.data || {}, lines = x.lines || []; return `<div class="card" style="display:flex;gap:10px;align-items:center"><b style="min-width:42px">${c.rank ? rankBn(c.rank) : '—'}</b><div style="flex:1"><h3>${esc(x.name || '')}${c.status === 'draft' ? ' <span class="mute small">(খসড়া)</span>' : ''}</h3>
       <div class="mute small">নম্বর ${num(lines.reduce((s, l) => s + (l.o || 0), 0))}/${num(lines.reduce((s, l) => s + l.f, 0))} · রেটিং ${x.rating == null ? '—' : d1(x.rating)} · উপস্থিত ${bn(x.present || 0)}/${bn(x.days || 0)}</div>
-      ${c.award === 'topper' ? pill('★ ক্লাস টপার', 'sun') : c.award === 'improved' ? pill('↑ সবচেয়ে উন্নতি', 'teal') : ''}</div><b>${x.score == null ? '—' : d1(x.score)}</b></div>`; }).join('') || empty('school', 'এই ক্লাসে কোনো শিক্ষার্থী নেই।'));
+      ${c.award === 'topper' ? pill('★ ক্লাস টপার', 'sun') : c.award === 'improved' ? pill('↑ সবচেয়ে উন্নতি', 'teal') : ''}
+      ${isAdmin() && c.status === 'published' ? `<div class="chips"><button class="pill" data-fix="${c.id}">সংশোধন</button></div>` : ''}</div><b>${x.score == null ? '—' : d1(x.score)}</b></div>`; }).join('') || empty('school', 'এই ক্লাসে কোনো শিক্ষার্থী নেই।'));
     el.innerHTML = h;
     el.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { RP.kind = b.dataset.kind; render(); });
     el.querySelectorAll('[data-cls]').forEach(b => b.onclick = () => { RP.cls = +b.dataset.cls; render(); });
@@ -242,6 +243,23 @@
     };
     el.querySelector('#pall').onclick = () => printCards(sorted, 'রিপোর্ট কার্ড · ক্লাস ' + bn(cls));
     el.querySelector('#pall2').onclick = () => printCards(sorted, 'রিপোর্ট কার্ড · ক্লাস ' + bn(cls), true);
+    // Admin only: correct the marks on a published card. The DB trigger (20-report-status) queues the guardian notice.
+    el.querySelectorAll('[data-fix]').forEach(b => b.onclick = () => {
+      const c = rows.find(x => x.id === b.dataset.fix), lines = c?.data?.lines || [];
+      sheet(`<h2>সংশোধন · ${esc(c?.data?.name || '')}</h2><div class="mute small">প্রকাশিত কার্ডের নম্বর বদলালে অভিভাবকের কাছে সংশোধনের বার্তা যাবে।</div>
+        ${lines.map((l, i) => `<label>${esc(l.s)} (পূর্ণমান ${num(l.f)})</label><input id="fx${i}" inputmode="numeric" value="${l.o == null ? '' : esc(l.o)}">`).join('') || '<div class="mute">এই কার্ডে বিষয় নেই।</div>'}
+        <button class="btn" id="fxok">সংরক্ষণ করুন</button><button class="link" data-close>বাতিল</button>`, (s, close) => {
+        s.querySelector('#fxok').onclick = async () => {
+          const next = lines.map((l, i) => { const v = ascii(s.querySelector('#fx' + i).value).trim(); return { ...l, o: v === '' ? null : +v }; });
+          if (next.some(l => l.o != null && (!Number.isFinite(l.o) || l.o < 0 || l.o > l.f))) return toast('নম্বর ঠিক নেই');
+          if (JSON.stringify(next) === JSON.stringify(lines)) return close();
+          try {
+            await raw('PATCH', `/rest/v1/report_cards?id=eq.${c.id}&status=eq.published`, { data: { ...c.data, lines: next } }, { prefer: 'return=minimal' });
+            close(); toast('সংশোধন হয়েছে। অভিভাবকদের জানানো হবে।'); render();
+          } catch { toast('সংশোধন করা যায়নি। আবার চেষ্টা করুন।'); }
+        };
+      });
+    });
     const pb = el.querySelector('#pub');
     if (pb) pb.onclick = async () => {
       pb.disabled = true; pb.textContent = 'প্রকাশ হচ্ছে…';

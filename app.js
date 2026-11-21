@@ -769,7 +769,10 @@ SCREENS.pin = { title: p => p === 'forced' ? 'নতুন পিন বান�
 
 SCREENS.consent = { title: 'সম্মতি', home: true, render: async (el) => {
   el.innerHTML = `<div class="card"><h2>আপনার সন্তানের তথ্য</h2><div class="mute">ডিফ এডু আপনার সন্তানের নাম, শ্রেণি, উপস্থিতি, পরীক্ষার ফল, ফি ও শিক্ষকের মন্তব্য সংরক্ষণ করে, যাতে আপনি ও শিক্ষক একসাথে অগ্রগতি দেখতে পারেন। কোনো বিজ্ঞাপন বা ট্র্যাকিং নেই। AI-এর কিছু ফিচারে Google Gemini ব্যবহার হয়। যেকোনো সময় "আমার তথ্য ও গোপনীয়তা" থেকে তথ্য মুছে ফেলার অনুরোধ করতে পারবেন।</div></div>
+    <div id="cs"></div>
     <button class="btn" id="agree">আমি সম্মতি দিচ্ছি</button><button class="btn ghost" data-logout>লগআউট</button>`;
+  // Per child, per purpose switches: the same screen as "আমার তথ্য ও গোপনীয়তা" (family.js SCREENS.mydata).
+  try { await SCREENS.mydata.render(el.querySelector('#cs')); } catch (e) { console.warn(e); }
   el.querySelectorAll('[data-logout]').forEach(b => b.onclick = () => signOut());
   el.querySelector('#agree').onclick = async () => {
     try { await upsert('consents', { profile_id: S.uid, coaching_id: S.me.coaching_id, app_terms: true, updated_at: new Date().toISOString() }, 'profile_id'); } catch (e) { console.warn(e); }

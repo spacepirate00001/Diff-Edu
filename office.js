@@ -717,9 +717,10 @@
     if (!rows.length) return [];
     const uids = [...new Set(rows.map(r => str(r, 'changed_by')).filter(Boolean))];
     const sids = [...new Set(rows.map(studentIdOf).filter(Boolean))];
-    // Two plain lookups for names. If one fails, names show as "অজানা" and the list still loads.
+    // Two plain lookups for names. The changer can be a guardian or a student, so read profiles (admin may),
+    // not staff_public. If one fails, names show as "অজানা" and the list still loads.
     const [users, studs] = await Promise.all([
-      uids.length ? sel('staff_public', `select=id,full_name&id=${inList(uids)}`).catch(() => []) : [],
+      uids.length ? sel('profiles', `select=id,full_name&id=${inList(uids)}`).catch(() => []) : [],
       sids.length ? sel('students', `select=id,profile:profiles!students_profile_id_fkey(full_name)&id=${inList(sids)}`).catch(() => []) : [],
     ]);
     const userName = Object.fromEntries(users.map(u => [u.id, u.full_name || '']));

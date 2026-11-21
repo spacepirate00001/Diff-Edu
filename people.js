@@ -62,6 +62,10 @@
   } };
 
   // ---------- edit student (EditStudentScreen) ----------
+  // Keys and titles as family.js PURPOSES (staff do not load family.js, so the list is repeated here).
+  const CONSENT_PURPOSES = [['face_gate', 'অফিসের গেটে মুখ চিনে হাজিরা'], ['classroom_face', 'ক্লাসরুমে মুখ চিনে হাজিরা'],
+    ['photo_publish', 'ছবি ব্যবহার'], ['voice', 'ভয়েস রেকর্ডিং'], ['merit_list', 'মেধা তালিকায় নাম'],
+    ['ai_tutor', 'AI পড়ার সহায়ক'], ['ai_grading', 'AI দিয়ে খাতা দেখা'], ['student_chat', 'বন্ধুর সাথে চ্যাট']];
   SCREENS['a.editstudent'] = { title: 'শিক্ষার্থী সম্পাদনা', render: async (el, id) => {
     const [s, links] = await Promise.all([
       loadStudents().then(all => all.find(x => x.id === id)),
@@ -80,6 +84,7 @@
         ${section('ক্লাস')}${chipRow(CLASSES.map(c => [c, bn(c)]), f.cls, 'data-cls')}
         ${section('ব্যাচ')}<div class="card">${shiftPicker(f.main, f.extra)}</div>
         <div class="card"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ea" ${f.active ? 'checked' : ''} style="width:auto"> ভর্তি আছে</label><div class="mute small">বন্ধ করলে হাজিরা ও তালিকায় আর আসবে না; তথ্য মুছবে না।</div></div>
+        ${section('সম্মতি (কাগজের ফর্ম)')}<div id="cons"></div>
         ${section('অভিভাবক')}
         ${G.map((g, i) => `<div class="card">${g.relation ? `<div class="guard-rel">${esc(g.relation)}</div>` : ''}
           <label>নাম</label><input id="gn${i}" maxlength="100" value="${esc(g.name)}">
@@ -122,6 +127,26 @@
       };
     };
     draw();
+    // Paper-form answers: the admin's own row per purpose (set_student_consent). The effective answer is
+    // stricter-wins over every linked guardian, so it can stay off after a "yes" here.
+    const consBox = el.querySelector('#cons');
+    const drawCons = async () => {
+      const [on, mine] = await Promise.all([
+        Promise.all(CONSENT_PURPOSES.map(([p]) => rpc('student_consent_on', { p_student: s.id, p_purpose: p }))),
+        sel('student_consents', `select=purpose,granted&student_id=eq.${s.id}&by_profile=eq.${S.uid}`),
+      ]);
+      const mineOf = Object.fromEntries(mine.map(r => [r.purpose, r.granted]));
+      consBox.innerHTML = CONSENT_PURPOSES.map(([p, t], i) => `<div class="card"><h3>${t}</h3>
+        <div class="mute small">এখন: ${on[i] === true ? 'চালু' : 'বন্ধ'} · ${mineOf[p] === true ? 'কাগজে হ্যাঁ' : mineOf[p] === false ? 'কাগজে না' : 'কাগজে উত্তর নেই'}</div>
+        <div class="chips"><button class="pill ${mineOf[p] === true ? 'good' : ''}" data-cons="${p}|1">হ্যাঁ</button><button class="pill ${mineOf[p] === false ? 'sun' : ''}" data-cons="${p}|0">না</button></div></div>`).join('');
+      consBox.querySelectorAll('[data-cons]').forEach(b => b.onclick = async () => {
+        const [p, v] = b.dataset.cons.split('|');
+        b.disabled = true;
+        try { await rpc('set_student_consent', { p_student_id: s.id, p_purpose: p, p_granted: v === '1' }); await drawCons(); }
+        catch (e) { b.disabled = false; toast(friendly(e)); }
+      });
+    };
+    await drawCons().catch(() => { consBox.innerHTML = empty('wifi_off', 'সম্মতি আনা যায়নি।'); });
   } };
 
   // ---------- edit teacher / guardian (EditPersonScreen) ----------
