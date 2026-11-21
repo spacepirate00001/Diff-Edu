@@ -103,8 +103,8 @@
     HOME_CFG = await hcP;
     const badge = n => n > 0 ? bn(n) : null;
     const manage = admin ? [['users', 'অ্যাকাউন্ট ব্যবস্থাপনা', 'a.users'], ['note_edit', 'প্রোফাইল সম্পাদনা', 'a.people'], ['calendar', 'ক্লাস রুটিন', 'a.routine'],
-      ['question', 'পরিবর্তনের অনুরোধ', 't.requests', badge(todo[0])], ['phone', 'নম্বর সংশোধন', 'a.phones', badge(todo[1])], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['money', 'শিক্ষকদের সম্মানী', 't.honorarium'], ['notebook', 'পরিবর্তনের ইতিহাস', 'a.history'], ['signal', 'সার্ভার থেকে নিয়ন্ত্রণ', 'a.control'], ['letters', 'লেখা বদলান', 'a.texts']] : [];
-    const daily = [['attendance', 'উপস্থিতি গ্রহণ', 't.att'], ['check_list', 'আজ কার হাজিরা', 't.board'], ['star', 'ক্লাস রেটিং', 't.rate'], ['signal', 'শিক্ষার্থীদের সংকেত', 't.signals'], ['question', 'প্রশ্ন বক্স', 't.doubts'], ['mic', 'ভয়েস ও মুখস্থ পড়া', 't.voice'], ['camera', 'CCTV যাচাই', 't.gate']];
+      ['question', 'পরিবর্তনের অনুরোধ', 't.requests', badge(todo[0])], ['phone', 'নম্বর সংশোধন', 'a.phones', badge(todo[1])], ['card', 'ফি ব্যবস্থাপনা', 'a.fees'], ['money', 'শিক্ষকদের সম্মানী', 't.honorarium'], ['notebook', 'পরিবর্তনের ইতিহাস', 'a.history'], ['signal', 'সার্ভার থেকে নিয়ন্ত্রণ', 'a.control'], ['megaphone', 'অভিভাবক-খবর ও ছুটি', 'a.notices'], ['alert', 'চ্যাট রিপোর্ট', 'a.chatreports'], ['letters', 'লেখা বদলান', 'a.texts']] : [];
+    const daily = [['attendance', 'উপস্থিতি গ্রহণ', 't.att'], ['check_list', 'আজ কার হাজিরা', 't.board'], ['star', 'ক্লাস রেটিং', 't.rate'], ['signal', 'শিক্ষার্থীদের সংকেত', 't.signals'], ['clock', 'আগে বের হওয়ার সংকেত', 't.leaves'], ['question', 'প্রশ্ন বক্স', 't.doubts'], ['mic', 'ভয়েস ও মুখস্থ পড়া', 't.voice'], ['camera', 'CCTV যাচাই', 't.gate']];
     const exams = [['numbers', 'নম্বর এন্ট্রি', 't.marks'], ['document', 'রিপোর্ট কার্ড ও টপার', 'a.reports'], ['calendar', 'পরীক্ষার রুটিন', 't.routine'], ['calendar', 'পরীক্ষার পরিকল্পনা', 't.exams'],
       ['archive', 'প্রশ্ন ব্যাংক', 't.qbank'], ['check_list', 'প্রশ্ন অনুমোদন', 't.qapprove'], ['inbox', 'প্রশ্ন জমা দিন', 't.sourceup'], ['ai_spark', 'AI প্রশ্নপত্র তৈরি', 't.aipaper'], ['note_edit', 'AI খাতা মূল্যায়ন', 't.grading'], ['seat', 'সিট প্ল্যান', 't.seat']];
     const progress = [['alert', 'ঝুঁকিতে থাকা শিক্ষার্থী', 't.risk'], ['chart', 'ব্যাচ তুলনা', 't.compare'], ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 't.challenges'], ['book', 'সিলেবাস ট্র্যাকার', 'syllabus:6'], ['flashcards', 'ফ্ল্যাশকার্ড', 'flash:6'], ['book', 'শিক্ষা উপকরণ', 'materials:5'], ['camera', 'অনলাইন ক্লাস ভিডিও', 'online:6'], ['camera', 'ভিডিও লিংক যোগ', 't.videos']];
@@ -697,6 +697,18 @@
     el.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => nav.replace('materials', b.dataset.chip));
     el.querySelectorAll('[data-url]').forEach(b => b.onclick = () => ytId(b.dataset.url) ? playVideo([{ id: ytId(b.dataset.url), title: b.querySelector('h3').textContent }]) : b.dataset.url ? window.open(b.dataset.url, '_blank', 'noopener') : toast('লিংক নেই'));
   } };
+  // ---------- "আগে বের হয়েছে" signals (teacher and admin): one tap to confirm, which alone sends the guardian message (P3-T8, plan C3) ----------
+  // Reads early_leave_signals and confirm_early_leave (35-early-leave-signal.sql). Nothing is sent to a guardian before the tap.
+  SCREENS['t.leaves'] = { title: 'আগে বের হওয়ার সংকেত', sub: 'নিশ্চিত করলে তবেই অভিভাবকের বার্তা যাবে', render: async (el) => {
+    const rows = await sel('early_leave_signals', 'select=id,day,shift,student:students(class_level,roll,profile:profiles!students_profile_id_fkey(full_name))&status=eq.open&order=day.desc,created_at.desc&limit=100');
+    el.innerHTML = (rows.map(r => `<div class="card sun"><div class="mute small">${fmtDate(r.day)} · ${shiftBn(r.shift)} শিফট · ক্লাস ${bn(r.student?.class_level || '')}</div><h3>${esc(r.student?.profile?.full_name || r.student?.roll || 'শিক্ষার্থী')}</h3><div class="mute small">আসার চিহ্ন আছে, তারপর একটি পিরিয়ডে অনুপস্থিত দেওয়া হয়েছে।</div><button class="pill good" data-leave="${r.id}" style="margin-top:6px">নিশ্চিত করুন</button></div>`).join('') || empty('clock', 'এখন কোনো সংকেত নেই।'));
+    el.querySelectorAll('[data-leave]').forEach(b => b.onclick = async () => {
+      b.disabled = true;
+      try { const n = await rpc('confirm_early_leave', { p_signal: b.dataset.leave }); toast(n ? 'অভিভাবককে জানানো হয়েছে।' : 'নিশ্চিত হয়েছে। খবর চুপচাপ মোডে আছে, কিছু পাঠানো হয়নি।'); render(); }
+      catch { b.disabled = false; toast('হয়নি'); }
+    });
+  } };
+
   SCREENS.soon = { title: p => p || 'শীঘ্রই', render: async (el) => {
     el.innerHTML = `<div class="card">${empty('ai_spark', 'এই অংশটি শীঘ্রই ওয়েবে আসছে।' + (isAndroid ? ' ততদিন অ্যান্ড্রয়েড অ্যাপে ব্যবহার করুন।' : ''))}</div>${apkBanner()}`;
   } };

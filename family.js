@@ -42,6 +42,7 @@
     else h += '<span class="pill" style="background:var(--line);color:var(--ink-soft)">আজ এখনো উপস্থিতি নেওয়া হয়নি</span>';
     h += '</div>';
     // Slot 0 = the whole-shift exam, 1..3 = class periods. Only slots with a mark or a score get a line.
+    // Quick reply "অন্য ব্যাচে আসবে" (D13, guardian_other_batch): offered while the child is not marked present.
     for (let slot = 0; slot <= 3; slot++) {
       const m = marks[slot], s = scores[slot];
       if (m === undefined && s === undefined) continue;
@@ -50,7 +51,15 @@
       if (s !== undefined) parts.push('স্কোর ' + bn(String(s)) + '/১০');
       h += `<div class="mute" style="margin-top:6px">${esc(parts.join(' · '))}</div>`;
     }
+    if (!vals.some(v => v)) h += `<button class="pill warn" data-other style="margin-top:10px;border:0;cursor:pointer">অন্য ব্যাচে আসবে</button>`;
     box.innerHTML = h;
+    const ob = box.querySelector('[data-other]');
+    if (ob) ob.onclick = async e => {
+      e.stopPropagation(); // the whole card is a link to attendance; this button must not follow it
+      ob.disabled = true;
+      try { await rpc('guardian_other_batch', { p_student: c.id }); ob.textContent = 'জানানো হয়েছে ✓'; ob.className = 'pill teal'; }
+      catch { ob.disabled = false; toast('জানানো যায়নি। আবার চাপুন।'); }
+    };
   }
   SCREENS['g.home'] = { home: true, title: () => 'স্বাগতম, ' + S.me.full_name, sub: () => 'অভিভাবক · ' + todayBnLong(), trail: () => avatarBtn() + logoutPill('sun'), render: async (el) => {
     const nh = noticeHighlight('guardians'); // notices first: guardians must not miss holidays, exam dates and fee news
@@ -159,7 +168,8 @@
         ['camera', 'অনলাইন ক্লাস (ভিডিও)', 'online:' + st.class_level], ['book', 'সিলেবাস ও বইয়ের পৃষ্ঠা', 'syllabus:' + st.class_level], ['book', 'শিক্ষা উপকরণ', 'materials:' + st.class_level], ['ai_spark', 'AI পড়ার সহায়ক', 's.tutor'],
         ['question', 'প্রশ্ন বক্স', 's.doubts'], ['notebook', 'ভুলের খাতা', 's.mistakes'], ['flashcards', 'ফ্ল্যাশকার্ড', 'flash:' + st.class_level]], true)}
       ${dashSection('student', 'play', 'gamepad', 'খেলা ও অভ্যাস', [['timer', 'ফোকাস টাইমার', 'focus'], ['swords', 'কুইজ ডুয়েল', 's.duel'], ['target', 'সাপ্তাহিক চ্যালেঞ্জ', 's.challenges'],
-        ['letters', 'শব্দ ও বানান', 's.spelling'], ['gamepad', 'শিক্ষামূলক খেলা', 's.games'], ['puzzle', 'দৈনিক ধাঁধা', 's.puzzle'], ['shop_bag', 'পয়েন্টের দোকান', 's.shop']], true)}
+        ['letters', 'শব্দ ও বানান', 's.spelling'], ['gamepad', 'শিক্ষামূলক খেলা', 's.games'], ['puzzle', 'দৈনিক ধাঁধা', 's.puzzle'], ['shop_bag', 'পয়েন্টের দোকান', 's.shop'],
+        ...(+st.class_level >= 5 ? [['chat', 'বন্ধুর সাথে চ্যাট', 's.chat']] : [])], true)}
       ${dashSection('student', 'me', 'target', 'আমার জিনিস', [['target', 'আমার লক্ষ্য', 's.goals'], ['trophy', 'সার্টিফিকেট', 'certs'], ['mic', 'মুখস্থ পড়া ও ভয়েস', 'voicebox'],
         ['bell', 'সব নোটিশ', 'notices:students'], ['search', big ? 'বড় লেখা: চালু' : 'বড় লেখা: বন্ধ', null], ['lock', 'পিন বদলাও', 'pin']], false)}
       ${apkBanner()}`;
@@ -261,13 +271,20 @@
   } };
 
   // ---------- fees ----------
+  // Online pay button is hidden until a provider is live (P4-T1 callback, merchant account B-merchant).
+  // shortcut: the button only toasts until P4-T1 gives it a redirect; set PAY_PROVIDER then.
+  const PAY_PROVIDER = null;
   SCREENS.fees = { title: 'ফি', render: async (el, id) => {
     const k = await kidOf(id); setSub(nm(k));
-    const fs = await cached('fees' + k.id, () => sel('fees', `select=month,amount,paid_amount,status,method,paid_at&student_id=eq.${k.id}&order=month.desc`));
+    const fs = await cached('fees' + k.id, () => sel('fees', `select=month,amount,paid_amount,status,method,paid_at,trx_id&student_id=eq.${k.id}&order=month.desc`));
     const due = fs.filter(f => f.status !== 'paid').reduce((s, f) => s + (+f.amount - +f.paid_amount), 0);
     const M = { cash: 'নগদ', bkash: 'bKash', nagad: 'Nagad' };
-    el.innerHTML = `<div class="card ${due > 0 ? 'coral' : 'good'}"><div class="mute small">মোট বকেয়া</div><div class="big ${due > 0 ? 'bad' : 'ok'}">${taka(due)}</div><div class="mute">${due > 0 ? 'ফি কোচিং অফিসে নগদ, bKash বা Nagad-এ জমা দিন।' : 'কোনো বকেয়া নেই। ধন্যবাদ!'}</div></div>
-      ${fs.map(f => { const d = new Date(f.month + 'T00:00:00'); return `<div class="card"><div class="row" style="border:0;padding:0"><div><h3>${MONTHS[d.getMonth()]} ${bn(d.getFullYear())}</h3><div class="mute small">${taka(f.amount)}${f.status === 'paid' && f.method ? ' · ' + M[f.method] : ''}</div></div>${f.status === 'paid' ? pill('পরিশোধিত', 'good') : f.status === 'partial' ? pill('বাকি ' + taka(+f.amount - +f.paid_amount), 'bad') : pill('বাকি', 'bad')}</div></div>`; }).join('') || empty('card', 'এখনো কোনো ফি তৈরি হয়নি।')}`;
+    // Receipt lines come from the ledger (fees.paid_at, method, trx_id are synced from payments by 23-fee-paid-fields.sql).
+    const receipt = f => `<div class="mute small" style="margin-top:6px">রসিদ · ${f.paid_at ? fmtDateY(f.paid_at) + ' ' + fmtTime(f.paid_at) : 'তারিখ নেই'}${f.method ? ' · ' + (M[f.method] || esc(f.method)) : ''}</div>${f.trx_id ? `<div class="mute small">ট্রানজেকশন আইডি: ${esc(f.trx_id)}</div>` : ''}`;
+    el.innerHTML = `<div class="card ${due > 0 ? 'coral' : 'good'}"><div class="mute small">মোট বকেয়া</div><div class="big ${due > 0 ? 'bad' : 'ok'}">${taka(due)}</div><div class="mute">${due > 0 ? 'ফি কোচিং অফিসে নগদ, bKash বা Nagad-এ জমা দিন।' : 'কোনো বকেয়া নেই। ধন্যবাদ!'}</div>${PAY_PROVIDER && due > 0 ? '<button class="btn" id="pay" style="margin-top:10px">অনলাইনে পরিশোধ করুন</button>' : ''}</div>
+      ${section('ফি ও রসিদ')}
+      ${fs.map(f => { const d = new Date(f.month + 'T00:00:00'); return `<div class="card"><div class="row" style="border:0;padding:0"><div><h3>${MONTHS[d.getMonth()]} ${bn(d.getFullYear())}</h3><div class="mute small">${taka(f.amount)}</div></div>${f.status === 'paid' ? pill('পরিশোধিত', 'good') : f.status === 'partial' ? pill('বাকি ' + taka(+f.amount - +f.paid_amount), 'bad') : pill('বাকি', 'bad')}</div>${+f.paid_amount > 0 ? receipt(f) : ''}</div>`; }).join('') || empty('card', 'এখনো কোনো ফি তৈরি হয়নি।')}`;
+    el.querySelector('#pay')?.addEventListener('click', () => toast('অনলাইন পরিশোধ এখনো চালু হয়নি।'));
   } };
 
   // ---------- notices ----------

@@ -619,7 +619,7 @@ function bindGo(b) { b.addEventListener('click', () => { const s = b.dataset.go;
 function setSub(t) { $('#sub').textContent = t || ''; $('#sub').hidden = !t; applyTextOverrides($('#sub')); }
 function setTitle(t) { $('#title').textContent = t; applyTextOverrides($('#title')); }
 
-const ADMIN_ONLY = new Set(['a.fees', 'a.users', 'a.phones', 'a.admit', 'a.history', 'a.people', 'a.editstudent', 'a.editperson', 'a.requests', 'a.control', 'a.texts']);
+const ADMIN_ONLY = new Set(['a.fees', 'a.users', 'a.phones', 'a.admit', 'a.history', 'a.people', 'a.editstudent', 'a.editperson', 'a.requests', 'a.control', 'a.notices', 'a.chatreports', 'a.texts']);
 async function render() {
   const seq = ++renderSeq;
   offlineFlag = false;

@@ -22,7 +22,7 @@
       { title: 'আমার জিনিস', tiles: ['আমার লক্ষ্য', 'সার্টিফিকেট', 'মুখস্থ পড়া ও ভয়েস', 'সব নোটিশ', 'পিন বদলাও'] },
     ],
     teacher: [
-      { title: 'প্রতিদিনের ক্লাস', tiles: ['উপস্থিতি গ্রহণ', 'আজ কার হাজিরা', 'ক্লাস রেটিং', 'শিক্ষার্থীদের সংকেত', 'প্রশ্ন বক্স', 'ভয়েস ও মুখস্থ পড়া', 'CCTV যাচাই'] },
+      { title: 'প্রতিদিনের ক্লাস', tiles: ['উপস্থিতি গ্রহণ', 'আজ কার হাজিরা', 'ক্লাস রেটিং', 'শিক্ষার্থীদের সংকেত', 'আগে বের হওয়ার সংকেত', 'প্রশ্ন বক্স', 'ভয়েস ও মুখস্থ পড়া', 'CCTV যাচাই'] },
       { title: 'পরীক্ষা ও ফলাফল', tiles: ['নম্বর এন্ট্রি', 'রিপোর্ট কার্ড ও টপার', 'পরীক্ষার রুটিন', 'পরীক্ষার পরিকল্পনা', 'প্রশ্ন ব্যাংক', 'AI প্রশ্নপত্র তৈরি', 'AI খাতা মূল্যায়ন', 'সিট প্ল্যান'] },
       { title: 'শিক্ষার্থী ও অগ্রগতি', tiles: ['ঝুঁকিতে থাকা শিক্ষার্থী', 'ব্যাচ তুলনা', 'সাপ্তাহিক চ্যালেঞ্জ', 'সিলেবাস ট্র্যাকার', 'ফ্ল্যাশকার্ড', 'শিক্ষা উপকরণ'] },
       { title: 'যোগাযোগ ও নোটিশ', tiles: ['নোটিশ পাঠান', 'সকল নোটিশ', 'অভিভাবকদের বার্তা', 'অভিভাবক মিটিং', 'পরিচালকের বার্তা'] },
@@ -30,7 +30,7 @@
     ],
     admin: [
       { title: 'ব্যবস্থাপনা', tiles: ['অ্যাকাউন্ট ব্যবস্থাপনা', 'প্রোফাইল সম্পাদনা', 'ক্লাস রুটিন', 'পরিবর্তনের অনুরোধ', 'নম্বর সংশোধন', 'ফি ব্যবস্থাপনা', 'শিক্ষকদের সম্মানী', 'পরিবর্তনের ইতিহাস'] },
-      { title: 'প্রতিদিনের ক্লাস', tiles: ['উপস্থিতি গ্রহণ', 'আজ কার হাজিরা', 'ক্লাস রেটিং', 'শিক্ষার্থীদের সংকেত', 'প্রশ্ন বক্স', 'ভয়েস ও মুখস্থ পড়া', 'CCTV যাচাই'] },
+      { title: 'প্রতিদিনের ক্লাস', tiles: ['উপস্থিতি গ্রহণ', 'আজ কার হাজিরা', 'ক্লাস রেটিং', 'শিক্ষার্থীদের সংকেত', 'আগে বের হওয়ার সংকেত', 'প্রশ্ন বক্স', 'ভয়েস ও মুখস্থ পড়া', 'CCTV যাচাই'] },
       { title: 'পরীক্ষা ও ফলাফল', tiles: ['নম্বর এন্ট্রি', 'রিপোর্ট কার্ড ও টপার', 'পরীক্ষার রুটিন', 'পরীক্ষার পরিকল্পনা', 'প্রশ্ন ব্যাংক', 'AI প্রশ্নপত্র তৈরি', 'AI খাতা মূল্যায়ন', 'সিট প্ল্যান'] },
       { title: 'শিক্ষার্থী ও অগ্রগতি', tiles: ['ঝুঁকিতে থাকা শিক্ষার্থী', 'ব্যাচ তুলনা', 'সাপ্তাহিক চ্যালেঞ্জ', 'সিলেবাস ট্র্যাকার', 'ফ্ল্যাশকার্ড', 'শিক্ষা উপকরণ'] },
       { title: 'যোগাযোগ ও নোটিশ', tiles: ['নোটিশ পাঠান', 'সকল নোটিশ', 'অভিভাবকদের বার্তা', 'অভিভাবক মিটিং', 'পরিচালকের বার্তা'] },
@@ -258,11 +258,11 @@
   // Settled read: one failed section does not hide the others.
   const settle = p => p.then(v => ({ v }), e => ({ e }));
 
-  // Shape of silent_mode_report rows as this screen reads them: wrong_child, missed, marks (to confirm with P3-T3).
+  // silent_mode_report columns (32-silent-mode.sql): marks, wrong_child, missed, missed_pct (a fraction), status.
   function nsVerdict(rep) {
     const marks = +rep?.marks || 0;
     const wrong = +rep?.wrong_child || 0;
-    const missPct = marks ? (+rep.missed || 0) / marks * 100 : null;
+    const missPct = rep?.missed_pct != null ? +rep.missed_pct * 100 : (marks ? (+rep.missed || 0) / marks * 100 : null);
     const ok = marks >= NS_MIN_SAMPLE && wrong === 0 && missPct < NS_MISS_MAX;
     return { ok, marks, wrong, missPct, insufficient: marks < NS_MIN_SAMPLE };
   }
@@ -364,5 +364,20 @@
       }
     };
     await nsOpen(el);
+  } };
+
+  // ---------- চ্যাট রিপোর্ট (admin only): reported student chat messages (P4-T4, plan C10) ----------
+  // ASSUMED until 41-chat-reports.sql exists: table chat_reports(id, coaching_id, message_id, reason, status 'open'|'resolved',
+  // created_at, resolved_at); chat_messages(id, phrase_id) with phrases(text) (40-chat-phrases.sql). Admin RLS and the
+  // update policy are assumed too. Only phrases and stickers exist in chat, so there is no free text to show.
+  SCREENS['a.chatreports'] = { title: 'চ্যাট রিপোর্ট', sub: 'রিপোর্ট করা বার্তা', render: async (el) => {
+    const rows = await sel('chat_reports', 'select=id,reason,created_at,message:chat_messages(phrase:phrases(text))&status=eq.open&order=created_at.desc&limit=100');
+    el.innerHTML = `<div class="ctl-hint">শিক্ষার্থী বা অভিভাবক যে বার্তা রিপোর্ট করেছেন, সেগুলো এখানে। দেখে "ঠিক আছে" চাপুন।</div>`
+      + (rows.map(r => `<div class="card coral"><div class="mute small">${fmtDate(r.created_at)}${r.reason ? ' · ' + esc(r.reason) : ''}</div><h3>${esc(r.message?.phrase?.text || '—')}</h3><button class="pill good" data-rep="${r.id}" style="margin-top:6px">ঠিক আছে</button></div>`).join('') || empty('alert', 'এখন কোনো রিপোর্ট নেই।'));
+    el.querySelectorAll('[data-rep]').forEach(b => b.onclick = async () => {
+      b.disabled = true;
+      try { await upd('chat_reports', `id=eq.${b.dataset.rep}&select=id`, { status: 'resolved', resolved_at: new Date().toISOString() }); toast('ঠিক আছে হিসেবে বন্ধ হয়েছে।'); SCREENS['a.chatreports'].render(el); }
+      catch { b.disabled = false; toast('হয়নি'); }
+    });
   } };
 })();
