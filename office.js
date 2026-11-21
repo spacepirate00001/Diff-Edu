@@ -424,11 +424,12 @@
         s.querySelectorAll('[data-m]').forEach(x => x.onclick = () => { method = x.dataset.m; s.querySelectorAll('[data-m]').forEach(y => y.classList.toggle('on', y === x)); });
         s.querySelector('#ps').onclick = async () => {
           const add = +ascii(s.querySelector('#pa').value); if (!(add > 0)) return toast('টাকা দিন');
+          const ps = s.querySelector('#ps'); ps.disabled = true; // a second tap would record the payment twice
           try {
             // The ledger checks the amount against what is still due and sets the fee's paid amount and status.
             await rpc('record_payment', { p_method: method, p_trx_id: s.querySelector('#pt').value.trim() || null, p_amount: add, p_allocations: [{ fee_id: r.id, amount: add }] });
             close(); toast('জমা সংরক্ষিত ✓'); render();
-          } catch (e) { toast(/more than the fee/.test(e.body || '') ? 'বাকির চেয়ে বেশি জমা নেওয়া যাবে না' : 'সংরক্ষণ হয়নি'); }
+          } catch (e) { ps.disabled = false; toast(/more than the fee/.test(e.body || '') ? 'বাকির চেয়ে বেশি জমা নেওয়া যাবে না' : 'সংরক্ষণ হয়নি'); }
         };
       });
     });

@@ -323,7 +323,7 @@
 
   SCREENS['s.decor'] = { title: 'আমার মাসকট ও স্টিকার', sub: 'তোমার পাওয়া জিনিস দিয়ে সাজাও', render: async (el) => {
     const st = (await sel('students', `select=id&profile_id=eq.${S.uid}&limit=1`))[0];
-    if (!st) return;
+    if (!st) return el.innerHTML = empty('alert', 'এই পাতাটি এখন তোমার জন্য নয়।');
     const [cat, owned, look] = await Promise.all([
       sel('sticker_catalog', 'select=key,kind,label,emoji&active=eq.true'),
       sel('student_stickers', `select=sticker_key&student_id=eq.${st.id}`),

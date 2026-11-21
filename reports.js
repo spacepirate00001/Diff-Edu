@@ -267,10 +267,12 @@
     if (pb) pb.onclick = async () => {
       pb.disabled = true; pb.textContent = 'প্রকাশ হচ্ছে…';
       try {
+        // Score and rank must be set before publishing; otherwise guardians see "—" or stale ranks.
+        if (drafts.length) await rpc('compute_report_scores', { p_report_id: drafts[0].id });
         await raw('PATCH', `/rest/v1/report_cards?class_level=eq.${cls}&kind=eq.${RP.kind}&period_from=eq.${from}&period_to=eq.${to}&status=eq.draft`,
           { status: 'published', published_by: S.uid, published_at: new Date().toISOString() }, { prefer: 'return=minimal' });
         toast('প্রকাশ হয়ে গেছে। অভিভাবকরা কার্ড দেখে "দেখেছি" চাপবেন।'); render();
-      } catch { toast('প্রকাশ করা যায়নি। আবার চেষ্টা করুন।'); pb.disabled = false; pb.textContent = 'অভিভাবকদের অ্যাপে প্রকাশ করুন'; }
+      } catch { toast('প্রকাশ করা যায়নি। স্কোর ও র‍্যাংক হিসাব করা যায়নি বা সংযোগ নেই। আবার চেষ্টা করুন।'); pb.disabled = false; pb.textContent = 'অভিভাবকদের অ্যাপে প্রকাশ করুন'; }
     };
     el.querySelector('#oldb').onclick = async () => {
       const box = el.querySelector('#old'); box.innerHTML = skel(2);

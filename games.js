@@ -148,7 +148,7 @@
 
   SCREENS['s.learn'] = { title: 'শেখার খেলা', sub: 'সময়ে যোগ-বিয়োগ, শব্দ, বানান, জোড়া, ক্রম', render: async (el) => {
     const st = await me();
-    if (!st) return;
+    if (!st) return el.innerHTML = empty('alert', 'এই পাতাটি এখন তোমার জন্য নয়।');
     if (!GameLogic.isOpen(dhakaHour())) {
       el.innerHTML = empty('moon', 'খেলা রাত ১০টার পর বন্ধ থাকে। কাল আবার খেলো।');
       return;

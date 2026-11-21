@@ -21,7 +21,7 @@
     if (!peerId) {
       const peers = await rpc('chat_classmates').catch(() => []);
       el.innerHTML = peers.map(p => `<div class="card tap" data-go="s.chat:${esc(p.peer_id)}" style="display:flex;gap:12px;align-items:center">${avatar(p.full_name)}<h3>${esc(p.full_name)}</h3>${p.blocked ? '<span class="pill">ব্লক করা</span>' : ''}</div>`).join('')
-        || empty('chat', 'এখনো কোনো বন্ধু চ্যাটের জন্য চালু নেই। অভিভাবকের অনুমতি লাগবে।');
+        || empty('chat', 'এখনো কোনো বন্ধু চ্যাটের জন্য চালু নেই। অভিভাবকের অনুমতি লাগবে। ক্লাসের সময়ে আর রাত ১০টার পরে চ্যাট বন্ধ থাকে।');
       el.querySelectorAll('[data-go]').forEach(bindGo);
       return;
     }

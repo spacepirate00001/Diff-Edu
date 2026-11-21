@@ -335,7 +335,9 @@
     if (!coaching) return toast('আবার লগইন করে চেষ্টা করুন।');
     try {
       await upsert('sender_settings', { coaching_id: coaching, ...patch }, 'coaching_id');
-    } catch {
+    } catch (e) {
+      // 36-legal-signoff.sql refuses silent_mode=false until the legal sign-off is recorded.
+      if (patch.silent_mode === false && /legal sign-off/i.test(e.body || '')) return toast('আইনি সম্মতি (legal sign-off) এখনো নেওয়া হয়নি। তাই খবর লাইভ করা যাবে না।');
       return toast('সংরক্ষণ হয়নি। নেট দেখে আবার চেষ্টা করুন।');
     }
     toast(msg);
@@ -371,9 +373,12 @@
   // Only phrases and stickers exist in chat, so the queue shows the phrase label, never free text.
   const CHAT_REASON = { rude: 'খারাপ কথা', unsafe: 'বিপজ্জনক', personal_info: 'ব্যক্তিগত তথ্য', other: 'অন্য' };
   SCREENS['a.chatreports'] = { title: 'চ্যাট রিপোর্ট', sub: 'রিপোর্ট করা বার্তা', render: async (el) => {
-    const rows = await sel('chat_report_queue', 'select=report_id,reason,reported_at,phrase_label&order=reported_at.desc&limit=100');
+    const rows = await sel('chat_report_queue', 'select=report_id,sender_id,reason,reported_at,phrase_label&order=reported_at.desc&limit=100');
+    // The view has only sender_id; read the names in a second query (embeds do not work through views).
+    const names = {};
+    if (rows.length) (await sel('profiles', `select=id,full_name&id=${inList([...new Set(rows.map(r => r.sender_id))])}`).catch(() => [])).forEach(p => names[p.id] = p.full_name);
     el.innerHTML = `<div class="ctl-hint">শিক্ষার্থী বা অভিভাবক যে বার্তা রিপোর্ট করেছেন, সেগুলো এখানে। দেখে "ঠিক আছে" চাপুন।</div>`
-      + (rows.map(r => `<div class="card coral"><div class="mute small">${fmtDate(r.reported_at)} · ${esc(CHAT_REASON[r.reason] || r.reason)}</div><h3>${esc(r.phrase_label || '—')}</h3><button class="pill good" data-rep="${esc(r.report_id)}" style="margin-top:6px">ঠিক আছে</button></div>`).join('') || empty('alert', 'এখন কোনো রিপোর্ট নেই।'));
+      + (rows.map(r => `<div class="card coral"><div class="mute small">${fmtDate(r.reported_at)} · ${esc(CHAT_REASON[r.reason] || r.reason)}</div><h3>${esc(r.phrase_label || '—')}</h3><div class="mute small">পাঠিয়েছেন: ${esc(names[r.sender_id] || '—')}</div><button class="pill good" data-rep="${esc(r.report_id)}" style="margin-top:6px">ঠিক আছে</button></div>`).join('') || empty('alert', 'এখন কোনো রিপোর্ট নেই।'));
     el.querySelectorAll('[data-rep]').forEach(b => b.onclick = async () => {
       b.disabled = true;
       try { await rpc('resolve_chat_report', { p_report: b.dataset.rep }); toast('ঠিক আছে হিসেবে বন্ধ হয়েছে।'); SCREENS['a.chatreports'].render(el); }
