@@ -1,9 +1,9 @@
 'use strict';
 // Report cards — mirror Reports.kt (rules), SupabaseReportRepository.kt and WeeklyReports.kt.
-// Weekly (Sat–Fri) or model-test series; score = 60% marks + 40% rating; tie → more days present.
-// Guardians/students see published cards (MyReports) and tap "দেখেছি"; staff build, print and (admin) publish.
+// Weekly (Sat–Fri) or model-test series. Score, rank and award are computed in SQL (compute_report_scores);
+// this file only assembles the card lines, saves drafts and shows the result.
+// Guardians/students see published cards (MyReports) and tap "দেখেছি"; staff build drafts, print and (admin) publish.
 (function () {
-  const W_MARKS = 0.6, W_RATING = 0.4;
   const KIND = { weekly: 'সাপ্তাহিক রিপোর্ট কার্ড', series: 'মডেল টেস্ট সিরিজ' };
   const grade = p => p >= 80 ? 'A+' : p >= 70 ? 'A' : p >= 60 ? 'A-' : p >= 50 ? 'B' : p >= 40 ? 'C' : p >= 33 ? 'D' : 'F';
   const rankBn = n => bn(n) + ([1, 5, 7, 8, 9, 10].includes(n) ? 'ম' : [2, 3].includes(n) ? 'য়' : n === 4 ? 'র্থ' : n === 6 ? 'ষ্ঠ' : 'তম');
@@ -12,9 +12,8 @@
   const lastFriday = (iso = dhakaToday()) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() - ((d.getDay() + 2) % 7)); return d.toLocaleDateString('en-CA'); };
   const range = (f, t) => `${fmtDate(f)} – ${fmtDateY(t)}`;
   const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
-  const totalOf = r => +r.behavior + +r.homework + +r.performance;
   const chunks = (a, n) => { const o = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
-  const COLS = 'id,student_id,kind,title,period_from,period_to,class_level,rank,class_size,award,data,published_at,seen_at';
+  const COLS = 'id,student_id,kind,title,period_from,period_to,class_level,rank,class_size,award,data,status,published_at,seen_at';
 
   // ---------- one card (screen + print share the same markup) ----------
   function cardHtml(c, { print = false } = {}) {
@@ -160,56 +159,36 @@
 
   if (typeof T === 'undefined') return; // the rest is for staff only
 
-  // ---------- staff: build, print, publish (ReportsAdminScreen) ----------
-  const RP = { kind: 'weekly', cls: 6, fri: null, from: null, to: null, old: false };
+  // ---------- staff: build drafts, print, publish (ReportsAdminScreen) ----------
+  // Scores, ranks and awards come from SQL (compute_report_scores). The app assembles the card lines
+  // from the marks, saves drafts (save_report_drafts) and shows what the server stored.
+  const RP = { kind: 'weekly', cls: 6, fri: null, from: null, to: null };
   async function loadPeriod(cls, from, to) {
     const studs = T.sortRoster((await T.allStudents()).filter(s => s.class_level === cls));
     const ids = studs.map(s => s.id);
     const exams = await sel('exams', `select=id,title,exam_date,full_marks,subject:subjects(name,name_bn)&class_level=eq.${cls}&exam_date=gte.${from}&exam_date=lte.${to}&order=exam_date&limit=300`);
     const marks = exams.length ? await sel('marks', `select=exam_id,student_id,obtained&exam_id=${inList(exams.map(e => e.id))}&limit=20000`) : [];
     const em = exams.map(e => ({ exam: e, subject: e.subject?.name_bn || e.subject?.name || '', marks: Object.fromEntries(marks.filter(m => m.exam_id === e.id).map(m => [m.student_id, m.obtained == null ? null : +m.obtained])) }));
-    let ratings = [], att = [];
+    let ratings = [];
     for (const part of chunks(ids, 150)) {
-      const [r, a] = await Promise.all([
-        sel('class_ratings', `select=student_id,day,behavior,homework,performance,shift,slot&day=gte.${from}&day=lte.${to}&student_id=${inList(part)}&limit=5000`),
-        sel('attendance', `select=student_id,check_in&date=gte.${from}&date=lte.${to}&student_id=${inList(part)}&limit=5000`),
-      ]);
-      ratings = ratings.concat(r); att = att.concat(a);
+      ratings = ratings.concat(await sel('class_ratings', `select=student_id,behavior,homework,performance&day=gte.${from}&day=lte.${to}&student_id=${inList(part)}&limit=5000`));
     }
-    const attendance = {};
-    att.forEach(a => { const x = attendance[a.student_id] ||= [0, 0]; x[1]++; if (a.check_in) x[0]++; });
-    return { studs, exams: em, ratings, attendance };
+    return { studs, exams: em, ratings };
   }
-  // Same as Reports.kt buildCards.
-  function buildCards(kind, from, to, d, prev) {
-    const score = (m, r) => m != null && r != null ? W_MARKS * m + W_RATING * r * 10 : m != null ? m : r != null ? r * 10 : null;
-    const pct = (exams, sid) => { const full = exams.reduce((s, e) => s + +e.exam.full_marks, 0); return full <= 0 ? null : 100 * exams.reduce((s, e) => s + (e.marks[sid] ?? 0), 0) / full; };
-    const by = (l, k) => l.reduce((m, x) => ((m[x[k]] ||= []).push(x), m), {});
-    const rBy = by(d.ratings, 'student_id'), pBy = by(prev?.ratings || [], 'student_id');
+  // Card lines and names from the marks (data only, no score). Same shape as the rows the server stores.
+  function draftRows(kind, from, to, cls, d, prev) {
+    const rBy = d.ratings.reduce((m, x) => ((m[x.student_id] ||= []).push(x), m), {});
     const prevSub = {}; (prev?.exams || []).forEach(e => { if (!(e.subject in prevSub)) prevSub[e.subject] = e; });
-    const hasPrev = prev && (prev.exams.length || prev.ratings.length);
     const sorted = d.exams.slice().sort((a, b) => (a.exam.exam_date || '').localeCompare(b.exam.exam_date || '') || a.subject.localeCompare(b.subject));
-    const cards = d.studs.map(s => {
-      const rs = rBy[s.id] || [], ps = pBy[s.id] || [];
-      const rating = avg(rs.map(totalOf));
+    return d.studs.map(s => {
+      const rs = rBy[s.id] || [];
       const lines = sorted.map(e => { const p = kind === 'weekly' ? prevSub[e.subject] : null;
         return { s: e.subject || e.exam.title, d: e.exam.exam_date, f: +e.exam.full_marks, o: e.marks[s.id] ?? null, p: p ? p.marks[s.id] ?? null : null, pf: p ? +p.exam.full_marks : null }; });
-      const [present, days] = d.attendance[s.id] || [0, 0];
-      return { student_id: s.id, name: T.nameOf(s), roll: s.roll || '', batch: shiftBn(s.batch?.shift), lines, rating,
-        b: avg(rs.map(r => +r.behavior)), h: avg(rs.map(r => +r.homework)), pe: avg(rs.map(r => +r.performance)), present, days,
-        score: score(pct(d.exams, s.id), rating), prev_score: hasPrev ? score(pct(prev.exams, s.id), avg(ps.map(totalOf))) : null };
+      return { student_id: s.id, kind, title: KIND[kind], period_from: from, period_to: to, class_level: cls,
+        data: { name: T.nameOf(s), roll: s.roll || '', batch: shiftBn(s.batch?.shift), lines,
+          b: avg(rs.map(r => +r.behavior)), h: avg(rs.map(r => +r.homework)), pe: avg(rs.map(r => +r.performance)) } };
     });
-    const r10 = c => Math.round(c.score * 10);
-    const ranked = cards.filter(c => c.score != null).sort((a, b) => r10(b) - r10(a) || b.present - a.present);
-    const rank = {};
-    ranked.forEach((c, i) => { const p = ranked[i - 1]; rank[c.student_id] = p && r10(p) === r10(c) && p.present === c.present ? rank[p.student_id] : i + 1; });
-    let improved = null, gain = 0.5;
-    ranked.forEach(c => { if (rank[c.student_id] !== 1 && c.prev_score != null && c.score - c.prev_score > gain) { gain = c.score - c.prev_score; improved = c.student_id; } });
-    return cards.map(c => ({ ...c, rank: rank[c.student_id] ?? null, class_size: ranked.length, award: rank[c.student_id] === 1 ? 'topper' : c.student_id === improved ? 'improved' : null }))
-      .sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || a.name.localeCompare(b.name));
   }
-  const asCard = (c, kind, from, to, cls) => ({ kind, title: KIND[kind], period_from: from, period_to: to, class_level: cls, rank: c.rank, class_size: c.class_size, award: c.award,
-    data: { name: c.name, roll: c.roll, batch: c.batch, lines: c.lines, rating: c.rating, b: c.b, h: c.h, pe: c.pe, present: c.present, days: c.days, score: c.score, prev_score: c.prev_score } });
 
   SCREENS['a.reports'] = { title: 'রিপোর্ট কার্ড', sub: 'সাপ্তাহিক ও মডেল টেস্ট সিরিজ', render: async (el) => {
     RP.fri ||= lastFriday(); RP.from ||= monthStart(); RP.to ||= dhakaToday();
@@ -220,25 +199,26 @@
       : `<div class="formrow"><div><label>শুরু</label><input type="date" id="rf" value="${RP.from}"></div><div><label>শেষ</label><input type="date" id="rt" value="${RP.to}"></div></div>`;
     h += `<div class="mute small">${range(from, to)} · নিয়ম: নম্বর ৬০% + রেটিং ৪০%</div>`;
     el.innerHTML = h + skel(3);
-    const [d, prev, pub] = await Promise.all([
+    const [d, rows] = await Promise.all([
       loadPeriod(cls, from, to),
-      weekly ? loadPeriod(cls, addDays(from, -7), addDays(to, -7)) : Promise.resolve(null),
       sel('report_cards', `select=${COLS}&class_level=eq.${cls}&kind=eq.${RP.kind}&period_from=eq.${from}&period_to=eq.${to}&limit=500`).catch(() => []),
     ]);
-    const cards = buildCards(RP.kind, from, to, d, prev);
+    const drafts = rows.filter(r => r.status === 'draft'), pubd = rows.filter(r => r.status === 'published');
+    const sorted = rows.slice().sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || (a.data?.name || '').localeCompare(b.data?.name || ''));
     const gaps = d.exams.map(e => [e.subject || e.exam.title, d.studs.filter(s => !(s.id in e.marks)).length]).filter(g => g[1] > 0);
     h += `<div class="card ${gaps.length || !d.exams.length ? 'sun' : 'teal'}">${!d.exams.length ? `এই সময়ে ক্লাস ${bn(cls)} এর কোনো পরীক্ষা পাওয়া যায়নি। কার্ড শুধু রেটিং দিয়ে হবে। পরীক্ষা যোগ করতে: নম্বর ইনপুট।`
-      : `<div>পরীক্ষা ${bn(d.exams.length)} টি: ${esc(d.exams.map(e => e.subject || e.exam.title).join(', '))}</div>${gaps.length ? gaps.map(([s, n]) => `<div>• ${esc(s)}: ${bn(n)} জনের নম্বর এখনো দেওয়া হয়নি</div>`).join('') : '<div>সব নম্বর দেওয়া আছে, কার্ড তৈরি।</div>'}`}</div>`;
-    const canPub = cards.some(c => c.score != null);
-    h += `<button class="btn" id="pall" ${cards.length ? '' : 'disabled'}>ক্লাসে অবস্থানসহ প্রিন্ট করুন (এক পাতায় ২টি)</button>
-      <button class="btn ghost" id="pall2" ${cards.length ? '' : 'disabled'}>ক্লাসে অবস্থান ছাড়া প্রিন্ট করুন (এক পাতায় ২টি)</button>
-      ${isAdmin() ? `<button class="btn sun" id="pub" ${canPub ? '' : 'disabled'}>অভিভাবকদের অ্যাপে প্রকাশ করুন</button>` : ''}`;
-    if (pub.length) { const seen = pub.filter(p => p.seen_at); h += `<div class="card"><h3>অভিভাবক দেখেছেন: ${bn(seen.length)} / ${bn(pub.length)} জন</h3>${pub.length > seen.length ? `<div class="mute small">এখনো দেখেননি: ${esc(pub.filter(p => !p.seen_at).map(p => p.data?.name || '').join(', '))}</div>` : ''}</div>`; }
+      : `<div>পরীক্ষা ${bn(d.exams.length)} টি: ${esc(d.exams.map(e => e.subject || e.exam.title).join(', '))}</div>${gaps.length ? gaps.map(([s, n]) => `<div>• ${esc(s)}: ${bn(n)} জনের নম্বর এখনো দেওয়া হয়নি</div>`).join('') : '<div>সব নম্বর দেওয়া আছে।</div>'}`}</div>`;
+    if (rows.length) h += `<div class="card ${drafts.length ? 'sun' : 'teal'}">${drafts.length ? `খসড়া ${bn(drafts.length)} টি কার্ড, এখনো অভিভাবকদের কাছে যায়নি। দেখে নিয়ে প্রকাশ করুন।` : `সব ${bn(pubd.length)} টি কার্ড প্রকাশিত।`}</div>`;
+    h += `<button class="btn ghost" id="build">${rows.length ? 'খসড়া হালনাগাদ করুন (প্রকাশিত কার্ড বদলাবে না)' : 'খসড়া কার্ড তৈরি করুন'}</button>
+      <button class="btn" id="pall" ${rows.length ? '' : 'disabled'}>ক্লাসে অবস্থানসহ প্রিন্ট করুন (এক পাতায় ২টি)</button>
+      <button class="btn ghost" id="pall2" ${rows.length ? '' : 'disabled'}>ক্লাসে অবস্থান ছাড়া প্রিন্ট করুন (এক পাতায় ২টি)</button>
+      ${isAdmin() ? `<button class="btn sun" id="pub" ${drafts.length ? '' : 'disabled'}>অভিভাবকদের অ্যাপে প্রকাশ করুন</button>` : ''}`;
+    if (pubd.length) { const seen = pubd.filter(p => p.seen_at); h += `<div class="card"><h3>অভিভাবক দেখেছেন: ${bn(seen.length)} / ${bn(pubd.length)} জন</h3>${pubd.length > seen.length ? `<div class="mute small">এখনো দেখেননি: ${esc(pubd.filter(p => !p.seen_at).map(p => p.data?.name || '').join(', '))}</div>` : ''}</div>`; }
     if (isAdmin()) h += '<div id="rem"></div>';
     h += `<button class="btn ghost" id="oldb">আগের প্রকাশিত রিপোর্ট দেখুন (ক্লাস ${bn(cls)})</button><div id="old"></div>`;
-    h += section('ক্লাসে অবস্থান') + (cards.map(c => `<div class="card" style="display:flex;gap:10px;align-items:center"><b style="min-width:42px">${c.rank ? rankBn(c.rank) : '—'}</b><div style="flex:1"><h3>${esc(c.name)}</h3>
-      <div class="mute small">নম্বর ${num(c.lines.reduce((s, l) => s + (l.o || 0), 0))}/${num(c.lines.reduce((s, l) => s + l.f, 0))} · রেটিং ${c.rating == null ? '—' : d1(c.rating)} · উপস্থিত ${bn(c.present)}/${bn(c.days)}</div>
-      ${c.award === 'topper' ? pill('★ ক্লাস টপার', 'sun') : c.award === 'improved' ? pill('↑ সবচেয়ে উন্নতি', 'teal') : ''}</div><b>${d1(c.score)}</b></div>`).join('') || empty('school', 'এই ক্লাসে কোনো শিক্ষার্থী নেই।'));
+    h += section('ক্লাসে অবস্থান') + (sorted.map(c => { const x = c.data || {}, lines = x.lines || []; return `<div class="card" style="display:flex;gap:10px;align-items:center"><b style="min-width:42px">${c.rank ? rankBn(c.rank) : '—'}</b><div style="flex:1"><h3>${esc(x.name || '')}${c.status === 'draft' ? ' <span class="mute small">(খসড়া)</span>' : ''}</h3>
+      <div class="mute small">নম্বর ${num(lines.reduce((s, l) => s + (l.o || 0), 0))}/${num(lines.reduce((s, l) => s + l.f, 0))} · রেটিং ${x.rating == null ? '—' : d1(x.rating)} · উপস্থিত ${bn(x.present || 0)}/${bn(x.days || 0)}</div>
+      ${c.award === 'topper' ? pill('★ ক্লাস টপার', 'sun') : c.award === 'improved' ? pill('↑ সবচেয়ে উন্নতি', 'teal') : ''}</div><b>${x.score == null ? '—' : d1(x.score)}</b></div>`; }).join('') || empty('school', 'এই ক্লাসে কোনো শিক্ষার্থী নেই।'));
     el.innerHTML = h;
     el.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { RP.kind = b.dataset.kind; render(); });
     el.querySelectorAll('[data-cls]').forEach(b => b.onclick = () => { RP.cls = +b.dataset.cls; render(); });
@@ -246,20 +226,34 @@
     const rf = el.querySelector('#rf'), rt = el.querySelector('#rt');
     if (rf) rf.onchange = () => { if (rf.value) { RP.from = rf.value; render(); } };
     if (rt) rt.onchange = () => { if (rt.value) { RP.to = rt.value; render(); } };
-    el.querySelector('#pall').onclick = () => printCards(cards.map(c => asCard(c, RP.kind, from, to, cls)), 'রিপোর্ট কার্ড · ক্লাস ' + bn(cls));
-    el.querySelector('#pall2').onclick = () => printCards(cards.map(c => asCard(c, RP.kind, from, to, cls)), 'রিপোর্ট কার্ড · ক্লাস ' + bn(cls), true);
+    const bb = el.querySelector('#build');
+    bb.onclick = async () => {
+      bb.disabled = true; bb.textContent = 'তৈরি হচ্ছে…';
+      try {
+        const [cur, prev] = await Promise.all([loadPeriod(cls, from, to), weekly ? loadPeriod(cls, addDays(from, -7), addDays(to, -7)) : null]);
+        await rpc('save_report_drafts', { p_rows: draftRows(RP.kind, from, to, cls, cur, prev) });
+        // Ranks and scores are computed by the server; only the admin may run it.
+        if (isAdmin()) {
+          const one = (await sel('report_cards', `select=id&class_level=eq.${cls}&kind=eq.${RP.kind}&period_from=eq.${from}&period_to=eq.${to}&limit=1`))[0];
+          if (one) await rpc('compute_report_scores', { p_report_id: one.id });
+        }
+        toast('খসড়া তৈরি হয়েছে। প্রকাশের আগে দেখে নিন।'); render();
+      } catch { toast('খসড়া তৈরি করা যায়নি। আবার চেষ্টা করুন।'); bb.disabled = false; bb.textContent = rows.length ? 'খসড়া হালনাগাদ করুন (প্রকাশিত কার্ড বদলাবে না)' : 'খসড়া কার্ড তৈরি করুন'; }
+    };
+    el.querySelector('#pall').onclick = () => printCards(sorted, 'রিপোর্ট কার্ড · ক্লাস ' + bn(cls));
+    el.querySelector('#pall2').onclick = () => printCards(sorted, 'রিপোর্ট কার্ড · ক্লাস ' + bn(cls), true);
     const pb = el.querySelector('#pub');
     if (pb) pb.onclick = async () => {
-      const rows = cards.filter(c => c.score != null || c.lines.length).map(c => ({ coaching_id: S.me.coaching_id, student_id: c.student_id, ...asCard(c, RP.kind, from, to, cls), published_by: S.uid }));
       pb.disabled = true; pb.textContent = 'প্রকাশ হচ্ছে…';
       try {
-        await raw('POST', '/rest/v1/report_cards?on_conflict=student_id,kind,period_from,period_to&select=id', rows, { prefer: 'return=representation,resolution=merge-duplicates' });
+        await raw('PATCH', `/rest/v1/report_cards?class_level=eq.${cls}&kind=eq.${RP.kind}&period_from=eq.${from}&period_to=eq.${to}&status=eq.draft`,
+          { status: 'published', published_by: S.uid, published_at: new Date().toISOString() }, { prefer: 'return=minimal' });
         toast('প্রকাশ হয়ে গেছে। অভিভাবকরা কার্ড দেখে "দেখেছি" চাপবেন।'); render();
       } catch { toast('প্রকাশ করা যায়নি। আবার চেষ্টা করুন।'); pb.disabled = false; pb.textContent = 'অভিভাবকদের অ্যাপে প্রকাশ করুন'; }
     };
     el.querySelector('#oldb').onclick = async () => {
       const box = el.querySelector('#old'); box.innerHTML = skel(2);
-      const rows = await sel('report_cards', `select=kind,period_from,period_to,seen_at&class_level=eq.${cls}&order=period_to.desc&limit=5000`).catch(() => []);
+      const rows = await sel('report_cards', `select=kind,period_from,period_to,seen_at&class_level=eq.${cls}&status=eq.published&order=period_to.desc&limit=5000`).catch(() => []);
       const per = {}; rows.forEach(r => { const k = `${r.kind}|${r.period_from}|${r.period_to}`; const x = per[k] ||= { kind: r.kind, from: r.period_from, to: r.period_to, n: 0, seen: 0 }; x.n++; if (r.seen_at) x.seen++; });
       const list = Object.values(per);
       box.innerHTML = section(`আগের প্রকাশিত রিপোর্ট · ক্লাস ${bn(cls)}`) + (list.map(p => `<div class="card"><div class="mute small">${KIND[p.kind]} · দেখেছেন ${bn(p.seen)}/${bn(p.n)}</div><h3>${range(p.from, p.to)}</h3>
@@ -267,7 +261,7 @@
       box.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { const [k, f, t] = b.dataset.open.split('|'); RP.kind = k; if (k === 'weekly') RP.fri = t; else { RP.from = f; RP.to = t; } render(); });
       box.querySelectorAll('[data-reprint],[data-reprint2]').forEach(b => b.onclick = async () => {
         const [k, f, t] = (b.dataset.reprint || b.dataset.reprint2).split('|');
-        const cs = await sel('report_cards', `select=${COLS}&class_level=eq.${cls}&kind=eq.${k}&period_from=eq.${f}&period_to=eq.${t}&limit=500`).catch(() => []);
+        const cs = await sel('report_cards', `select=${COLS}&class_level=eq.${cls}&kind=eq.${k}&period_from=eq.${f}&period_to=eq.${t}&status=eq.published&limit=500`).catch(() => []);
         printCards(cs.sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9)), 'রিপোর্ট কার্ড · ক্লাস ' + bn(cls), 'reprint2' in b.dataset);
       });
     };
