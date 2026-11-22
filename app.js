@@ -680,7 +680,7 @@ const back44 = `<button class="dback" data-back aria-label="ফিরে যা�
 // No role picker: the account itself decides where the user goes.
 SCREENS.welcome = { dark: true, home: true, render: async (el) => {
   el.innerHTML = `<div class="welcome wb"><div class="wb-top"><img class="wlogo" src="logo.svg" alt="ডিফ এডু">
-    <div class="wordmark">Different Academic<br>&amp; Exam Care</div><div class="since">SINCE 2008</div>
+    <div class="wordmark">Different Academic<br>&amp; Exam Care</div><div class="since">SINCE 2009</div>
     <div class="tag">Every child is Different.</div></div>
     <div class="wb-bottom"><button class="wb-login" data-go="login">লগইন করুন&nbsp;&nbsp;→</button>
     <button class="wb-adm" data-go="admission">নতুন ভর্তির আবেদন</button>
