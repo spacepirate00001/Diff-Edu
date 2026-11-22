@@ -724,8 +724,10 @@ SCREENS.admission = { title: 'ভর্তি তথ্য', sub: 'Diff Edu · �
       <div class="row"><span>শিফট</span><b>সকাল · বিকেল · রাত</b></div><div class="row"><span>অফিস</span><a href="tel:01711678818">${bn('01711-678818')}</a></div></div>
     <div class="card"><h2>ভর্তির আগ্রহ জানান</h2><div class="mute">ফর্ম পূরণ করলে অফিস থেকে আপনাকে ফোন করা হবে।</div>
       <form id="af"><label>শিক্ষার্থীর নাম</label><input id="an" required maxlength="80">
+      <label>অভিভাবকের নাম</label><input id="ag" required maxlength="80">
       <label>শ্রেণি</label><select id="ac">${CLASSES.map(c => `<option value="${c}">শ্রেণি ${bn(c)}</option>`).join('')}</select>
       <label>অভিভাবকের মোবাইল নম্বর</label><input id="ap" inputmode="tel" required maxlength="14" placeholder="01XXXXXXXXX">
+      <label>পছন্দের শিফট (ঐচ্ছিক)</label><select id="as"><option value="">ঠিক করিনি</option><option value="morning">সকাল</option><option value="afternoon">বিকেল</option><option value="night">রাত</option></select>
       <label>বার্তা (ঐচ্ছিক)</label><textarea id="am" maxlength="500"></textarea>
       <div class="err" id="aerr"></div><button class="btn" id="asend">পাঠান</button></form></div>`;
   el.querySelector('#af').onsubmit = async ev => {
@@ -734,7 +736,7 @@ SCREENS.admission = { title: 'ভর্তি তথ্য', sub: 'Diff Edu · �
     if (!/^01\d{9}$/.test(phone)) { el.querySelector('#aerr').textContent = 'সঠিক মোবাইল নম্বর দিন (০১ দিয়ে শুরু, ১১ সংখ্যা)।'; return; }
     const b = el.querySelector('#asend'); b.disabled = true; b.textContent = 'পাঠানো হচ্ছে…';
     try {
-      await raw('POST', '/rest/v1/rpc/submit_admission_inquiry', { p_slug: CFG.slug, p_student_name: el.querySelector('#an').value.trim(), p_class_level: +el.querySelector('#ac').value, p_phone: phone, p_message: el.querySelector('#am').value.trim() || null }, { auth: false });
+      await raw('POST', '/rest/v1/rpc/submit_admission_inquiry', { p_slug: CFG.slug, p_child_name: el.querySelector('#an').value.trim(), p_class_level: +el.querySelector('#ac').value, p_guardian_name: el.querySelector('#ag').value.trim(), p_phone: phone, p_preferred_shift: el.querySelector('#as').value || null, p_note: el.querySelector('#am').value.trim() || null }, { auth: false });
       el.innerHTML = `<div class="card good">${empty('party', 'ধন্যবাদ! আপনার তথ্য পাওয়া গেছে। অফিস থেকে শীঘ্রই ফোন করা হবে।')}</div>`;
     } catch (e) {
       el.querySelector('#aerr').textContent = e.status === 400 || /limit|too many/i.test(e.body || '') ? 'আজ এই নম্বর থেকে অনেকবার পাঠানো হয়েছে। পরে চেষ্টা করুন বা অফিসে ফোন করুন।' : 'পাঠানো যায়নি। নেট দেখে আবার পাঠান।';
