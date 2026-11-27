@@ -1,0 +1,43 @@
+/* Motion layer: short, light moves that only use opacity and transform (cheap on cheap phones).
+   Everything is inside prefers-reduced-motion: no-preference, so people who switch motion off see none. */
+@media (prefers-reduced-motion: no-preference) {
+  /* A new page slides up a little and fades in; its first children follow one after another.
+     shell.show() adds .is-entering for 600ms only, so a refresh of the same page never plays it again. */
+  .page.is-entering { animation: mo-page 240ms var(--de-ease) both; }
+  .page.is-entering > * { animation: mo-rise 320ms var(--de-ease) both; }
+  .page.is-entering > :nth-child(2) { animation-delay: 40ms; }
+  .page.is-entering > :nth-child(3) { animation-delay: 80ms; }
+  .page.is-entering > :nth-child(4) { animation-delay: 120ms; }
+  .page.is-entering > :nth-child(5) { animation-delay: 160ms; }
+  .page.is-entering > :nth-child(n+6) { animation-delay: 200ms; }
+  @keyframes mo-page { from { opacity: 0; } }
+  @keyframes mo-rise { from { opacity: 0; transform: translateY(12px); } }
+
+  /* Sheets and dialogs: the scrim fades, a dialog pops in. */
+  .de-sheet-scrim { transition: opacity 200ms var(--de-ease); }
+  .de-dialog { animation: mo-pop 220ms var(--de-ease-spring) both; }
+  @keyframes mo-pop { from { opacity: 0; transform: scale(0.92); } }
+
+  /* Everything tappable answers the finger at once, and lets go smoothly. */
+  .de-btn, .de-row, .de-chip, .de-bottomnav__item, .de-notice, .de-pinpad__key { transition: transform var(--de-t-press) var(--de-ease), background-color var(--de-t-press) var(--de-ease), opacity var(--de-t-press) var(--de-ease); }
+  a.de-row:active, button.de-row:active, .de-chip:active { transform: scale(0.98); }
+
+  /* The current tab icon hops once when its tab opens. */
+  .de-bottomnav__item.is-on .de-icon { animation: mo-tab 320ms var(--de-ease-spring); }
+  @keyframes mo-tab { 40% { transform: translateY(-3px) scale(1.12); } }
+
+  /* Skeleton: a soft light sweeps across instead of a plain pulse. */
+  .de-skeleton { position: relative; overflow: hidden; animation: none; }
+  .de-skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--de-raised) 70%, transparent), transparent); animation: mo-shimmer 1.3s ease-in-out infinite; }
+  @keyframes mo-shimmer { to { transform: translateX(100%); } }
+
+  /* The splash leaves softly. */
+  .splash.is-leaving { opacity: 0; transition: opacity 180ms ease-out; }
+}
+
+/* Plain rules that matter with or without motion. */
+.de-btn[disabled], .de-btn.is-disabled { opacity: 0.55; cursor: not-allowed; }
+.de-btn[aria-busy="true"] { cursor: progress; }
+.page { min-height: 0; }
+img, svg { max-width: 100%; }
+img:not([width]):not([height]):not([class]) { height: auto; }

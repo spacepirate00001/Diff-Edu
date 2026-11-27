@@ -38,7 +38,9 @@ export function createShell(root, ctx, { fakeUpdate = false } = {}) {
       page = result; tabId = tab;
       top.replaceChildren();
       if (result.chrome !== 'sky') top.append(appbar({ title, back, onBack: ctx.back, onSearch: ctx.openSearch, onFeedback: () => import('../features/feedback/feedback.js').then(m => m.openFeedback(title)), onBell: ctx.openInbox, unread: ctx.unread() }));
-      main.replaceChildren(h('div', { class: result.chrome === 'sky' ? 'page page--sky' : 'page' }, result.node));
+      const pg = h('div', { class: (result.chrome === 'sky' ? 'page page--sky' : 'page') + ' is-entering' }, result.node);
+      main.replaceChildren(pg);
+      setTimeout(() => pg.classList.remove('is-entering'), 600);   // the entrance plays once (ui/motion.css)
       main.scrollTop = 0;
       navSlot.replaceChildren(bottomNav(ctx.me.role, tab, ctx.goTab, ['guardian', 'teacher'].includes(ctx.me.role) ? { inbox: ctx.unread() } : {}));
       result.onMount?.();
