@@ -1,85 +1,113 @@
-// More learning games (70-more-games.sql). Every game here is a short round of questions with big tap targets, in Bangla.
-// Content is small and checked by hand; add lines to the lists below to grow a game. Loaded only with games.js.
+// The tap-and-think games: চটজলদি (all the quick questions in one race), ম্যাথ রেস (on-screen number pad), জোড়া কার্ড, অক্ষর সাজাও.
+// Each game: run(root, done, rnd, { cls }) and done({ correct, total, seconds }) when the round ends. The server only sees correct / total / seconds,
+// so combos and hearts here are for the feel; points stay 10 per right answer (+20 when everything is right). Loaded only with games.js.
 import { h } from '../../ui/dom.js';
 import { bn } from '../../core/bn.js';
 import { GameLogic } from './logic.js';
+import { fx, makeHud } from './fx.js';
+import { quickQ, mathQ, EASY_WORDS, HARD_WORDS, PICS, SCRAMBLE } from './questions.js';
 
-const TRUE_FALSE = [
-  ['বাংলাদেশের রাজধানী ঢাকা।', true], ['সূর্য ওঠে পশ্চিম দিকে।', false], ['এক সপ্তাহে সাত দিন।', true], ['মাছ ফুসফুস দিয়ে শ্বাস নেয়।', false],
-  ['পানি ফোটে ১০০ ডিগ্রি সেলসিয়াসে।', true], ['আমাদের জাতীয় ফুল শাপলা।', true], ['রয়েল বেঙ্গল টাইগার আমাদের জাতীয় পশু।', true], ['১২-এর অর্ধেক ৮।', false],
-  ['পৃথিবী সূর্যের চারদিকে ঘোরে।', true], ['হৃৎপিণ্ড শরীরে রক্ত পাঠায়।', true], ['মাকড়সার ছয়টা পা।', false], ['আমাদের স্বাধীনতা দিবস ২৬ মার্চ।', true],
-  ['শহীদ দিবস ও আন্তর্জাতিক মাতৃভাষা দিবস ২১ ফেব্রুয়ারি।', true], ['বিজয় দিবস ১৬ ডিসেম্বর।', true], ['গাছ দিনের বেলা কার্বন ডাই-অক্সাইড নেয়।', true],
-  ['৯ × ৬ = ৫৬।', false], ['৭ × ৮ = ৫৬।', true], ['চাঁদ নিজের আলোয় জ্বলে।', false], ['তিমি একটা মাছ।', false], ['ত্রিভুজের তিনটা বাহু।', true],
-  ['আমাদের জাতীয় পাখি দোয়েল।', true], ['আমাদের জাতীয় মাছ ইলিশ।', true], ['শিলাইদহের কুঠিবাড়ি কুষ্টিয়া জেলায়।', true], ['পদ্মা, মেঘনা আর যমুনা আমাদের নদী।', true],
-  ['১০০ সেন্টিমিটারে ১ মিটার।', true], ['এক ঘণ্টায় ১০০ মিনিট।', false], ['বাদুড় একটা পাখি।', false], ['সুন্দরবন আমাদের দেশে।', true],
-];
-// The first word is the odd one out; the rest are the group (three are picked each round).
-const ODD = [
-  ['গাজর', 'আম', 'জাম', 'কাঁঠাল', 'লিচু'], ['রুই', 'দোয়েল', 'কাক', 'চড়ুই', 'ময়না'], ['কলকাতা', 'ঢাকা', 'খুলনা', 'রাজশাহী', 'সিলেট'],
-  ['৭', '২', '৪', '১০', '১২'], ['বাঘ', 'গরু', 'ছাগল', 'ভেড়া', 'হাঁস'], ['বৃত্ত', 'লাল', 'নীল', 'সবুজ', 'হলুদ'], ['চেয়ার', 'কলম', 'পেন্সিল', 'রাবার', 'স্কেল'],
-  ['হিমালয়', 'পদ্মা', 'মেঘনা', 'যমুনা', 'কর্ণফুলী'], ['কিলোমিটার', 'ত্রিভুজ', 'বর্গ', 'আয়তক্ষেত্র', 'বৃত্ত'], ['ক্রিকেট', 'ইংরেজি', 'বাংলা', 'গণিত', 'বিজ্ঞান'],
-  ['বই', 'কাঁচি', 'ছুরি', 'কুঠার', 'করাত'], ['সোমবার', 'শীত', 'গ্রীষ্ম', 'বর্ষা', 'বসন্ত'], ['সাবান', 'ডিম', 'দুধ', 'ভাত', 'রুটি'], ['কাক', 'রুই', 'ইলিশ', 'কই', 'শোল'],
-  ['৯', '৬', '৮', '১২', '১৪'], ['কুমির', 'দোয়েল', 'শালিক', 'ময়না', 'টিয়া'],
-];
-// Bangla proverbs: [text with ____, the missing word, wrong words].
-const PROVERBS = [
-  ['অতি লোভে ____ নষ্ট।', 'তাঁতি', ['চাষি', 'মাঝি', 'ধোপা']], ['ঠেলার নাম ____।', 'বাবাজি', ['ভাইজান', 'মিয়াজি', 'দাদাজি']], ['যত গর্জে তত ____ না।', 'বর্ষে', ['হাসে', 'চলে', 'ভাসে']],
-  ['দশের লাঠি ____ বোঝা।', 'একের', ['দুইয়ের', 'সবার', 'নিজের']], ['নাচতে না জানলে ____ বাঁকা।', 'উঠান', ['মঞ্চ', 'পা', 'ঘর']], ['সবুরে ____ ফলে।', 'মেওয়া', ['আম', 'ধান', 'কলা']],
-  ['যেমন কর্ম তেমন ____।', 'ফল', ['ভাত', 'বই', 'মাছ']], ['স্বভাব যায় না ____।', 'মলে', ['চলে', 'বলে', 'ঢলে']], ['আপনি বাঁচলে ____ নাম।', 'বাপের', ['মায়ের', 'দাদার', 'গ্রামের']],
-  ['চোরের মার বড় ____।', 'গলা', ['হাত', 'পেট', 'পা']], ['গাছে কাঁঠাল ____ তেল।', 'গোঁফে', ['হাতে', 'মাথায়', 'পায়ে']], ['এক হাতে ____ বাজে না।', 'তালি', ['ঢোল', 'বাঁশি', 'ঘণ্টা']],
-  ['ইচ্ছা থাকলে ____ হয়।', 'উপায়', ['টাকা', 'সময়', 'বন্ধু']], ['লেখাপড়া করে যে, ____ চড়ে সে।', 'গাড়িঘোড়া', ['নৌকা', 'গাছে', 'পাহাড়ে']], ['উঠন্ত মূলো ____ চেনা যায়।', 'পত্তনেই', ['রাতেই', 'দামেই', 'হাটেই']],
-];
-const SCRAMBLE = [['বিদ্যালয়', 'school'], ['বন্ধু', 'friend'], ['আপেল', 'apple'], ['জল', 'water'], ['আম', 'mango'], ['ফুল', 'flower'], ['শিক্ষক', 'teacher'], ['বাগান', 'garden'], ['জানালা', 'window'], ['খরগোশ', 'rabbit'], ['কলম', 'pencil'], ['মেঘ', 'cloud']];
-const PICS = [['🐘', 'হাতি'], ['🐅', 'বাঘ'], ['🐟', 'মাছ'], ['🌳', 'গাছ'], ['🍌', 'কলা'], ['🚲', 'সাইকেল'], ['🏠', 'বাড়ি'], ['⭐', 'তারা'], ['🌙', 'চাঁদ'], ['☀️', 'সূর্য'], ['🐓', 'মুরগি'], ['🐄', 'গরু'], ['🚌', 'বাস'], ['🐦', 'পাখি'], ['🍎', 'আপেল'], ['📖', 'বই']];
+const sub = text => h('p', { class: 'de-row__sub st-center', text });
+const secs = t0 => GameLogic.clampSeconds(Date.now() - t0);
 
-const sub = text => h('p', { class: 'de-row__sub', text });
-// One round of multiple-choice questions. make(rnd) -> { head, big, hint, options: [text], right: text }. The right answer lights up for a moment after each tap.
-function quiz(rounds, make, label) {
-  return (root, done, rnd = Math.random) => {
-    const t0 = Date.now(); let i = 0, correct = 0, timer;
-    const qs = Array.from({ length: rounds }, () => make(rnd));
-    const step = () => {
-      const q = qs[i]; let locked = false;
-      const buttons = q.options.map(o => h('button', { class: 'st-opt', type: 'button', onclick: () => {
-        if (locked) return; locked = true;
-        const ok = o === q.right; if (ok) correct++;
-        buttons.forEach(b => { if (b.dataset.v === q.right) b.classList.add('is-right'); else if (b === buttons[q.options.indexOf(o)]) b.classList.add('is-wrong'); });
-        timer = setTimeout(() => { i++; if (i < rounds) step(); else done({ correct, total: rounds, seconds: GameLogic.clampSeconds(Date.now() - t0) }); }, 650);
-      } }, h('span', { text: q.label ? q.label(o) : o })));
-      buttons.forEach((b, k) => { b.dataset.v = q.options[k]; });
-      root.replaceChildren(sub(bn(`${i + 1}/${rounds}`)), h('section', { class: 'de-card st-q', 'aria-label': label }, q.hint ? sub(q.hint) : null, h('div', { class: 'st-big', text: q.big }), h('div', { class: 'st-opts' }, ...buttons)));
-    };
-    step();
-    return () => clearTimeout(timer);
+// ---- চটজলদি: every kind of quick question, mixed. Time runs down; right answers add time, wrong ones cost time and a heart ----
+const QUICK_START = 60, QUICK_CAP = 90, HEARTS = 3;
+function quickFire(root, done, rnd = Math.random, { cls = 5 } = {}) {
+  const t0 = Date.now(), seen = new Set(), hud = makeHud({ hearts: HEARTS, maxTime: QUICK_CAP }), box = h('div', { class: 'gm-box' });
+  let left = QUICK_START, hearts = HEARTS, right = 0, wrong = 0, combo = 0, locked = false, over = false, next, last = Date.now();
+  const show = () => hud.set({ time: left, text: bn(`${Math.ceil(left)} সেকেন্ড · ${right} সঠিক`), hearts, combo });
+  const end = () => { if (over) return; over = true; clearInterval(tick); clearTimeout(next); fx.end(); done({ correct: right, total: Math.max(1, right + wrong), seconds: secs(t0) }); };
+  const ask = () => {
+    const q = quickQ(rnd, cls, right, seen); locked = false;
+    const buttons = q.options.map(o => { const b = h('button', { class: 'st-opt', type: 'button' }, h('span', { text: o })); b.dataset.v = o; return b; });
+    buttons.forEach(b => b.addEventListener('click', () => {
+      if (locked || over) return; locked = true;
+      const ok = b.dataset.v === q.right;
+      buttons.forEach(x => { if (x.dataset.v === q.right) x.classList.add('is-right'); else if (x === b) x.classList.add('is-wrong'); });
+      if (ok) { right++; combo++; left = Math.min(QUICK_CAP, left + (combo >= 3 ? 4 : 3)); fx.ok(combo); }
+      else { wrong++; combo = 0; hearts--; left = Math.max(0, left - 5); fx.bad(); box.classList.remove('gm-shake'); void box.offsetWidth; box.classList.add('gm-shake'); }
+      show();
+      next = setTimeout(() => { if (hearts <= 0 || left <= 0) end(); else ask(); }, ok ? 420 : 950);
+    }));
+    box.replaceChildren(h('section', { class: 'de-card st-q' }, sub(q.hint), h('div', { class: 'st-big', text: q.big }), h('div', { class: 'st-opts' }, ...buttons)));
   };
+  const tick = setInterval(() => { const now = Date.now(); if (!locked) left -= (now - last) / 1000; last = now; if (left <= 0 && !locked) end(); else show(); }, 100);
+  root.replaceChildren(hud.el, box, h('button', { class: 'de-btn de-btn--text', type: 'button', onclick: end, text: 'এখানেই শেষ করি' }));
+  ask(); show();
+  return () => { over = true; clearInterval(tick); clearTimeout(next); };
 }
-const pick = (list, rnd) => list[Math.floor(rnd() * list.length)];
 
-export const MORE_GAMES = {
-  true_false: quiz(10, rnd => { const [big, right] = pick(TRUE_FALSE, rnd); return { hint: 'সত্যি না মিথ্যা?', big, options: ['সত্যি', 'মিথ্যা'], right: right ? 'সত্যি' : 'মিথ্যা' }; }, 'সত্যি না মিথ্যা'),
-  odd_one_out: quiz(6, rnd => { const [odd, ...group] = pick(ODD, rnd); return { hint: 'কোনটা দলে মেলে না?', big: '🤔', options: GameLogic.shuffle([odd, ...GameLogic.shuffle(group, rnd).slice(0, 3)], rnd), right: odd }; }, 'বেমানান কোনটা'),
-  number_pattern: quiz(6, rnd => { const q = GameLogic.patternQuestion(rnd); return { hint: 'পরের সংখ্যাটা কত?', big: bn(q.shown.join(', ') + ', ?'), options: q.options, right: q.ans, label: bn }; }, 'সংখ্যার ধাঁধা'),
-  proverb_fill: quiz(6, rnd => { const [text, right, bad] = pick(PROVERBS, rnd); return { hint: 'ফাঁকা জায়গায় কী বসবে?', big: text, options: GameLogic.shuffle([right, ...bad], rnd), right }; }, 'প্রবাদ পূরণ'),
-  emoji_guess: quiz(8, rnd => { const [e, right] = pick(PICS, rnd); return { hint: 'এটা কী?', big: e, options: GameLogic.shuffle([right, ...GameLogic.shuffle(PICS.map(p => p[1]).filter(x => x !== right), rnd).slice(0, 3)], rnd), right }; }, 'ছবি দেখে বলো'),
-  // Tap the letters in the right order. Wrong tries are free; the word counts as right only if the first try was right.
-  letter_scramble(root, done, rnd = Math.random) {
-    const words = GameLogic.shuffle(SCRAMBLE, rnd).slice(0, 5), t0 = Date.now(); let i = 0, correct = 0, tapped = [], tries = 0, tiles = [];
-    const load = () => { const w = words[i][1]; tiles = GameLogic.shuffle([...w], rnd); if (tiles.join('') === w) tiles.reverse(); tapped = []; tries = 0; };
-    const next = () => { i++; if (i < words.length) { load(); draw(); } else done({ correct, total: words.length, seconds: GameLogic.clampSeconds(Date.now() - t0) }); };
-    const draw = () => {
-      const [clue, w] = words[i], built = tapped.map(k => tiles[k]).join(''), full = tapped.length === w.length, right = full && built === w;
-      root.replaceChildren(sub(bn(`${i + 1}/${words.length}`)), h('section', { class: 'de-card st-q' }, sub('বাংলা অর্থ দেখে ইংরেজি শব্দটা বানাও'), h('div', { class: 'st-big', text: clue }),
-        h('div', { class: 'st-big', 'aria-live': 'polite', text: built || '…' }),
-        h('div', { class: 'st-opts' }, ...tiles.map((t, k) => h('button', { class: 'st-opt' + (tapped.includes(k) ? ' is-right' : ''), type: 'button', 'aria-disabled': tapped.includes(k) ? 'true' : null, onclick: () => {
-          if (tapped.includes(k) || tapped.length >= w.length) return;
-          tapped.push(k);
-          if (tapped.length < w.length) return draw();
-          draw();
-          if (tapped.map(x => tiles[x]).join('') === w) { if (tries === 0) correct++; setTimeout(next, 600); } else { tries++; setTimeout(() => { tapped = []; draw(); }, 700); }
-        } }, h('span', { text: t })))),
-        right ? sub('বাহ, ঠিক হয়েছে!') : full ? sub('আরেকটু ভেবে দেখো, আবার সাজাও।') : null,
-        h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: () => { tapped = []; draw(); }, text: 'মুছে আবার সাজাই' })));
-    };
-    load(); draw();
-  },
-};
+// ---- ম্যাথ রেস: 60 seconds, a big number pad (no phone keyboard covering the screen), the answer goes in by itself when it has enough digits ----
+function mathRace(root, done, rnd = Math.random, { cls = 5 } = {}) {
+  const t0 = Date.now(), hud = makeHud({ maxTime: 60 }), qEl = h('div', { class: 'st-big', 'aria-live': 'polite' }), ansEl = h('div', { class: 'gm-ans', 'aria-live': 'off' }), card = h('section', { class: 'de-card st-q' }, qEl, ansEl);
+  let left = 60, right = 0, wrong = 0, combo = 0, q, buf = '', over = false, last = Date.now();
+  const show = () => hud.set({ time: left, text: bn(`${Math.ceil(left)} সেকেন্ড · ${right} সঠিক`), combo });
+  const end = () => { if (over) return; over = true; clearInterval(tick); document.removeEventListener('keydown', onKey); fx.end(); done({ correct: right, total: Math.max(1, right + wrong), seconds: secs(t0) }); };
+  const ask = () => { q = mathQ(rnd, cls, right); buf = ''; qEl.textContent = q.prompt; ansEl.textContent = '…'; };
+  const submit = () => {
+    if (over || !buf) return;
+    if (+buf === q.ans) { right++; combo++; fx.ok(combo); } else { wrong++; combo = 0; fx.bad(); card.classList.remove('gm-shake'); void card.offsetWidth; card.classList.add('gm-shake'); }
+    show(); ask();
+  };
+  const press = d => { if (over) return; buf += d; ansEl.textContent = bn(buf); if (buf.length >= String(q.ans).length) submit(); };
+  const back = () => { buf = buf.slice(0, -1); ansEl.textContent = buf ? bn(buf) : '…'; };
+  const onKey = e => { if (/^[0-9]$/.test(e.key)) press(e.key); else if (e.key === 'Backspace') back(); else if (e.key === 'Enter') submit(); };
+  const key = (label, fn, aria) => h('button', { class: 'gm-key', type: 'button', 'aria-label': aria || null, onclick: fn, text: label });
+  const pad = h('div', { class: 'gm-pad' }, ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => key(bn(d), () => press(String(d)))), key('⌫', back, 'মোছো'), key(bn(0), () => press('0')), key('✓', submit, 'উত্তর দাও'));
+  document.addEventListener('keydown', onKey);
+  const tick = setInterval(() => { const now = Date.now(); left -= (now - last) / 1000; last = now; if (left <= 0) end(); else show(); }, 100);
+  root.replaceChildren(hud.el, card, pad, h('button', { class: 'de-btn de-btn--text', type: 'button', onclick: end, text: 'এখানেই শেষ করি' }));
+  ask(); show();
+  return () => { over = true; clearInterval(tick); document.removeEventListener('keydown', onKey); };
+}
+
+// ---- জোড়া কার্ড: more pairs in higher classes. Little ones match a picture with its Bangla name; older ones match a Bangla word with its English ----
+function memoryPairs(root, done, rnd = Math.random, { cls = 5 } = {}) {
+  const n = cls <= 3 ? 4 : cls <= 6 ? 6 : 8, t0 = Date.now(), hud = makeHud();
+  const pool = cls <= 3 ? PICS : cls <= 6 ? EASY_WORDS : [...EASY_WORDS, ...HARD_WORDS];
+  const chosen = GameLogic.shuffle(pool, rnd).slice(0, n);
+  const deck = GameLogic.shuffle(chosen.flatMap(([a, b], id) => [{ id, text: a }, { id, text: b }]), rnd);
+  let open = [], gone = new Set(), busy = false, misses = 0, timer;
+  const info = () => hud.set({ text: bn(`${gone.size / 2}/${n} জোড়া · ${misses} ভুল`) });
+  const cards = deck.map((c, i) => h('button', { class: 'st-card' + (c.text.length > 2 ? ' st-card--w' : ''), type: 'button', 'aria-label': `কার্ড ${bn(i + 1)}`, text: '?', onclick: () => flip(i) }));
+  const refresh = () => cards.forEach((b, i) => { const up = open.includes(i) || gone.has(i); b.textContent = up ? deck[i].text : '?'; b.classList.toggle('is-gone', gone.has(i)); b.setAttribute('aria-disabled', gone.has(i) ? 'true' : 'false'); });
+  function flip(i) {
+    if (busy || gone.has(i) || open.includes(i)) return;
+    open.push(i); fx.tick(); refresh();
+    if (open.length < 2) return;
+    const [a, b] = open;
+    if (deck[a].id === deck[b].id) {
+      gone.add(a); gone.add(b); open = []; fx.ok(gone.size / 2); refresh(); info();
+      if (gone.size === deck.length) { const allowed = Math.ceil(n / 2); done({ correct: Math.max(1, n - Math.max(0, Math.floor((misses - allowed + 1) / 2))), total: n, seconds: secs(t0) }); }
+    } else { misses++; busy = true; fx.bad(); info(); timer = setTimeout(() => { open = []; busy = false; refresh(); }, 900); }
+  }
+  root.replaceChildren(hud.el, sub('দুটো করে কার্ড উল্টে একই জোড়া মেলাও। কম ভুল করলে পুরো পয়েন্ট!'), h('div', { class: 'st-cards' }, ...cards));
+  info();
+  return () => clearTimeout(timer);
+}
+
+// ---- অক্ষর সাজাও: six words, a hint button. The word counts as right only if it was built without a hint and right the first time ----
+function letterScramble(root, done, rnd = Math.random, { cls = 5 } = {}) {
+  const pool = cls <= 4 ? SCRAMBLE.filter(([, en]) => en.length <= 5) : SCRAMBLE, words = GameLogic.shuffle(pool, rnd).slice(0, 6), t0 = Date.now(), hud = makeHud();
+  let i = 0, correct = 0, combo = 0, tapped = [], tries = 0, tiles = [], timer;
+  const load = () => { const w = words[i][1]; tiles = GameLogic.shuffle([...w], rnd); if (tiles.join('') === w) tiles.reverse(); tapped = []; tries = 0; };
+  const next = () => { i++; if (i < words.length) { load(); draw(); } else done({ correct, total: words.length, seconds: secs(t0) }); };
+  const draw = () => {
+    const [clue, w] = words[i], built = tapped.map(k => tiles[k]).join(''), full = tapped.length === w.length;
+    hud.set({ text: bn(`${i + 1}/${words.length} · ${correct} সঠিক`), combo });
+    const hint = () => { tries++; tapped = []; for (const ch of w) { const k = tiles.findIndex((t, x) => t === ch && !tapped.includes(x)); if (k >= 0) { tapped.push(k); break; } } draw(); };
+    root.replaceChildren(hud.el, h('section', { class: 'de-card st-q' }, sub('বাংলা অর্থ দেখে ইংরেজি শব্দটা বানাও'), h('div', { class: 'st-big', text: clue }), h('div', { class: 'st-big gm-built', 'aria-live': 'polite', text: built || '…' }),
+      h('div', { class: 'st-cards' }, ...tiles.map((t, k) => h('button', { class: 'st-card' + (tapped.includes(k) ? ' is-gone' : ''), type: 'button', 'aria-disabled': tapped.includes(k) ? 'true' : 'false', text: t, onclick: () => {
+        if (tapped.includes(k) || tapped.length >= w.length) return;
+        tapped.push(k); fx.tick(); draw();
+        if (tapped.length < w.length) return;
+        if (tapped.map(x => tiles[x]).join('') === w) { if (tries === 0) { correct++; combo++; } else combo = 0; fx.ok(combo); timer = setTimeout(next, 700); } else { tries++; combo = 0; fx.bad(); timer = setTimeout(() => { tapped = []; draw(); }, 800); }
+      } }))),
+      full ? sub(built === w ? 'বাহ, ঠিক হয়েছে!' : 'আরেকটু ভেবে দেখো, আবার সাজাও।') : null,
+      h('div', { class: 'st-actions' }, h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: () => { tapped = []; draw(); }, text: 'মুছে আবার সাজাই' }), h('button', { class: 'de-btn de-btn--text', type: 'button', onclick: hint, text: '💡 ইঙ্গিত (প্রথম অক্ষর)' }))));
+  };
+  load(); draw();
+  return () => clearTimeout(timer);
+}
+
+export const MORE_GAMES = { quick_fire: quickFire, math_race: mathRace, memory_pairs: memoryPairs, letter_scramble: letterScramble };
