@@ -17,7 +17,7 @@ export const quizStars = (correct, firstTry) => (firstTry && correct > 0 ? Math.
 export function quizCheer(correct, total) {
   if (!total) return '';
   const r = correct / total;
-  return r === 1 ? 'সবগুলো ঠিক! দারুণ!' : r >= 0.8 ? 'খুব ভালো করেছ!' : r >= 0.5 ? 'ভালো চেষ্টা! ভুলগুলো ভুলের খাতায় রাখা আছে, পরে আবার দেখে নিও।' : 'চেষ্টা করেছ, এটাই আসল। ভুলগুলো ভুলের খাতায় আছে, একটু একটু করে ঠিক করে নেব।';
+  return r === 1 ? 'সবগুলো ঠিক! দারুণ!' : r >= 0.8 ? 'খুব ভালো করেছ!' : r >= 0.5 ? 'ভালো চেষ্টা! ভুলগুলো ভুল শুধরে নেওয়ার খাতায় রাখা আছে, পরে আবার দেখে নিও।' : 'চেষ্টা করেছ, এটাই আসল। ভুলগুলো শুধরে নেওয়ার খাতায় আছে, একটু একটু করে ঠিক করে নেব।';
 }
 
 // ---- mistake notebook (live rule, play.js: boxes 1..5, review after 1, 2, 4, 7, 14 days; a right answer in box 5 removes the question) ----

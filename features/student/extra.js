@@ -116,7 +116,7 @@ export function duelPage() {
       list.length ? list.map(x => { const iAmC = x.challenger_id === rec.id, mine = iAmC ? x.challenger_score : x.opponent_score, theirs = iAmC ? x.opponent_score : x.challenger_score, other = iAmC ? x.opponent_name : x.challenger_name;
         return h('section', { class: 'de-card gx-card' }, h('span', { class: 'de-row__sub', text: `${x.subject} · ${shortDate(x.created_at)}` }), h('h3', { class: 'gx-h3', text: `${x.quiz_title} · ${other}-এর সাথে` }),
           mine == null ? h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: () => play(x), text: 'এখন খেলো' }) : h('p', { class: 'de-row__title', text: theirs == null ? `তুমি ${bn(mine)} · ${other}-এর অপেক্ষা` : `তুমি ${bn(mine)} · ${other} ${bn(theirs)} — ${mine > theirs ? 'তুমি জিতেছ!' : mine < theirs ? 'পরের বার আরও ভালো হবে!' : 'সমান সমান!'}` })); })
-        : emptyState('এখনো কোনো ডুয়েল নেই', 'একজন বন্ধুকে চ্যালেঞ্জ করো, একই পাঁচটা প্রশ্ন, যে যখন সময় পায় খেলবে।'),
+        : emptyState('এখনো কোনো ডুয়েল নেই', 'একজন বন্ধুর সাথে টক্কর দাও, একই পাঁচটা প্রশ্ন, যে যখন সময় পায় খেলবে।'),
       h('p', { class: 'de-row__sub gx-note', text: 'ডুয়েল শুধু নিজের ক্লাসের বন্ধুর সাথে, দিনে সর্বোচ্চ ৫টা।' }));
   };
   draw();

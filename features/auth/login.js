@@ -10,7 +10,7 @@ import { validLoginId, loginId, validPin, normPin } from '../../core/pin.js';
 import { openForgot } from './forgot.js';
 
 export function login(ctx) {
-  const id = field({ label: 'মোবাইল নম্বর বা আইডি', value: rememberedId(), autocomplete: 'username', onBrand: true, name: 'username', help: 'কোচিং থেকে দেওয়া আইডি' });
+  const id = field({ label: 'মোবাইল নম্বর বা আইডি', value: rememberedId(), autocomplete: 'username', onBrand: true, name: 'username', help: 'অফিস থেকে পাওয়া আইডি' });
   id.input.setAttribute('autocapitalize', 'none'); id.input.setAttribute('spellcheck', 'false'); id.input.setAttribute('autocorrect', 'off');
   const remember = h('input', { type: 'checkbox', id: 'remember', checked: !!rememberedId() });
   const msg = h('p', { class: 'login-error', role: 'alert', hidden: true });
@@ -35,11 +35,11 @@ export function login(ctx) {
     pad.clear(); pad.error(''); update();
   }
   const node = fullPage({ tone: 'deep', title: 'লগইন', back: true, onBack: () => ctx.back(), label: 'login', children: [
-    h('p', { class: 'full__sub', text: 'কোচিং থেকে দেওয়া আইডি ও পিন দিন' }),
+    h('p', { class: 'full__sub', text: 'অফিস থেকে পাওয়া আইডি আর পিন দিন' }),
     h('form', { class: 'login-form', onsubmit: e => e.preventDefault() }, id.el,
-      h('label', { class: 'check-row check-row--brand', for: 'remember' }, remember, h('span', { text: 'এই ফোনে আইডি মনে রাখুন' })), msg,
+      h('label', { class: 'check-row check-row--brand', for: 'remember' }, remember, h('span', { text: 'এই ফোনে আইডি সেভ থাক' })), msg,
       pad.el,
-      h('button', { class: 'de-btn de-btn--text on-brand-link', type: 'button', onclick: openForgot, text: 'পিন ভুলে গেছেন?' }), go),
+      h('button', { class: 'de-btn de-btn--text on-brand-link', type: 'button', onclick: openForgot, text: 'পিন মনে নেই?' }), go),
   ] });
   update();
   return { node, destroy: () => pad.destroy() };

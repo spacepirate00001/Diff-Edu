@@ -9,9 +9,9 @@ export function callOfficeButton(text = 'ফোন করুন') {
 }
 export function openForgot() {
   const sheet = openSheet({
-    title: 'পিন ভুলে গেছেন?',
+    title: 'পিন মনে নেই?',
     content: h('div', { class: 'sheet-col' },
-      h('p', { class: 'sheet-text', text: 'অফিসে ফোন করে আপনার আইডি বলুন। নতুন পিন পাবেন, তারপর নিজের পিন বানিয়ে নেবেন।' }),
+      h('p', { class: 'sheet-text', text: 'নিরাপত্তার কারণে অ্যাপ থেকে সরাসরি পিন বদলানো যায় না। আপনার নিবন্ধিত নম্বর থেকে অফিসে ফোন করুন বা সরাসরি অফিসে আসুন। নতুন পিন পেলে নিজের পিন বানিয়ে নেবেন।' }),
       h('p', { class: 'big-phone', text: OFFICE_PHONE_BN }),
       callOfficeButton(),
       h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: () => sheet.close(), text: 'ঠিক আছে' })),

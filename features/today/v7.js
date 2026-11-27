@@ -474,7 +474,7 @@
   // Encouraging line for a score. Never blames: a low score gets "we are with you".
   function scoreWords(score, max) {
     var ratio = score / (max || DEFAULT_MAX);
-    if (ratio >= 0.8) return "দারুণ হয়েছে!";
+    if (ratio >= 0.8) return "আজ তো আগুন! স্কোর দারুণ হয়েছে।";
     if (ratio >= 0.5) return "ভালো এগোচ্ছে।";
     return "চেষ্টা চলছে, আমরা পাশে আছি।";
   }
@@ -493,7 +493,7 @@
     var card = mkCard("de-nudge");
     var head = el("div", "de-nudge__head");
     head.appendChild(window.Diffy.make("happy", "de-mascot--sm"));
-    head.appendChild(el("span", "de-row__title", "ডিফি মনে করাচ্ছে"));
+    head.appendChild(el("span", "de-row__title", "ডিফি কানে কানে বলছে:"));
     card.appendChild(head);
     var ul = el("ul", "de-nudge__list");
     list.forEach(function (n) {
@@ -569,7 +569,7 @@
 
   function statusChip(today, cls, extra) {
     var t = today.status;
-    var text = t === "present" ? "আজ উপস্থিত" : t === "absent" ? "আজ অনুপস্থিত" : t === "holiday" ? "আজ ছুটি" : "এখনো হাজিরা হয়নি";
+    var text = t === "present" ? "আজ কোচিংয়ে এসেছে" : t === "absent" ? "আজ অনুপস্থিত" : t === "holiday" ? "আজ ছুটি" : "এখনো হাজিরা হয়নি";
     var kind = t === "present" ? "now" : t === "absent" ? "bad" : "plain";
     return el("span", "de-chip de-chip--" + kind + (cls ? " " + cls : "") + (extra && t !== "present" ? " " + extra : ""), text);
   }
@@ -742,7 +742,7 @@
       var line = el("div", "de-streak" + (streak >= 2 ? " de-streak--fun" : ""));
       if (streak >= 2) {
         line.appendChild(sticker("টানা " + streak + " দিন!", "sunny", "diamond", true));
-        line.appendChild(el("span", "", "একদিনও বাদ পড়েনি।"));
+        line.appendChild(el("span", "", "একদিনও কামাই নেই। 🔥"));
       } else {
         line.appendChild(el("i", "de-diamond"));
         line.appendChild(el("span", "", "নিয়মিত আসা বড় অভ্যাস। আজই শুরু হোক।"));

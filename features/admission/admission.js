@@ -37,7 +37,7 @@ export function admission(ctx) {
     h('p', { class: 'de-row__sub', text: 'অফিসের নম্বর: ' + OFFICE_PHONE_BN }));
   const thanks = () => form.replaceWith(h('section', { class: 'de-card thanks', role: 'status' },
     window.Diffy ? window.Diffy.make('cheering', 'de-mascot--lg') : null, h('h2', { class: 'de-row__title', text: 'ধন্যবাদ!' }),
-    h('p', { class: 'de-row__sub', text: 'আপনার তথ্য পাওয়া গেছে। অফিস থেকে শীঘ্রই ফোন করা হবে।' }), h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: () => ctx.go('/welcome'), text: 'ঠিক আছে' })));
+    h('p', { class: 'de-row__sub', text: 'আপনার তথ্য অফিসের খাতায় তোলা হয়েছে। শিগগিরই অফিস থেকে ফোন করা হবে।' }), h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: () => ctx.go('/welcome'), text: 'ঠিক আছে' })));
   let busy = false;
   form.addEventListener('submit', async e => {
     e.preventDefault(); if (busy) return;
@@ -50,6 +50,6 @@ export function admission(ctx) {
     if (res.kind === 'ok') return thanks();
     msg.textContent = inquiryMessage(res); msg.hidden = false;
   });
-  return { node: fullPage({ tone: 'cream', title: 'ভর্তির আগ্রহ জানান', back: true, onBack: () => ctx.back(), label: 'admission', children: [about, form, h('div', { class: 'admission-call' }, callOfficeButton('অফিসে ফোন করুন'))] }) };
+  return { node: fullPage({ tone: 'cream', title: 'ভর্তি হতে চাই', back: true, onBack: () => ctx.back(), label: 'admission', children: [about, form, h('div', { class: 'admission-call' }, callOfficeButton('অফিসে ফোন করুন'))] }) };
 }
 export { fn, bn };

@@ -10,7 +10,7 @@ export const starsRow = (score, max) => {
   return h('span', { class: 'de-stars', role: 'img', 'aria-label': bn(`৫টির মধ্যে ${on}টি তারা`) }, ...Array.from({ length: 5 }, (_, i) => h('i', { class: 'de-star' + (i < on ? ' de-star--on' : ''), style: { '--k': String(i) } })));
 };
 export const sticker = (text, color, star) => h('span', { class: 'de-sticker' + (color ? ' de-sticker--' + color : '') }, h('i', { class: star ? 'de-star' : 'de-diamond' }), bn(text));
-const scoreWords = ratio => (ratio >= 0.8 ? 'আজ দারুণ করেছ!' : ratio >= 0.5 ? 'ভালো চলছে!' : 'আরেকটু চেষ্টায় আরও ভালো হবে।');
+const scoreWords = ratio => (ratio >= 0.8 ? 'আজ তো আগুন! স্কোর দারুণ হয়েছে।' : ratio >= 0.5 ? 'ভালোই যাচ্ছে, আরেকটু জোশ লাগাও!' : 'আরেকটু চেষ্টায় আরও ভালো হবে।');
 const MOOD_LINE = { cheering: 'আজ তো তুমি দারুণ!', happy: 'আজ নতুন কিছু শেখা হোক!', encouraging: 'ধীরে ধীরে, তুমি পারবে!', sleepy: 'কাল আবার দেখা হবে, ঠিক আছে?' };
 
 // today: { status: 'present'|'absent'|'none', arrived_at, score, score_max, note: { text, by } }
@@ -55,7 +55,7 @@ export function examCard(e, onOpen) {
 export function weekCard(week, streak) {
   const present = week.filter(d => d.state === 'present').length;
   const dots = h('div', { class: 'de-week' }, ...week.map(d => h('span', { class: 'de-week__day' }, h('i', { class: 'de-week__dot' + (d.state === 'present' ? (d.is_today ? ' de-week__dot--today' : '') : d.state === 'absent' ? ' de-week__dot--absent' : ' de-week__dot--none'), role: 'img', 'aria-label': `${d.day}: ${d.state === 'present' ? 'উপস্থিত' : d.state === 'absent' ? 'অনুপস্থিত' : 'এখনো হয়নি'}` }), d.day)));
-  const line = streak >= 2 ? h('div', { class: 'de-streak de-streak--fun' }, sticker(`টানা ${streak} দিন!`, 'sunny'), h('span', { text: 'একদিনও বাদ পড়েনি।' })) : h('div', { class: 'de-streak' }, h('i', { class: 'de-diamond' }), h('span', { text: 'নিয়মিত আসা বড় অভ্যাস। আজই শুরু হোক।' }));
+  const line = streak >= 2 ? h('div', { class: 'de-streak de-streak--fun' }, sticker(`টানা ${streak} দিন হাজির!`, 'sunny'), h('span', { text: 'একদিনও কামাই নেই। 🔥' })) : h('div', { class: 'de-streak' }, h('i', { class: 'de-diamond' }), h('span', { text: 'নিয়মিত আসা বড় অভ্যাস। আজই শুরু হোক।' }));
   return card('', h('div', { class: 'de-row' }, h('div', { class: 'de-row__main' }, h('span', { class: 'de-row__title', text: 'এই সপ্তাহ' })), h('span', { class: 'de-row__sub tg-caption-end', text: `${bn(present)} দিন উপস্থিত` })), dots, line);
 }
 export function trendCard(trend) {
@@ -71,8 +71,8 @@ export function starsCard(stars, line, onOpen) {
     h('span', { class: 'de-row__sub', text: line }), h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: onOpen, text: 'কুইজ খেলো, স্টার জমাও' }));
 }
 export function nudgeCard(list) {
-  return card('de-nudge', h('div', { class: 'de-nudge__head' }, window.Diffy ? window.Diffy.make('happy', 'de-mascot--sm') : null, h('span', { class: 'de-row__title', text: 'ডিফি মনে করাচ্ছে' })),
+  return card('de-nudge', h('div', { class: 'de-nudge__head' }, window.Diffy ? window.Diffy.make('happy', 'de-mascot--sm') : null, h('span', { class: 'de-row__title', text: 'ডিফি কানে কানে বলছে:' })),
     h('ul', { class: 'de-nudge__list' }, ...list.map(n => h('li', {}, h('i', { class: 'de-diamond' }), h('span', { text: bn(n.text) })))),
-    h('span', { class: 'de-nudge__who', text: 'এই মনে করানোগুলো নিয়ম ধরে তৈরি, কোনো AI নয়।' }));
+    h('span', { class: 'de-nudge__who', text: 'নিয়ম মেনে বানানো রিমাইন্ডার, কোনো জাদু বা AI না!' }));
 }
 export const askButton = onAsk => h('button', { class: 'de-btn de-btn--secondary de-btn--ask v6-ask', type: 'button', 'aria-haspopup': 'dialog', onclick: onAsk }, window.Diffy ? window.Diffy.make('happy', 'de-mascot--sm') : null, 'ডিফিকে জিজ্ঞেস করো');

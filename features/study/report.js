@@ -79,7 +79,7 @@ export const reportPage = () => childPage({
       const on = showRank();
       box.replaceChildren(
         h('button', { class: 'cswitch' + (on ? ' is-on' : ''), type: 'button', 'aria-pressed': String(on), onclick: () => { store.set(RANK_KEY, on ? '0' : '1'); paint(); } },
-          h('span', { class: 'cswitch__t' }, h('b', { text: 'ক্লাসে অবস্থান দেখাও' }), h('span', { class: 'cswitch__d', text: on ? 'কার্ডে ও প্রিন্টে অবস্থান থাকবে।' : 'অবস্থান ছাড়া দেখা ও প্রিন্ট হবে।' })),
+          h('span', { class: 'cswitch__t' }, h('b', { text: 'ক্লাস পজিশন দেখানো হবে' }), h('span', { class: 'cswitch__d', text: on ? 'কার্ডে ও প্রিন্টে অবস্থান থাকবে।' : 'অবস্থান ছাড়া দেখা ও প্রিন্ট হবে।' })),
           h('span', { class: 'cswitch__state', 'aria-hidden': 'true' }, on ? icon('check') : null, h('span', { text: on ? 'চালু' : 'বন্ধ' }))),
         ...cards.map(c => cardView(c, kid, on, go)));
     };

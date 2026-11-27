@@ -21,7 +21,7 @@ export function feeState(f, now = Date.now()) {
   if (isLate) return 'late';
   return Number(f.paid_amount || 0) > 0 ? 'partial' : 'due';
 }
-export const STATE_BN = { paid: 'পরিশোধিত', partial: 'কিছু বাকি', late: 'বাকি পড়েছে', due: 'বাকি' };
+export const STATE_BN = { paid: 'পরিশোধ হয়েছে', partial: 'কিছু বাকি', late: 'বাকি', due: 'বাকি' };
 export const dueLabel = (f, now = Date.now()) => {
   const s = feeState(f, now);
   if (s === 'paid') return 'পরিশোধিত';

@@ -14,7 +14,7 @@ export const SOURCES = {
     const r = await rpc('today_admin');
     if (r.kind !== 'ok') return r;
     const d = r.data || {};
-    const L = [['needs_review', 'দেখে অনুমোদন দেওয়া বাকি'], ['early_leave_open', 'আগে ছুটির খবর খোলা'], ['fee_call', 'ফি-র জন্য ফোন করার তালিকা'], ['chat_reports_open', 'চ্যাটের অভিযোগ খোলা'], ['report_drafts', 'রিপোর্ট কার্ড খসড়া']];
+    const L = [['needs_review', 'অনুমোদনের অপেক্ষায়'], ['early_leave_open', 'আগে ছুটির খবর খোলা'], ['fee_call', 'ফি তাগাদা তালিকা'], ['chat_reports_open', 'চ্যাট রিপোর্ট'], ['report_drafts', 'রিপোর্ট কার্ড খসড়া']];
     return { ...r, data: L.filter(([k]) => d[k] > 0).map(([k, title]) => ({ key: k, title, count: d[k] })) };
   },
 };

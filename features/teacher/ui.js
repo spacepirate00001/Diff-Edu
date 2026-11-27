@@ -66,5 +66,5 @@ export function silentLine(ctx) {
   }).catch(() => { /* the line is a help, never a blocker */ });
   return btn;
 }
-export const stateWord = state => ({ saved: 'জমা হয়েছে', queued: 'ফোনে রাখা আছে, নেট এলে যাবে', failed: 'যায়নি, আবার চেষ্টা করুন', rejected: 'সার্ভার নেয়নি, ফোনে রাখা কাজ দেখুন' })[state] || '';
+export const stateWord = state => ({ saved: 'জমা হয়েছে', queued: 'ফোনে রাখা আছে, নেট এলে যাবে', failed: 'যায়নি, আবার চেষ্টা করুন', rejected: 'সার্ভার নেয়নি, অফলাইন পেন্ডিং কাজ দেখুন' })[state] || '';
 export function saveToast(state, ok) { toast(state === 'saved' ? ok : stateWord(state)); }

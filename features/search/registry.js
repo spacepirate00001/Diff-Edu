@@ -21,7 +21,7 @@ const R = [
   ['s_videos', 'ভিডিও', 'video', 'student', 'study', 3, null],
   ['s_materials', 'উপকরণ', 'নোট বই material', 'student', 'study', 3, null],
   ['s_flash', 'ফ্ল্যাশকার্ড', 'flashcard', 'student', 'study', 3, null],
-  ['s_mistakes', 'ভুলের খাতা', 'ভুল mistake', 'student', 'study', 3, null],
+  ['s_mistakes', 'ভুল শুধরে নেওয়ার খাতা', 'ভুল mistake', 'student', 'study', 3, null],
   ['s_askbox', 'প্রশ্ন বক্স', 'প্রশ্ন করো question', 'student', 'study', 3, null],
   ['s_ai', 'AI সহায়ক', 'ডিফি এআই ai tutor', 'student', 'study', 3, 'ai_tutor'],
   ['s_timer', 'ফোকাস টাইমার', 'টাইমার মনোযোগ timer', 'student', 'study', 3, null],
@@ -71,7 +71,7 @@ const R = [
   ['t_auto', 'অটোমেশনের নিয়ম', 'স্বয়ংক্রিয় খবর চুপ মোড silent এসএমএস automation', 'teacher', 'more', 5, null],
   ['t_me', 'আমার প্রোফাইল ও সময়সূচি', 'প্রোফাইল সময়সূচি রুটিন schedule', 'teacher', 'more', 5, null],
   ['t_meet', 'মিটিং', 'সাক্ষাৎ meeting', 'teacher', 'more', 5, null],
-  ['t_honor', 'সম্মানী', 'বেতন honorarium', 'teacher', 'more', 6, null],
+  ['t_honor', 'ক্লাস সম্মানী', 'বেতন honorarium', 'teacher', 'more', 6, null],
   ['t_leave', 'ছুটি', 'leave', 'teacher', 'more', 5, null],
   ['t_requests', 'অনুরোধ', 'request', 'teacher', 'more', 5, null],
   // admin
@@ -95,11 +95,11 @@ export const byId = Object.fromEntries(FEATURES.map(f => [f.id, f]));
 // Real screens that exist now (found by search too). route is where it goes.
 export const LIVE = [
   { id: 'inbox', name: 'ইনবক্স', syn: ['নোটিশ', 'বার্তা', 'খবর', 'notice', 'message', 'inbox'], roles: ['guardian', 'student', 'teacher', 'admin'], route: '/inbox' },
-  { id: 'push', name: 'ফোনে খবর (নোটিফিকেশন)', syn: ['নোটিফিকেশন', 'পুশ', 'push', 'খবর', 'অনুমতি'], roles: ['guardian', 'student', 'teacher', 'admin'], route: '/more/push', flag: 'web_push' },
-  { id: 'display', name: 'দেখার ধরন', syn: ['লেখা', 'বড়', 'গাঢ়', 'রং', 'dark', 'size'], roles: ['guardian', 'student', 'teacher', 'admin'], route: '/more/display' },
+  { id: 'push', name: 'অ্যাপ নোটিফিকেশন', syn: ['নোটিফিকেশন', 'পুশ', 'push', 'খবর', 'অনুমতি'], roles: ['guardian', 'student', 'teacher', 'admin'], route: '/more/push', flag: 'web_push' },
+  { id: 'display', name: 'থিম ও লেখার সাইজ', syn: ['লেখা', 'বড়', 'গাঢ়', 'রং', 'dark', 'size'], roles: ['guardian', 'student', 'teacher', 'admin'], route: '/more/display' },
   { id: 'pin', name: 'পিন বদলান', syn: ['পাসওয়ার্ড', 'পিন', 'pin', 'password'], roles: ['guardian', 'student', 'teacher', 'admin'], route: '/more/pin' },
   { id: 'privacy', name: 'গোপনীয়তা', syn: ['সম্মতি', 'তথ্য', 'মুছুন', 'privacy', 'consent'], roles: ['guardian'], route: '/more/privacy' },
-  { id: 'pending', name: 'ফোনে রাখা কাজ', syn: ['আউটবক্স', 'জমা', 'pending'], roles: ['guardian', 'student', 'teacher', 'admin'], route: '/more/pending' },
+  { id: 'pending', name: 'অফলাইন পেন্ডিং কাজ', syn: ['আউটবক্স', 'জমা', 'pending'], roles: ['guardian', 'student', 'teacher', 'admin'], route: '/more/pending' },
   { id: 'help', name: 'সাহায্য', syn: ['ফোন', 'অফিস', 'help'], roles: ['guardian', 'student', 'teacher', 'admin'], route: '/more/help' },
 ];
 // Features that have a real screen now (step 2: the guardian's). id -> [route, icon]. Everything not listed still says "ধাপ N-এ আসছে".

@@ -134,8 +134,8 @@ async function adminCounts(box) {
   if (d) cache.set(uid, 'today_admin', d); else d = cache.get(uid, 'today_admin')?.v;
   if (!d) return;
   const row = (n, text) => h('li', { class: 'todo-row' }, h('span', { class: 'de-chip ' + (n ? 'de-chip--warn' : 'de-chip--plain'), text: bn(n) }), h('span', { text }));
-  box.append(h('section', { class: 'v6-card' }, h('span', { class: 'de-row__title', text: 'আজ কী দেখা দরকার' }), h('ul', { class: 'todo' },
-    row(d.needs_review || 0, 'দেখে অনুমোদন দেওয়া বাকি'), row(d.early_leave_open || 0, 'আগে ছুটির খবর খোলা'), row(d.fee_call || 0, 'ফি-র জন্য ফোন করার তালিকা'),
-    row(d.chat_reports_open || 0, 'চ্যাটের অভিযোগ খোলা'), row(d.report_drafts || 0, 'রিপোর্ট কার্ড খসড়া'))));
+  box.append(h('section', { class: 'v6-card' }, h('span', { class: 'de-row__title', text: 'আজকের করণীয়' }), h('ul', { class: 'todo' },
+    row(d.needs_review || 0, 'অনুমোদনের অপেক্ষায়'), row(d.early_leave_open || 0, 'আগে ছুটির খবর খোলা'), row(d.fee_call || 0, 'ফি তাগাদা তালিকা'),
+    row(d.chat_reports_open || 0, 'চ্যাট রিপোর্ট'), row(d.report_drafts || 0, 'রিপোর্ট কার্ড খসড়া'))));
 }
 export { stateCard, tabById };
