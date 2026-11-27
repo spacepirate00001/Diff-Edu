@@ -9,6 +9,7 @@ import { bn, ascii, dhakaDay } from '../../core/bn.js';
 import { me, progressCard, noRecState } from './common.js';
 import { GameLogic, GAME_RULES, ROUND_SECONDS, gameError } from './logic.js';
 import { MORE_GAMES } from './games-more.js';
+import { ACTION_GAMES } from './games-action.js';
 
 const WORDS = [['বই', 'book'], ['জল', 'water'], ['আকাশ', 'sky'], ['গাছ', 'tree'], ['মাছ', 'fish'], ['ফুল', 'flower']];
 const SPELL = [['বই', 'book', ['buk', 'bok']], ['জল', 'water', ['wator', 'watar']], ['স্কুল', 'school', ['scool', 'skool']], ['বন্ধু', 'friend', ['frend', 'freind']], ['আম', 'mango', ['mengo', 'manggo']], ['আপেল', 'apple', ['aple', 'appel']]];
@@ -85,6 +86,7 @@ export const GAMES = {
     draw();
   },
   ...MORE_GAMES,
+  ...ACTION_GAMES,
 };
 
 // ---- list of games, with the time left today ----

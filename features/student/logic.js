@@ -87,6 +87,9 @@ export function teamError(text) {
 // ---- games (44-games.sql and pwa-dev/games.js): 10 points per right answer, +20 for a perfect round, 30 minutes a day, open from 6:00 to 22:00 Dhaka ----
 export const DAILY_SECONDS = 1800, ROUND_SECONDS = 60, MAX_SECONDS = 300, OPEN_FROM = 6, CLOSE_HOUR = 22;
 export const GAME_RULES = {
+  shoot_math: ['গণিত শুটার', 'বেলুন উড়ছে! ঠিক উত্তরের বেলুনে গুলি করো।'],
+  shoot_words: ['শব্দ শুটার', 'বাংলা শব্দের ইংরেজি বেলুনে গুলি করো।'],
+  drone_mission: ['ড্রোন মিশন', 'ড্রোন উড়িয়ে ঠিক উত্তরের গেট পার হও।'],
   math_race: ['ম্যাথ রেস', '৬০ সেকেন্ডে যত পারো যোগ-বিয়োগ করো।'],
   word_match: ['শব্দ মিলানো', 'বাংলা শব্দের ইংরেজি অর্থ বেছে নাও।'],
   spelling_b: ['বানান বি', 'বাংলা অর্থ দেখে ঠিক বানানটি বেছে নাও।'],
