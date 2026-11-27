@@ -36,7 +36,7 @@ export function createShell(root, ctx, { fakeUpdate = false } = {}) {
       try { page?.destroy?.(); } catch { /* a page that cannot clean up must not block the next one */ }
       page = result; tabId = tab;
       top.replaceChildren();
-      if (result.chrome !== 'sky') top.append(appbar({ title, back, onBack: ctx.back, onSearch: ctx.openSearch, onBell: ctx.openInbox, unread: ctx.unread() }));
+      if (result.chrome !== 'sky') top.append(appbar({ title, back, onBack: ctx.back, onSearch: ctx.openSearch, onFeedback: () => import('../features/feedback/feedback.js').then(m => m.openFeedback(title)), onBell: ctx.openInbox, unread: ctx.unread() }));
       main.replaceChildren(h('div', { class: result.chrome === 'sky' ? 'page page--sky' : 'page' }, result.node));
       main.scrollTop = 0;
       navSlot.replaceChildren(bottomNav(ctx.me.role, tab, ctx.goTab, ['guardian', 'teacher'].includes(ctx.me.role) ? { inbox: ctx.unread() } : {}));
