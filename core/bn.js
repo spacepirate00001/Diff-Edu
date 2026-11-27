@@ -5,7 +5,7 @@ export const ascii = s => String(s ?? '').replace(/[০-৯]/g, d => DIGITS.inde
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const DAYS = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 export const MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
-export const money = n => '৳' + bn(Number(n || 0).toLocaleString('en-US'));
+export const money = n => '৳\u00A0' + bn(Number(n || 0).toLocaleString('en-US'));
 
 // Dhaka calendar day of a time (ms or Date). Asia/Dhaka is UTC+6 all year (no daylight saving).
 export function dhakaParts(at = Date.now()) {

@@ -777,7 +777,7 @@
     var row = el("div", "de-row");
     var main = el("div", "de-row__main");
     var paid = fee.status === "paid";
-    var amount = "৳" + bn(fee.amount);
+    var amount = "৳\u00A0" + bn(fee.amount);
 
     main.appendChild(el("span", "de-row__title", bn(fee.month_label)));
     main.appendChild(el("span", "de-row__sub", paid ? amount : amount + " · " + bn(fee.due_label)));
