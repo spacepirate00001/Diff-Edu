@@ -24,7 +24,7 @@ export async function migrateLegacy() {
   if (raw == null) return;
   let list = []; try { list = JSON.parse(raw); } catch { /* ignore */ }
   try {
-    for (const it of Array.isArray(list) ? list : []) if (it?.path) await idb.put({ ...it, key: String(it.key || it.id || uuid()), seq: it.seq || 0, state: 'waiting', label: it.label || 'ফোনে রাখা কাজ' });
+    for (const it of Array.isArray(list) ? list : []) if (it?.path) await idb.put({ ...it, key: String(it.key || it.id || uuid()), seq: it.seq || 0, state: 'waiting', label: it.label || 'অফলাইন পেন্ডিং কাজ' });
     store.del(KEYS.outboxDb);
   } catch { /* no IndexedDB here: keep the old copy for the next start */ }
 }

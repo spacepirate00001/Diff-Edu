@@ -28,19 +28,19 @@ export function moreTab(ctx) {
       ...items.map(f => routeOf(f, role) ? row({ ic: LIVE_ROUTES[f.id][1], text: f.name, onclick: () => ctx.go(routeOf(f, role)) })
         : row({ ic: 'file', text: f.name, sub: `ধাপ ${bn(f.step)}-এ আসছে`, disabled: true, onclick: () => ctx.go(featureRoute(f.id)) })))));
   }
-  const pendingRow = row({ ic: 'clock', text: 'ফোনে রাখা কাজ', onclick: () => openPending() });
+  const pendingRow = row({ ic: 'clock', text: 'অফলাইন পেন্ডিং কাজ', onclick: () => openPending() });
   outbox.list(session.uid()).then(rs => { if (rs.length) pendingRow.querySelector('.de-row__main').after(h('span', { class: 'de-chip de-chip--warn', text: bn(rs.length) })); });
   root.append(h('section', { class: 'more-group' }, h('h2', { class: 'inbox-group__h', text: 'আমার' }), h('div', { class: 'de-card more-card' },
     h('div', { class: 'me-card' }, h('span', { class: 'de-avatar me-av', 'aria-hidden': 'true', text: initialsOf(me.full_name) }), h('span', { class: 'me-t' }, h('b', { text: me.full_name }), h('span', { text: `${ROLE_BN[role]} · আইডি ${bn(me.login_id)}` }))),
-    row({ ic: 'text', text: 'দেখার ধরন', sub: 'লেখার মাপ ও রং', onclick: () => ctx.go('/more/display') }),
+    row({ ic: 'text', text: 'থিম ও লেখার সাইজ', sub: 'লেখার মাপ ও রং', onclick: () => ctx.go('/more/display') }),
     row({ ic: 'lock', text: 'পিন বদলান', onclick: () => ctx.go('/more/pin') }),
-    flags.on('web_push') ? row({ ic: 'bell', text: 'ফোনে খবর', sub: 'নোটিফিকেশন চালু বা বন্ধ করুন', onclick: () => ctx.go('/more/push') }) : null,
+    flags.on('web_push') ? row({ ic: 'bell', text: 'অ্যাপ নোটিফিকেশন', sub: 'নোটিফিকেশন চালু বা বন্ধ করুন', onclick: () => ctx.go('/more/push') }) : null,
     role === 'guardian' ? row({ ic: 'user', text: 'প্রোফাইল ও সন্তান', sub: 'আপনার ও সন্তানদের তথ্য', onclick: () => ctx.go('/more/profile') }) : null,
     role === 'guardian' ? row({ ic: 'info', text: 'গোপনীয়তা', sub: 'সন্তানের সম্মতি, তথ্য মুছে ফেলা', onclick: () => ctx.go('/more/privacy') }) : null,
     pendingRow,
     row({ ic: 'phone', text: 'অফিসে ফোন করুন', sub: OFFICE_PHONE_BN, href: 'tel:' + OFFICE_PHONE }),
     row({ ic: 'help', text: 'সাহায্য', onclick: () => ctx.go('/more/help') }),
-    row({ ic: 'refresh', text: 'অ্যাপ রিফ্রেশ করুন', sub: 'আটকে গেলে এটা চাপুন', onclick: async () => { if (await confirmBox({ title: 'অ্যাপ রিফ্রেশ', text: 'অ্যাপ নতুন করে খুলবে। ফোনে রাখা কাজ থেকে যাবে।', ok: 'রিফ্রেশ করুন' })) refreshApp(); } }))));
+    row({ ic: 'refresh', text: 'অ্যাপ রিফ্রেশ করুন', sub: 'আটকে গেলে এটা চাপুন', onclick: async () => { if (await confirmBox({ title: 'অ্যাপ রিফ্রেশ', text: 'অ্যাপ নতুন করে খুলবে। অফলাইন পেন্ডিং কাজ থেকে যাবে।', ok: 'রিফ্রেশ করুন' })) refreshApp(); } }))));
   root.append(h('button', { class: 'de-btn de-btn--secondary logout-btn', type: 'button', onclick: () => ctx.confirmLogout() }, icon('logout'), 'লগআউট'), h('p', { class: 'more-ver', text: VERSION }));
   return { node: root };
 }

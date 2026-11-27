@@ -28,8 +28,8 @@ export const feesPage = ctx => childPage({
     const due = totalDue(fees), cur = currentFee(fees), months = unpaid(fees).length;
     return [
       h('section', { class: 'de-card gx-card gx-hero ' + (due > 0 ? 'is-due' : 'is-clear') },
-        h('span', { class: 'gx-cap', text: 'মোট বকেয়া' }), h('b', { class: 'gx-big', text: money(due) }),
-        h('p', { class: 'de-row__sub', text: due > 0 ? `${bn(months)} মাসের ফি বাকি। অফিসে নগদ, বা bKash বা Nagad-এ জমা দিন।` : 'কোনো বকেয়া নেই। ধন্যবাদ!' }),
+        h('span', { class: 'gx-cap', text: 'বাকি আছে' }), h('b', { class: 'gx-big', text: money(due) }),
+        h('p', { class: 'de-row__sub', text: due > 0 ? `${bn(months)} মাসের ফি বাকি রয়েছে। অফিসে নগদ অথবা বিকাশ/নগদে পরিশোধ করতে পারবেন।` : 'কোনো বকেয়া নেই। ধন্যবাদ!' }),
         due > 0 && flags.on('online_pay') ? h('button', { class: 'de-btn de-btn--primary', type: 'button', onclick: async () => (await import('./pay.js')).openPay({ kid, fees, onDone: () => reload() }) }, icon('coin'), 'অনলাইনে ফি দিন') : null,
         due > 0 && !flags.on('online_pay') ? h('a', { class: 'de-btn de-btn--secondary', href: 'tel:' + OFFICE_PHONE }, icon('phone'), 'অফিসে ফোন করুন') : null),
       cur ? h('section', { class: 'de-card gx-card' }, h('div', { class: 'gx-row' }, h('div', {}, h('span', { class: 'gx-cap', text: 'এই মাস' }), h('h2', { class: 'gx-h3', text: monthLabel(cur) }), h('span', { class: 'de-row__sub', text: `${money(cur.amount)} · ${dueLabel(cur)}` })),

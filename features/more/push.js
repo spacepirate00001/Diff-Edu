@@ -48,7 +48,7 @@ export function pushPage(ctx) {
         h('button', { class: 'de-btn de-btn--secondary', type: 'button', disabled: busy, text: 'না, এখন না', onclick: () => set(fire('cancel')) })));
     }
     if (state === 'error') return root.replaceChildren(stateCard({ kind: 'error', title: 'চালু করা যায়নি', text: 'নেট দেখে আবার চেষ্টা করুন।', action: 'আবার চেষ্টা করুন', onAction: () => set(fire('tap_enable')), mascot: false }));
-    return root.replaceChildren(h('section', { class: 'de-card tc-card' }, h('h2', { class: 'tc-h', text: 'ফোনে খবর পান' }), h('p', { class: 'tc-sub', text: 'অ্যাপ বন্ধ থাকলেও নতুন নোটিশ বা বার্তার খবর ফোনের স্ক্রিনে আসবে। চালু করার আগে সব বুঝিয়ে বলা হবে।' }),
+    return root.replaceChildren(h('section', { class: 'de-card tc-card' }, h('h2', { class: 'tc-h', text: 'অ্যাপ নোটিফিকেশন পান' }), h('p', { class: 'tc-sub', text: 'অ্যাপ বন্ধ থাকলেও নতুন নোটিশ বা বার্তার খবর ফোনের স্ক্রিনে আসবে। চালু করার আগে সব বুঝিয়ে বলা হবে।' }),
       h('button', { class: 'de-btn de-btn--primary', type: 'button', text: 'নোটিফিকেশন চালু করুন', onclick: () => set(fire('tap_enable')) })));
   }
   async function refresh() { state = await currentPushState(); draw(); }

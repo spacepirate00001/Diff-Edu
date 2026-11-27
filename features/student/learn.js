@@ -28,7 +28,7 @@ export function learnTab(ctx) {
   const dueChip = h('span', { class: 'de-chip de-chip--warn', hidden: true });
   const groups = [
     ['পড়ো', [['s_syllabus', '/learn/syllabus', 'book', 'সিলেবাস ও অধ্যায়', 'কোন অধ্যায় শেষ, কোনটা বাকি'], ['s_materials', '/learn/materials', 'file', 'নোট ও ভিডিও', 'শিক্ষকের দেওয়া উপকরণ'], ['s_homework', '/learn/homework', 'check', 'বাড়ির কাজ', 'কী কবে জমা দিতে হবে'], ['s_flash', '/learn/flash', 'file', 'ফ্ল্যাশকার্ড', 'ছোট ছোট কার্ডে মনে রাখো'], ['s_revision', '/learn/revision', 'clock', 'পড়ার পরিকল্পনা', 'পরীক্ষার আগের দিনগুলোর ভাগ করা পড়া']]],
-    ['অনুশীলন', [['s_quiz', '/learn/quiz', 'trophy', 'কুইজ', 'খেলতে খেলতে শেখো, স্টার জমাও'], ['s_mistakes', '/learn/mistakes', 'check', 'ভুলের খাতা', 'আগের ভুলগুলো আবার দেখে নাও'], ['s_timer', '/learn/focus', 'clock', 'ফোকাস টাইমার', '২৫ মিনিট মন দিয়ে পড়ো, স্টার পাও'], ['s_askbox', '/learn/doubts', 'chat', 'প্রশ্ন বক্স', 'নাম ছাড়াই শিক্ষককে প্রশ্ন করো'], ['s_ai', '/learn/diffy', 'help', 'ডিফি', 'পড়ার সঙ্গী']]],
+    ['অনুশীলন', [['s_quiz', '/learn/quiz', 'trophy', 'কুইজ', 'খেলতে খেলতে শেখো, স্টার জমাও'], ['s_mistakes', '/learn/mistakes', 'check', 'ভুল শুধরে নেওয়ার খাতা', 'আগের ভুলগুলো আবার দেখে নাও'], ['s_timer', '/learn/focus', 'clock', 'ফোকাস টাইমার', '২৫ মিনিট মন দিয়ে পড়ো, স্টার পাও'], ['s_askbox', '/learn/doubts', 'chat', 'প্রশ্ন বক্স', 'নাম ছাড়াই শিক্ষককে প্রশ্ন করো'], ['s_ai', '/learn/diffy', 'help', 'ডিফি', 'পড়ার সঙ্গী']]],
     ['পরীক্ষা', [['s_exams', '/learn/exams', 'exam', 'অনলাইন পরীক্ষা', 'অনুশীলন আর নির্দিষ্ট সময়ের পরীক্ষা'], ['s_results', '/learn/results', 'chart', 'পরীক্ষার ফল', 'প্রতিটা পরীক্ষার নম্বর ও গড়'], ['s_report', '/learn/report', 'file', 'রিপোর্ট কার্ড', 'সপ্তাহের ফল ও ক্লাসে অবস্থান']]],
   ];
   for (const [title, list] of groups) {
@@ -92,7 +92,7 @@ const loadQuizzes = rec => sel('quizzes', `select=id,title,class_level,questions
 export const quizListPage = ctx => studentPage({
   key: 'sqz', load: loadQuizzes, isEmpty: r => !r.length,
   empty: () => emptyState('এই ক্লাসে এখনো কোনো কুইজ নেই', 'শিক্ষক কুইজ দিলে এখানে দেখা যাবে। আজ একটু বিশ্রাম।'),
-  draw: list => [progressCard(self.get()), h('p', { class: 'de-row__sub gx-note', text: 'কুইজে সময়ের তাড়া নেই। ভুল হলে ভুলের খাতায় জমা থাকে, পরে আবার দেখে নিতে পারবে। প্রথমবার খেললে স্টার পাবে।' }),
+  draw: list => [progressCard(self.get()), h('p', { class: 'de-row__sub gx-note', text: 'কুইজে সময়ের তাড়া নেই। ভুল হলে ভুল শুধরে নেওয়ার খাতায় জমা থাকে, পরে আবার দেখে নিতে পারবে। প্রথমবার খেললে স্টার পাবে।' }),
     h('div', { class: 'de-card more-card' }, ...list.map(q => navRow({ ic: 'trophy', text: q.title, sub: `${q.subject?.name || ''} · ${bn((q.questions || []).length)}টি প্রশ্ন`, onclick: () => ctx.go('/learn/quiz/' + q.id) })))],
 });
 
@@ -122,16 +122,16 @@ export function quizPage(ctx, id) {
       const correct = res.kind === 'ok' ? res.data.correct : local.correct, total = res.kind === 'ok' ? res.data.total : local.total, stars = res.kind === 'ok' ? res.data.stars : null;
       if (stars) self.patch({ stars: (self.get()?.stars || 0) + stars });
       let kept2 = false;
-      if (local.wrong.length) { const m = await out('POST', '/rest/v1/quiz_mistakes?on_conflict=student_id,q_key', mistakeRows({ quiz: q, questions: q.questions, wrong: local.wrong, coachingId: ctx.me.coaching_id, studentId: rec.id, today: dhakaDay() }), 'resolution=merge-duplicates,return=minimal', 'ভুলের খাতা'); kept2 = m.state === 'queued'; }
+      if (local.wrong.length) { const m = await out('POST', '/rest/v1/quiz_mistakes?on_conflict=student_id,q_key', mistakeRows({ quiz: q, questions: q.questions, wrong: local.wrong, coachingId: ctx.me.coaching_id, studentId: rec.id, today: dhakaDay() }), 'resolution=merge-duplicates,return=minimal', 'ভুল শুধরে নেওয়ার খাতা'); kept2 = m.state === 'queued'; }
       if (dead) return;
       say(h('section', { class: 'de-card st-result', 'aria-live': 'polite' }, window.Diffy ? window.Diffy.make(correct / (total || 1) >= 0.8 ? 'cheering' : 'happy', 'de-mascot--lg') : null,
         h('h2', { class: 'st-result__n', id: 'page-title', tabindex: '-1', text: `${bn(correct)}/${bn(total)} সঠিক` }), h('p', { class: 'de-row__sub', text: quizCheer(correct, total) }),
         stars ? h('span', { class: 'de-sticker de-sticker--sunny' }, h('i', { class: 'de-star' }), bn(`${stars}টা স্টার পেলে!`)) : null,
         res.kind === 'ok' && !stars && correct > 0 ? h('p', { class: 'de-row__sub', text: 'এটা আগে খেলেছ, তাই এবার নতুন স্টার নেই। চেষ্টা চালিয়ে যাও!' }) : null,
         kept ? h('p', { class: 'de-banner de-banner--warn', role: 'status' }, 'নেট নেই। ফল ফোনে রাখা আছে, নেট এলে জমা হবে আর তখন স্টার যোগ হবে।') : null,
-        local.wrong.length ? h('p', { class: 'de-row__sub', text: `${bn(local.wrong.length)}টা ভুল ভুলের খাতায় রাখা হয়েছে${kept2 ? ' (নেট এলে যাবে)' : ''}।` }) : null,
+        local.wrong.length ? h('p', { class: 'de-row__sub', text: `${bn(local.wrong.length)}টা ভুল শুধরে নেওয়ার খাতায় রাখা হয়েছে${kept2 ? ' (নেট এলে যাবে)' : ''}।` }) : null,
         h('div', { class: 'st-actions' }, h('button', { class: 'de-btn de-btn--primary', type: 'button', onclick: () => ctx.replace('/learn/quiz'), text: 'কুইজের তালিকা' }),
-          local.wrong.length ? h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: () => ctx.go('/learn/mistakes'), text: 'ভুলের খাতা দেখো' }) : null,
+          local.wrong.length ? h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: () => ctx.go('/learn/mistakes'), text: 'ভুল শুধরে নেওয়ার খাতা দেখো' }) : null,
           h('button', { class: 'de-btn de-btn--text', type: 'button', onclick: play, text: 'আবার খেলো' }))));
       root.querySelector('#page-title')?.focus({ preventScroll: true });
     }
@@ -156,13 +156,13 @@ export function mistakesPage(ctx) {
     const stale = r.kind !== 'ok', all = stale ? old.v : rows(r), today = dhakaDay(), due = dueMistakes(all, today), later = all.filter(m => m.due > today);
     const start = () => {
       const qs = due.map(m => m.question);
-      root.replaceChildren(player({ title: 'ভুলের খাতা', questions: qs, onQuit: draw, onDone: async answers => {
+      root.replaceChildren(player({ title: 'ভুল শুধরে নেওয়ার খাতা', questions: qs, onQuit: draw, onDone: async answers => {
         root.replaceChildren(loading(1));
         let right = 0, kept = false;
         for (const [i, m] of due.entries()) {
           const ok = answers[i] === m.question.answer_index; if (ok) right++;
           const f = `student_id=eq.${rec.id}&q_key=eq.${encodeURIComponent(m.q_key)}`, upd = reviewMistake(m, ok, today);
-          const w = upd.remove ? await out('DELETE', `/rest/v1/quiz_mistakes?${f}`, undefined, undefined, 'ভুলের খাতা') : await out('PATCH', `/rest/v1/quiz_mistakes?${f}`, { box: upd.box, due: upd.due, wrong_count: upd.wrong_count }, 'return=minimal', 'ভুলের খাতা');
+          const w = upd.remove ? await out('DELETE', `/rest/v1/quiz_mistakes?${f}`, undefined, undefined, 'ভুল শুধরে নেওয়ার খাতা') : await out('PATCH', `/rest/v1/quiz_mistakes?${f}`, { box: upd.box, due: upd.due, wrong_count: upd.wrong_count }, 'return=minimal', 'ভুল শুধরে নেওয়ার খাতা');
           if (w.state === 'queued') kept = true;
         }
         if (dead) return;
@@ -170,7 +170,7 @@ export function mistakesPage(ctx) {
           h('h2', { class: 'st-result__n', id: 'page-title', tabindex: '-1', text: `${bn(right)}/${bn(due.length)} ঠিক` }),
           h('p', { class: 'de-row__sub', text: right === due.length ? 'সবগুলো ঠিক হয়েছে, দারুণ! এই প্রশ্নগুলো আরও পরে আবার আসবে।' : 'যেগুলো ভুল হলো সেগুলো কাল আবার আসবে। একটু একটু করে সব ঠিক হয়ে যাবে।' }),
           kept ? h('p', { class: 'de-banner de-banner--warn', role: 'status' }, 'নেট নেই। হিসাব ফোনে রাখা আছে, নেট এলে জমা হবে।') : null,
-          h('button', { class: 'de-btn de-btn--primary', type: 'button', onclick: draw, text: 'ভুলের খাতায় ফিরে যাও' })));
+          h('button', { class: 'de-btn de-btn--primary', type: 'button', onclick: draw, text: 'ভুল শুধরে নেওয়ার খাতায় ফিরে যাও' })));
         root.querySelector('#page-title')?.focus({ preventScroll: true });
       } }));
     };

@@ -42,7 +42,7 @@ export function adminHonorPage() {
           tot.n > 1 ? h('button', { class: 'de-btn de-btn--primary', type: 'button', onclick: () => payAll(cards, key, reload) }, `সবাইকে পরিশোধ (${bn(tot.n)} জন)`) : null),
         d.partial ? h('p', { class: 'tc-cap', text: 'হার বা পরিশোধের তথ্য পুরো আনা যায়নি।' }) : null,
         ...cards.map(card),
-        h('p', { class: 'tc-cap', text: 'শিক্ষকের নিজের লেখা ক্লাসের হিসাব থেকে এই অঙ্ক হয়। পরিশোধের পর সেই মাস আর বদলানো যায় না।' }));
+        h('p', { class: 'tc-cap', text: 'নেওয়া ক্লাসের হিসাব অনুযায়ী সম্মানী নির্ধারিত হয়। হিসাব পরিশোধ হয়ে গেলে ওই মাসের এন্ট্রি আর পরিবর্তন করা যাবে না।' }));
     },
   });
   return page;

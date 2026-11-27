@@ -4,7 +4,7 @@ import { rpc, sel, rows } from '../../core/api.js';
 import { session } from '../../core/session.js';
 
 export const PURPOSES = [
-  ['face_gate', 'অফিসের গেটে মুখ চিনে হাজিরা', 'অফিসের গেটের ক্যামেরা মুখ চিনে হাজিরা নেয়। না বললে কার্ড বা হাতে হাজিরা হবে।'],
+  ['face_gate', 'গেটে ক্যামেরায় হাজিরা', 'গেটের ক্যামেরা চিনে নিলে হাজিরা উঠে যাবে। অনুমতি না দিলে খাতা বা কার্ডে হাজিরা নেওয়া হবে। (চোখ ঠিক রাখলেই হবে, কড়া নজরদারি নয়! 😊)'],
   ['classroom_face', 'ক্লাসরুমে মুখ চিনে হাজিরা', 'ক্লাসরুমের ক্যামেরা মুখ চিনে হাজিরা নেয়।'],
   ['photo_publish', 'ছবি ব্যবহার', 'অনুষ্ঠান ও নোটিশে সন্তানের ছবি ব্যবহার হবে।'],
   ['voice', 'ভয়েস রেকর্ডিং', 'মুখস্থ পড়া ও শিক্ষকের ভয়েস মেসেজ রেকর্ড হবে।'],
@@ -16,7 +16,7 @@ export const PURPOSES = [
 // What turning it off really does (only what the server really does; no promises beyond that).
 export const OFF_NOTE = { face_gate: 'গেটের ক্যামেরা আর মুখ চিনবে না।' };
 export const TERMS = 'ডিফ এডু আপনার সন্তানের নাম, শ্রেণি, উপস্থিতি, পরীক্ষার ফল, ফি ও শিক্ষকের মন্তব্য সংরক্ষণ করে, যাতে আপনি ও শিক্ষক একসাথে অগ্রগতি দেখতে পারেন। কোনো বিজ্ঞাপন বা ট্র্যাকিং নেই। AI-এর কিছু ফিচারে Google Gemini ব্যবহার হয়। যেকোনো সময় "গোপনীয়তা" পাতা থেকে তথ্য মুছে ফেলার অনুরোধ করতে পারবেন।';
-export const NO_DIFFERENCE = 'না বললে পড়াশোনায় কোনো পার্থক্য হবে না।';
+export const NO_DIFFERENCE = 'এতে অনুমতি না দিলেও সন্তানের পড়াশোনায় কোনো প্রভাব পড়বে না।';
 
 // -> { ok, kind, on: {purpose: bool}, mine: Set } for one child
 export async function readChild(studentId) {

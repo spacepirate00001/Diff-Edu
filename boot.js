@@ -94,7 +94,7 @@ session.onExpired(() => { returnTo = router.here().path; toast('আবার ল
 // ---- showing a page ----
 function teardown() { try { page?.destroy?.(); } catch { /* ignore */ } page = null; if (shell) { shell.destroy(); shell = null; } view = null; }
 function finishBoot() { document.documentElement.classList.add('booted'); document.getElementById('splash')?.remove(); }
-const TITLES = { '/inbox': 'ইনবক্স', '/more/display': 'দেখার ধরন', '/more/help': 'সাহায্য', '/more/pending': 'আরও' };
+const TITLES = { '/inbox': 'ইনবক্স', '/more/display': 'থিম ও লেখার সাইজ', '/more/help': 'সাহায্য', '/more/pending': 'আরও' };
 
 async function build(d) {
   const R = d.route.path, role = me()?.role;

@@ -17,7 +17,7 @@ export function welcome(ctx) {
       h('h1', { class: 'welcome-title', id: 'page-title', tabindex: '-1', text: 'Every child is Different.' }),
       h('button', { class: 'de-btn de-btn--primary', type: 'button', onclick: () => ctx.go('/login'), text: 'লগইন করুন' }),
       h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: () => ctx.go('/admission'), text: 'ভর্তির খোঁজ নিন' }),
-      h('p', { class: 'welcome-line', text: 'অভিভাবক · শিক্ষার্থী · শিক্ষক, সবার একই লগইন' }))));
+      h('p', { class: 'welcome-line', text: 'অভিভাবক, শিক্ষার্থী ও শিক্ষক—সবার জন্য একটাই অ্যাপ।' }))));
   const diffy = node.querySelector('[data-diffy]');
   const mount = () => { if (window.Diffy && diffy && !diffy.firstChild) diffy.appendChild(window.Diffy.make('cheering', 'de-mascot--lg')); };
   const t = setTimeout(mount, 400);   // the sprite loads once; paint again if it was not ready

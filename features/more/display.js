@@ -22,7 +22,7 @@ export function displayPage() {
           option({ label: 'বড় লেখা', sample: SAMPLE, on: p.text === 'large', name: 'text-large', onPick: () => { prefs.set({ text: 'large', sizeAsked: true }); paint(); } }))),
       h('section', { class: 'de-card' }, h('h2', { class: 'de-row__title', text: 'রং' }),
         h('div', { role: 'radiogroup', 'aria-label': 'রং', class: 'opt-list' },
-          ...[['auto', 'ফোনের মতো', 'ফোন আর আকাশের সাথে বদলায়'], ['light', 'হালকা', 'সবসময় হালকা'], ['dark', 'গাঢ়', 'সবসময় গাঢ়']].map(([k, l, s]) =>
+          ...[['auto', 'ফোনের মতো', 'ফোনের ডার্ক/লাইট মোড অনুযায়ী বদলায়'], ['light', 'হালকা', 'সবসময় হালকা'], ['dark', 'গাঢ়', 'সবসময় গাঢ়']].map(([k, l, s]) =>
             option({ label: l, sample: s, on: p.theme === k, name: 'theme-' + k, onPick: () => { prefs.set({ theme: k }); sky.apply(); paint(); } })))),
       ...(store.works ? [] : [h('p', { class: 'de-row__sub', role: 'status', text: 'এই ফোন পছন্দ মনে রাখতে পারছে না। এই খোলায় চলবে।' })]));
   };
@@ -36,6 +36,6 @@ export function openSizeSheet() {
   sheet = openSheet({ title: 'লেখা কেমন সুবিধা?', dismissible: false, content: h('div', { class: 'sheet-col' },
     h('button', { class: 'de-btn de-btn--secondary size-pick', type: 'button', onclick: () => pick('normal') }, h('b', { text: 'সাধারণ' }), h('span', { text: SAMPLE })),
     h('button', { class: 'de-btn de-btn--primary size-pick size-pick--big', type: 'button', onclick: () => pick('large') }, h('b', { text: 'বড় লেখা' }), h('span', { text: SAMPLE })),
-    h('p', { class: 'de-row__sub', text: 'পরে "আরও → দেখার ধরন" থেকে বদলাতে পারবেন।' })) });
+    h('p', { class: 'de-row__sub', text: 'পরে "আরও → থিম ও লেখার সাইজ" থেকে বদলাতে পারবেন।' })) });
   return sheet;
 }

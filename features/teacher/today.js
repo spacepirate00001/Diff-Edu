@@ -39,7 +39,7 @@ function reviewCard(ctx, items, onChange) {
     saveBar.show(state, { text: state === 'saved' ? (accept ? 'ঠিক আছে বলা হয়েছে' : 'ভুল বলা হয়েছে') : undefined });
   }
   draw();
-  return h('section', { class: 'de-card tc-card', 'aria-label': 'ক্যামেরার সন্দেহ' }, h('h2', { class: 'tc-h', text: 'ক্যামেরা যাচাই' }), h('p', { class: 'tc-cap', text: 'মুখ পুরো মেলেনি। আপনি "ঠিক" বা "ভুল" না বলা পর্যন্ত অভিভাবকের কাছে কিছু যায় না।' }), list);
+  return h('section', { class: 'de-card tc-card', 'aria-label': 'ক্যামেরার সন্দেহ' }, h('h2', { class: 'tc-h', text: 'ক্যামেরা যাচাই' }), h('p', { class: 'tc-cap', text: 'ক্যামেরা পুরোপুরি নিশ্চিত নয়। আপনি "ঠিক" বা "ভুল" না চাপলে অভিভাবকের কাছে কোনো তথ্য যাবে না।' }), list);
 }
 
 export function teacherToday(ctx) {
