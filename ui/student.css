@@ -87,3 +87,4 @@
 .exam-q legend { float: left; width: 100%; padding: 0; margin: 0 0 var(--de-s2); }
 .exam-q legend + * { clear: both; }
 .de-msg .chat-who { display: block; }
+.st-qtext { margin: 0; font: var(--de-heading); color: var(--de-ink); white-space: pre-wrap; overflow-wrap: anywhere; }

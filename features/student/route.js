@@ -2,7 +2,7 @@
 import { ready } from './css.js';
 
 const T = {
-  syllabus: ['study', 'সিলেবাস'], materials: ['study', 'নোট ও ভিডিও'], quiz: ['study', 'কুইজ'], mistakes: ['study', 'ভুল শুধরে নেওয়ার খাতা'], revision: ['study', 'পড়ার পরিকল্পনা'], exams: ['study', 'অনলাইন পরীক্ষা'],
+  syllabus: ['study', 'সিলেবাস'], materials: ['study', 'নোট ও ভিডিও'], quiz: ['study', 'কুইজ'], mistakes: ['study', 'ভুল শুধরে নেওয়ার খাতা'], practice: ['study', 'প্রশ্ন অনুশীলন'], revision: ['study', 'পড়ার পরিকল্পনা'], exams: ['study', 'অনলাইন পরীক্ষা'],
   results: ['study', 'পরীক্ষার ফল'], report: ['study', 'রিপোর্ট কার্ড'], homework: ['study', 'বাড়ির কাজ'], merit: ['study', 'মেধা তালিকা'], ratings: ['more', 'রেটিং ও প্রশংসা'], goals: ['more', 'আমার লক্ষ্য'], certs: ['more', 'সার্টিফিকেট'],
   flash: ['study', 'ফ্ল্যাশকার্ড'], doubts: ['study', 'প্রশ্ন বক্স'], focus: ['study', 'ফোকাস টাইমার'], diffy: ['study', 'ডিফি'],
 };
@@ -17,7 +17,7 @@ export async function studentPageFor(segs, ctx, query = {}) {
     const L = await import('./learn.js'), X = ['flash', 'doubts', 'focus', 'diffy'].includes(name) ? await import('./extra.js') : null;
     const study = ['materials', 'revision', 'results', 'ratings', 'goals', 'certs'].includes(name) ? await import('../study/pages.js') : null;
     const result = name === 'flash' ? X.flashPage() : name === 'doubts' ? X.doubtsPage(ctx) : name === 'focus' ? X.focusPage() : name === 'diffy' ? X.diffyPage(ctx) : name === 'syllabus' ? L.syllabusPage(ctx) : name === 'homework' ? L.homeworkPage() : name === 'mistakes' ? L.mistakesPage(ctx) : name === 'exams' ? L.examsPage(ctx) : name === 'merit' ? L.meritPage(ctx)
-      : name === 'quiz' ? (arg ? L.quizPage(ctx, arg) : L.quizListPage(ctx)) : name === 'report' ? (await import('../study/report.js')).reportPage()
+      : name === 'practice' ? (await import('./practice.js')).practicePage(ctx) : name === 'quiz' ? (arg ? L.quizPage(ctx, arg) : L.quizListPage(ctx)) : name === 'report' ? (await import('../study/report.js')).reportPage()
       : name === 'materials' ? study.materialsPage(query.kind) : name === 'revision' ? study.revisionPage() : name === 'results' ? study.resultsPage() : name === 'ratings' ? study.ratingsPage() : name === 'goals' ? study.goalsPage() : study.certsPage();
     return { tab, title: name === 'quiz' && arg ? 'কুইজ খেলো' : title, back: true, result };
   }
