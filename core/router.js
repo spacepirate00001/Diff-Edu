@@ -14,7 +14,7 @@ export const TEACHER_MORE = ['automation', 'me'];
 // Step 5: the teacher's exam work under "আরও" (features/exams/route.js). marks and approve also open one item: /more/marks/:id, /more/approve/:id.
 export const EXAM_PAGES = ['marks', 'upload', 'approve', 'qbank', 'cards'];
 // Step 6: the admin's office pages under "অফিস" (features/office/route.js); the teacher's honorarium is /more/honorarium.
-export const OFFICE_PAGES = ['fees', 'admissions', 'notices', 'honorarium', 'family', 'feedback'];
+export const OFFICE_PAGES = ['fees', 'admissions', 'notices', 'honorarium', 'family', 'feedback', 'people', 'corrections', 'routine'];
 export const PUBLIC = ['/welcome', '/login', '/admission'];
 export const GATE = ['/pin-set', '/consent'];
 

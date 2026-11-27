@@ -147,9 +147,10 @@
   display: flex;
   align-items: center;
   gap: var(--de-s3);
-  padding: var(--de-s4);
-  background: var(--de-brand-deep);
-  color: var(--de-on-brand);
+  padding: var(--de-s3) var(--de-s4);
+  background: var(--de-surface);   /* light bar (2026-11-27 design review): the page title is the hero, not a heavy plum band */
+  color: var(--de-ink);
+  border-bottom: var(--de-border) solid var(--de-line);
 }
 .de-appbar__back,
 .de-appbar__action {
@@ -161,7 +162,7 @@
   border: 0;
   border-radius: var(--de-r-md);
   background: transparent;
-  color: var(--de-on-brand);
+  color: var(--de-brand-text);
   cursor: pointer;
 }
 .de-appbar__back {
@@ -179,17 +180,17 @@
 }
 .de-appbar__title {
   display: block;
-  font: var(--de-heading);
-  color: var(--de-on-brand);
+  font: var(--de-title);
+  color: var(--de-ink);
 }
 .de-appbar__sub {
   display: block;
   font: var(--de-caption);
-  color: var(--de-on-brand-muted);
+  color: var(--de-ink-muted);
 }
 .de-appbar__back:focus-visible,
 .de-appbar__action:focus-visible {
-  outline: var(--de-focus) solid var(--de-accent);
+  outline: var(--de-focus) solid var(--de-ring);
   outline-offset: var(--de-focus);
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -231,15 +232,14 @@
 }
 .de-bottomnav__item.is-on {
   color: var(--de-brand-text);
-  background: var(--de-brand-soft);
   font-weight: 700;
 }
 .de-bottomnav__item.is-on::before {
   content: "";
   position: absolute;
   top: 0;
-  left: 25%;
-  right: 25%;
+  left: 30%;
+  right: 30%;
   height: 3px;
   border-radius: 0 0 var(--de-r-sm) var(--de-r-sm);
   background: var(--de-brand-text);
@@ -1370,17 +1370,16 @@ button.de-chip:focus-visible {
   align-self: flex-start;
   gap: var(--de-s1);
   padding: var(--de-s1) var(--de-s3);
-  border: var(--de-sticker-edge-w) solid var(--de-sticker-edge);
-  border-radius: var(--de-r-xl);
+  border: 0;
+  border-radius: var(--de-r-full);
   background: var(--de-fun-sunny);
   color: var(--de-on-fun);
-  box-shadow: var(--de-shadow-sticker);
+  box-shadow: none;
   font: var(--de-label);
-  transform: rotate(-3deg);
-}
-.de-sticker--mint { background: var(--de-fun-mint); transform: rotate(2.5deg); }
-.de-sticker--coral { background: var(--de-fun-coral); transform: rotate(-2deg); }
-.de-sticker--sky { background: var(--de-fun-sky); transform: rotate(3deg); }
+}   /* design review 2026-11-27: flat pill, no tilt, no thick edge: the fun stays in the colour, not the wobble */
+.de-sticker--mint { background: var(--de-fun-mint); }
+.de-sticker--coral { background: var(--de-fun-coral); }
+.de-sticker--sky { background: var(--de-fun-sky); }
 .de-sticker .de-star { width: 14px; height: 14px; background: var(--de-on-fun); }
 .de-sticker .de-diamond { margin: 0 var(--de-s1); background: var(--de-on-fun); }
 .de-streak--fun { flex-wrap: wrap; }

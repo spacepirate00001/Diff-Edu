@@ -30,6 +30,10 @@
 .tc-att__name b { font: var(--de-body); font-weight: 600; overflow-wrap: anywhere; }
 .tc-att__name span { font: var(--de-caption); color: var(--de-ink-muted); }
 .tc-att.is-away .tc-att__name b { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+/* design review 2026-11-27: the status is the answer, so make it big and unmissable; an absent row gets a red edge */
+.tc-att__main .de-chip { min-height: 32px; padding: 0 var(--de-s4); font: var(--de-label); }
+.tc-att { border-inline-start: 4px solid transparent; padding-inline-start: var(--de-s2); }
+.tc-att.is-away { border-inline-start-color: var(--de-bad-solid); background: var(--de-bad-soft); border-radius: var(--de-r-md); }
 .tc-att__key { flex: none; width: var(--de-touch); min-width: var(--de-touch); min-height: var(--de-touch); align-self: center; display: grid; place-items: center; border: 0; background: transparent; color: var(--de-brand-text); cursor: pointer; }
 .tc-av { flex: none; width: 40px; height: 40px; background: var(--de-brand-soft); color: var(--de-brand-text); }
 .tc-choice { display: flex; flex-direction: column; gap: var(--de-s2); }
