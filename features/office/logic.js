@@ -195,3 +195,14 @@ export function personPatch(p, f) {
 }
 export const pinResetCall = (login, pin) => ({ action: 'reset_pin', login_id: loginOf(login), pin });
 export const pinResetText = (p, pin) => ['ডিফ এডু', '', `${p.full_name}-এর নতুন পিন`, `লগইন আইডি: ${p.login_id}`, `পিন: ${pin}`, '', 'ঢুকে নিজের পছন্দের পিন বানিয়ে নিন।'].join('\n');
+
+// ---- অনুরোধ ও নম্বর সংশোধন: a teacher says a guardian's number is wrong; the admin sets the right one or turns it down (rpc decide_phone_change) ----
+export const PHONE_RULE = /^01[3-9]\d{8}$/;
+export function phoneDecision(req, typed) {
+  const phone = digitsOf(typed, 11);
+  if (!PHONE_RULE.test(phone)) return { ok: false, error: 'সঠিক নম্বর দিন (০১ দিয়ে শুরু, ১১ সংখ্যা)।' };
+  if (phone === digitsOf(req.old_phone, 11)) return { ok: false, error: 'এটা তো আগের নম্বরই, নতুন নম্বর দিন।' };
+  return { ok: true, call: { name: 'decide_phone_change', args: { p_id: req.id, p_approve: true, p_phone: phone } } };
+}
+export const rejectCall = req => ({ name: 'decide_phone_change', args: { p_id: req.id, p_approve: false, p_phone: null } });
+export const phoneReqError = res => /stale/.test(JSON.stringify(res?.data || '')) ? 'নম্বরটা এর মধ্যে বদলে গেছে, পাতা নতুন করে দেখুন।' : /already/.test(JSON.stringify(res?.data || '')) ? 'এটা আগেই ঠিক করা হয়েছে।' : res?.kind === 'offline' ? 'নেট নেই। নেট এলে আবার চেষ্টা করুন।' : 'হয়নি, আবার চেষ্টা করুন।';
