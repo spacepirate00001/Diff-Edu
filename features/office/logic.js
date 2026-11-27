@@ -128,7 +128,7 @@ export { money, monthKey };
 // ---- নতুন ছাত্র যোগ (admin-users create_family): one student and their guardian, all or nothing ----
 export const SHIFT_IDS = [['morning', 'সকাল'], ['afternoon', 'বিকাল'], ['night', 'রাত']];
 export const RELATIONS = ['মা', 'বাবা', 'অন্য'];
-const LOGIN_OK = /^[a-z0-9]{2,20}$/, PIN_OK = /^\d{4,6}$/, PHONE_OK = /^01\d{9}$/, SAME_DIGIT = /^(\d)\1{5}$/;
+const LOGIN_OK = /^[a-z0-9]{2,20}$/, PIN_OK = /^\d{4,6}$/, PHONE_OK = /^01[3-9]\d{8}$/, SAME_DIGIT = /^(\d)\1{5}$/;
 const WEAK = new Set(['012345', '123456', '234567', '345678', '456789', '543210', '654321', '765432', '876543', '987654']);
 // A random 6-digit PIN, skipping the obvious ones (111111, 123456 ...). rnd gives a number from 0 up to 1000000 (not 1), tests pass a fixed one.
 export function newPin(rnd = () => { const b = new Uint32Array(1); do { crypto.getRandomValues(b); } while (b[0] >= 4294000000); return b[0] % 1000000; }) {
@@ -145,9 +145,9 @@ export function validateFamily(f) {
   if (!SHIFT_IDS.some(s => s[0] === f.shift)) e.shift = 'ব্যাচ বেছে নিন।';
   if (!LOGIN_OK.test(login)) e.login = 'ইংরেজি ছোট অক্ষর বা সংখ্যা, ২ থেকে ২০টি। যেমন test1';
   if (!PIN_OK.test(pin)) e.pin = 'পিন হবে ৪ থেকে ৬ সংখ্যার।';
-  if (phone && !PHONE_OK.test(phone)) e.phone = 'নম্বর ০১ দিয়ে শুরু, মোট ১১ সংখ্যা।';
+  if (phone && !PHONE_OK.test(phone)) e.phone = 'নম্বর ০১৩ থেকে ০১৯ দিয়ে শুরু, মোট ১১ সংখ্যা। যেমন ০১৭১২৩৪৫৬৭৮';
   if (!gName) e.gName = 'অভিভাবকের নাম লিখুন।';
-  if (!PHONE_OK.test(gPhone)) e.gPhone = 'নম্বর ০১ দিয়ে শুরু, মোট ১১ সংখ্যা।';
+  if (!PHONE_OK.test(gPhone)) e.gPhone = 'নম্বর ০১৩ থেকে ০১৯ দিয়ে শুরু, মোট ১১ সংখ্যা। যেমন ০১৭১২৩৪৫৬৭৮';
   else if (gPhone === login) e.gPhone = 'ছাত্রের আইডি আর অভিভাবকের নম্বর আলাদা হতে হবে।';
   if (!PIN_OK.test(gPin)) e.gPin = 'পিন হবে ৪ থেকে ৬ সংখ্যার।';
   const student = { login_id: login, pin, full_name: name, class_level: Number(f.cls), roll: digitsOf(f.roll, 9), shift: f.shift }; if (phone) student.phone = phone;
@@ -156,8 +156,19 @@ export function validateFamily(f) {
 }
 // The words to copy and send to the family. A guardian who already exists keeps the old PIN.
 export const familyText = r => ['ডিফ এডু', '', `ছাত্রের লগইন আইডি: ${r.sLogin}`, `পিন: ${r.sPin}`, '', `অভিভাবকের লগইন আইডি: ${r.gLogin}`, r.existed ? 'অভিভাবক আগে থেকেই আছেন, তাঁর পিন আগের মতোই।' : `পিন: ${r.gPin}`, '', 'প্রথমবার লগইন করে পিন বদলে নিন।'].join('\n');
-export const familyError = res => /already|taken|exists|duplicate|unique/i.test(JSON.stringify(res && res.data || '')) ? 'এই আইডি আগে থেকেই আছে, অন্যটা দিন।'
-  : res && res.kind === 'offline' ? 'নেট নেই। নেট এলে আবার চেষ্টা করুন।' : res && res.status === 403 ? 'শুধু অ্যাডমিন এটা করতে পারেন।' : 'যোগ করা যায়নি। আবার চেষ্টা করুন।';
+export function familyError(res) {
+  const msg = String(res && res.data && (res.data.error || res.data.message) || '');
+  if (res && res.kind === 'offline') return 'নেট নেই। নেট এলে আবার চেষ্টা করুন।';
+  if (res && (res.status === 403 || /admin only/i.test(msg))) return 'শুধু অ্যাডমিন এটা করতে পারেন।';
+  if (res && res.status === 401) return 'আবার লগইন করুন, তারপর চেষ্টা করুন।';
+  if (/student login_id already|student.*(already|exists)/i.test(msg)) return 'ছাত্রের এই আইডি আগে থেকেই আছে, অন্যটা দিন।';
+  if (/taken by another role/i.test(msg)) return 'এই নম্বর অন্য কারও (ছাত্র বা শিক্ষকের) আইডি হিসেবে আছে। অভিভাবকের অন্য নম্বর দিন।';
+  if (/guardian phone/i.test(msg)) return 'অভিভাবকের নম্বর ঠিক নেই। ০১৩ থেকে ০১৯ দিয়ে শুরু, মোট ১১ সংখ্যা।';
+  if (/already|registered|exists|duplicate|unique/i.test(msg + JSON.stringify(res && res.data || ''))) return 'এই আইডি বা নম্বর আগে থেকেই আছে, অন্যটা দিন।';
+  if (/PIN/i.test(msg)) return 'পিন হবে ৪ থেকে ৬ সংখ্যার।';
+  return 'যোগ করা যায়নি' + (msg ? ` (${msg})` : '') + '। আবার চেষ্টা করুন।';
+}
+
 
 // ---- মানুষ (admin): find a person, fix their name, phone, class or roll, give a new PIN (admin-users reset_pin) ----
 export const PEOPLE_ROLES = [['student', 'ছাত্র'], ['guardian', 'অভিভাবক'], ['teacher', 'শিক্ষক']];
@@ -172,7 +183,7 @@ export const personSub = p => [PEOPLE_ROLES.find(r => r[0] === p.role)?.[1], p.s
 export function personPatch(p, f) {
   const errors = {}, profile = {}, student = {}, name = String(f.name || '').trim(), phone = digitsOf(f.phone, 11), s0 = p.students?.[0];
   if (!name) errors.name = 'নাম লিখুন।';
-  if (phone && !PHONE_OK.test(phone)) errors.phone = 'নম্বর ০১ দিয়ে শুরু, মোট ১১ সংখ্যা।';
+  if (phone && !PHONE_OK.test(phone)) errors.phone = 'নম্বর ০১৩ থেকে ০১৯ দিয়ে শুরু, মোট ১১ সংখ্যা। যেমন ০১৭১২৩৪৫৬৭৮';
   if (name && name !== p.full_name) profile.full_name = name;
   if (phone !== (p.phone || '')) profile.phone = phone || null;
   if (s0) {
