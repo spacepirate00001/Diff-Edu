@@ -50,12 +50,21 @@ async function enterApp() {
   const m = me();
   inbox.reset(); features.reset(); kids.reset(); self.reset();
   if (!tabsFor(m.role)) return false;
-  await withTimeout(features.load(), 6000, null);
-  if (m.role === 'guardian') {
-    // a failed read never blocks the app: the question simply comes again next time it opens
-    const r = await withTimeout(sel('consents', `select=profile_id&profile_id=eq.${session.uid()}&app_terms=is.true&limit=1`), 6000, { kind: 'offline' });
-    consentDone = r.kind === 'ok' ? rows(r).length > 0 : true;
-  } else consentDone = true;
+  // The three first questions to the server go out together (they used to wait for each other), and a saved answer from the last visit
+  // is used straight away while the fresh one loads quietly behind it. A failed or slow read never blocks the app.
+  const uid = session.uid(), seenKey = 'de.next.consent.' + uid;
+  const savedFeatures = cache.get(uid, 'features');
+  const featuresP = features.load();
+  if (savedFeatures && Array.isArray(savedFeatures.v)) features.set(savedFeatures.v);
+  const consentP = m.role !== 'guardian' ? Promise.resolve(true)
+    : sel('consents', `select=profile_id&profile_id=eq.${uid}&app_terms=is.true&limit=1`).then(r => {
+      const ok = r.kind === 'ok' ? rows(r).length > 0 : true;   // a failed read never blocks the app: the question simply comes again next time it opens
+      if (r.kind === 'ok') { if (ok) store.set(seenKey, '1'); else store.del(seenKey); }
+      return ok;
+    });
+  const consentKnown = m.role !== 'guardian' || store.get(seenKey) === '1';
+  await Promise.all([savedFeatures ? null : withTimeout(featuresP, 6000, null), consentKnown ? null : withTimeout(consentP, 6000, true)]);
+  consentDone = consentKnown ? true : await withTimeout(consentP, 1, true);
   gate = router.nextGate({ me: m, consentDone });
   startFlushing();
   if (m.role === 'guardian') kids.load();
@@ -214,7 +223,13 @@ async function start() {
     try { const { DeGuide } = await import('./features/landing/guide.js'); if (DeGuide.wanted()) await DeGuide.show(); } catch (e) { console.error(e); } // a broken guide must never block the app
   }
   if (session.has()) {
-    const r = await loadMe();
+    // A saved copy of the profile from the last visit opens the app at once; the fresh copy loads behind it (a changed role reloads the app).
+    const saved = cache.get(session.uid(), 'me');
+    let r;
+    if (saved && saved.v && saved.v.id === session.uid()) {
+      session.setMe(saved.v); r = { me: saved.v, kind: 'ok', stale: true };
+      loadMe().then(f => { if (f.me && f.me.role !== saved.v.role) location.reload(); }).catch(() => {});
+    } else r = await loadMe();
     if (r.me) { if (!await enterApp()) return showNoApp(); }
     else if (r.kind === 'noprofile') await session.signOut();   // no net and no saved copy: the welcome page shows, the saved session stays
   }

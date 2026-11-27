@@ -59,10 +59,11 @@ export function studentToday(ctx) {
   }
   async function go(quiet) {
     const me0 = ++run;
-    if (!quiet) cards.replaceChildren(loading(3));
+    if (!quiet && !(quiet === undefined && cache.get(uid, 'stoday'))) cards.replaceChildren(loading(3));
+    const old = cache.get(uid, 'stoday')?.v;
+    if (quiet === undefined && old) draw(old);   // the last copy shows at once, the fresh one replaces it
     const r = await load();
     if (dead || me0 !== run) return;
-    const old = cache.get(uid, 'stoday')?.v;
     if (r.kind === 'ok') return draw(r.data);
     if (r.kind === 'noself') return cards.replaceChildren(noRecState(() => go()));
     if (old) return draw(old, r.kind === 'offline' ? 'offline' : 'error');
