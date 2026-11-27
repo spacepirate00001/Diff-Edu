@@ -68,7 +68,7 @@ export function teacherToday(ctx) {
       const goFor = t => ctx.go(t.kind === 'attendance' ? periodUrl('/class/attend', t.p.shift, t.p.slot) : t.kind === 'rating' ? periodUrl('/class/rate', t.p.shift, t.p.slot) : t.kind === 'homework' ? '/class/homework' : '/today');
       out.push(h('section', { class: 'de-card tc-card', 'aria-label': 'আজ যা বাকি' }, h('h2', { class: 'tc-h', text: 'আজ যা বাকি' }),
         todo.length ? h('ul', { class: 'tc-list' }, ...todo.map(t => h('li', null, h('button', { class: 'de-row more-row', type: 'button', onclick: () => (t.kind === 'review' ? document.getElementById('tc-review')?.scrollIntoView({ block: 'start' }) : goFor(t)) },
-          h('span', { class: 'more-ic', 'aria-hidden': 'true' }, icon(t.kind === 'review' ? 'alert' : t.kind === 'homework' ? 'book' : t.kind === 'rating' ? 'star' : 'check')), h('span', { class: 'de-row__main' }, h('span', { class: 'de-row__title', text: t.text })), icon('chev')))))
+          h('span', { class: 'more-ic more-ic--' + (t.kind === 'review' ? 'bad' : 'warn'), 'aria-hidden': 'true' }, icon(t.kind === 'review' ? 'alert' : t.kind === 'homework' ? 'book' : t.kind === 'rating' ? 'star' : 'check')), h('span', { class: 'de-row__main' }, h('span', { class: 'de-row__title', text: t.text })), icon('chev')))))
           : h('p', { class: 'tc-sub', text: periods.length ? 'আজকের সব কাজ শেষ। ধন্যবাদ স্যার/ম্যাডাম।' : 'আজ রুটিনে আপনার ক্লাস নেই, তাই বাকি কিছু নেই।' })));
       if (review?.length) { const c = reviewCard(ctx, review, () => reload()); c.id = 'tc-review'; out.push(c); }
       else if (review === null) out.push(h('p', { class: 'tc-cap', text: 'ক্যামেরার যাচাই এখন আনা যায়নি।' }));
