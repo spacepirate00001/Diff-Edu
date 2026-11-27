@@ -13,7 +13,7 @@ import { loginMessage } from '../../core/errors.js';
 const STEPS = {
   old: ['পুরনো পিন দিন', 'আগে আপনার এখনকার পিন দিন।', 'পরের ধাপ'],
   new: ['নতুন পিন', 'নতুন পিন বেছে নিন। ৪ থেকে ৬টা সংখ্যা।', 'পরের ধাপ'],
-  again: ['আবার লিখুন', 'একই পিন আরেকবার লিখুন।', 'সংরক্ষণ করুন'],
+  again: ['আবার লিখুন', 'একই পিন আরেকবার লিখুন।', 'সেভ করুন'],
 };
 export function pinSet(ctx, { forced = false } = {}) {
   let step = forced ? 'new' : 'old', first = '', busy = false;
@@ -45,9 +45,9 @@ export function pinSet(ctx, { forced = false } = {}) {
     busy = true; paintBusy();
     const r = await changePin(pin);
     busy = false;
-    if (r.ok) { toast('নতুন পিন সংরক্ষণ হয়ে গেছে।'); pad.destroy(); offNet(); return forced ? ctx.afterPinSet() : ctx.replace('/more'); }
+    if (r.ok) { toast('নতুন পিন সেভ হয়ে গেছে।'); pad.destroy(); offNet(); return forced ? ctx.afterPinSet() : ctx.replace('/more'); }
     paint(); pad.clear();
-    error(r.stage === 'flag' ? 'নতুন পিন চালু হয়ে গেছে, তবে সার্ভারে পুরোপুরি জমা হয়নি। আবার একই পিন দিয়ে সংরক্ষণ করুন।' : r.kind === 'offline' ? 'নেট নেই। নেট চালু করে আবার চেষ্টা করুন।' : 'সংরক্ষণ করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।');
+    error(r.stage === 'flag' ? 'নতুন পিন চালু হয়ে গেছে, তবে সার্ভারে পুরোপুরি জমা হয়নি। আবার একই পিন দিয়ে সেভ করুন।' : r.kind === 'offline' ? 'নেট নেই। নেট চালু করে আবার চেষ্টা করুন।' : 'সেভ করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।');
     if (r.stage === 'flag') { step = 'again'; first = pin; paint(); }
   }
   function paintBusy() { pad.busy(busy); update(); save.textContent = 'একটু অপেক্ষা…'; save.classList.add('is-loading'); }
