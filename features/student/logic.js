@@ -92,6 +92,13 @@ export const GAME_RULES = {
   spelling_b: ['বানান বি', 'বাংলা অর্থ দেখে ঠিক বানানটি বেছে নাও।'],
   memory_pairs: ['জোড়া কার্ড', 'দুটি করে কার্ড উল্টে একই ছবির জোড়া মেলাও।'],
   sequence: ['সঠিক ক্রমে সাজানো', 'কথাগুলো ঠিক ক্রমে একের পর এক ট্যাপ করো।'],
+  times_table: ['নামতা রেস', '৬০ সেকেন্ডে যত পারো গুণ করো।'],
+  true_false: ['সত্যি না মিথ্যা', 'কথাটা সত্যি না মিথ্যা, চট করে বলো।'],
+  odd_one_out: ['বেমানান কোনটা', 'চারটার মধ্যে যেটা দলে মেলে না, সেটা খুঁজে বের করো।'],
+  number_pattern: ['সংখ্যার ধাঁধা', 'নিয়মটা ধরে পরের সংখ্যাটা বলো।'],
+  letter_scramble: ['অক্ষর সাজাও', 'এলোমেলো অক্ষর সাজিয়ে ইংরেজি শব্দ বানাও।'],
+  proverb_fill: ['প্রবাদ পূরণ', 'প্রবাদের ফাঁকা জায়গায় ঠিক শব্দটা বসাও।'],
+  emoji_guess: ['ছবি দেখে বলো', 'ছবিটা কীসের, ঠিক নামটা বেছে নাও।'],
 };
 export const GameLogic = {
   points: (correct, total) => correct * 10 + (total > 0 && correct === total ? 20 : 0),
@@ -103,6 +110,17 @@ export const GameLogic = {
     if (rnd() < 0.5) return { a, b, op: '+', ans: a + b };
     if (b > a) [a, b] = [b, a];
     return { a, b, op: '−', ans: a - b };
+  },
+  tableQuestion(rnd) { const a = 2 + Math.floor(rnd() * 9), b = 2 + Math.floor(rnd() * 9); return { a, b, op: '×', ans: a * b }; },
+  // A number pattern: four terms are shown, the fifth is the answer. Four options, one right.
+  patternQuestion(rnd) {
+    const kind = Math.floor(rnd() * 4), r = n => Math.floor(rnd() * n); let t;
+    if (kind === 0) { const d = 2 + r(8), s0 = 1 + r(9); t = [0, 1, 2, 3, 4].map(i => s0 + d * i); }
+    else if (kind === 1) { const m = 2 + r(2), s0 = 1 + r(3); t = [0, 1, 2, 3, 4].map(i => s0 * m ** i); }
+    else if (kind === 2) { const d = 2 + r(7), s0 = 40 + r(20); t = [0, 1, 2, 3, 4].map(i => s0 - d * i); }
+    else { const a = 1 + r(4), b = 2 + r(4), s0 = 1 + r(9); t = [s0]; for (let i = 1; i < 5; i++) t.push(t[i - 1] + (i % 2 ? a : b)); }
+    const ans = t[4], bad = GameLogic.shuffle([ans + 1, ans - 1, ans + 2, ans - 2, ans + 10, ans - 3], rnd).filter(x => x > 0 && x !== ans).slice(0, 3);
+    return { shown: t.slice(0, 4), ans, options: GameLogic.shuffle([ans, ...bad], rnd) };
   },
   countRight: (expected, given) => expected.reduce((n, x, i) => n + (given[i] === x ? 1 : 0), 0),
   isPair: (deck, i, j) => i !== j && deck[i] === deck[j],

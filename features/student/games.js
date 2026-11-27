@@ -8,6 +8,7 @@ import { sky } from '../../core/sky.js';
 import { bn, ascii, dhakaDay } from '../../core/bn.js';
 import { me, progressCard, noRecState } from './common.js';
 import { GameLogic, GAME_RULES, ROUND_SECONDS, gameError } from './logic.js';
+import { MORE_GAMES } from './games-more.js';
 
 const WORDS = [['বই', 'book'], ['জল', 'water'], ['আকাশ', 'sky'], ['গাছ', 'tree'], ['মাছ', 'fish'], ['ফুল', 'flower']];
 const SPELL = [['বই', 'book', ['buk', 'bok']], ['জল', 'water', ['wator', 'watar']], ['স্কুল', 'school', ['scool', 'skool']], ['বন্ধু', 'friend', ['frend', 'freind']], ['আম', 'mango', ['mengo', 'manggo']], ['আপেল', 'apple', ['aple', 'appel']]];
@@ -17,22 +18,25 @@ const dhakaHour = () => Math.floor(sky.minutes() / 60) % 24;
 const options = (rnd, right, pool) => GameLogic.shuffle([right, ...GameLogic.shuffle(pool.filter(x => x !== right), rnd).slice(0, 3)], rnd);
 const opt = (text, onclick) => h('button', { class: 'st-opt', type: 'button', onclick }, h('span', { text }));
 
+const timedRace = gen => (root, done, rnd = Math.random) => {
+  const t0 = Date.now(); let correct = 0, total = 0, q, over = false, tick;
+  const end = () => { if (over) return; over = true; clearInterval(tick); done({ correct, total, seconds: GameLogic.clampSeconds(Date.now() - t0) }); };
+  const left = h('p', { class: 'de-row__sub st-center', 'aria-live': 'off' }), input = h('input', { class: 'de-field__input st-answer', inputmode: 'numeric', autocomplete: 'off', 'aria-label': 'তোমার উত্তর' });
+  const show = () => { left.textContent = bn(`${Math.max(0, ROUND_SECONDS - Math.floor((Date.now() - t0) / 1000))} সেকেন্ড · ${correct} সঠিক`); };
+  const ask = () => { q = gen(rnd); qEl.textContent = bn(`${q.a} ${q.op} ${q.b} = ?`); input.value = ''; input.focus(); };
+  const qEl = h('div', { class: 'st-big', 'aria-live': 'polite' });
+  const go = () => { if (over || input.value.trim() === '') return; total++; if (+ascii(input.value) === q.ans) correct++; show(); ask(); };
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  root.replaceChildren(left, h('section', { class: 'de-card st-q' }, qEl, input, h('button', { class: 'de-btn de-btn--primary', type: 'button', onclick: go, text: 'উত্তর দাও' })), h('button', { class: 'de-btn de-btn--text', type: 'button', onclick: end, text: 'এখানেই শেষ করি' }));
+  tick = setInterval(() => { show(); if (Date.now() - t0 >= ROUND_SECONDS * 1000) end(); }, 1000);
+  show(); ask();
+  return () => { over = true; clearInterval(tick); };
+};
+
 // Each game: run(root, done). done({ correct, total, seconds }) when the round ends. rnd is injectable.
 export const GAMES = {
-  math_race(root, done, rnd = Math.random) {
-    const t0 = Date.now(); let correct = 0, total = 0, q, over = false, tick;
-    const end = () => { if (over) return; over = true; clearInterval(tick); done({ correct, total, seconds: GameLogic.clampSeconds(Date.now() - t0) }); };
-    const left = h('p', { class: 'de-row__sub st-center', 'aria-live': 'off' }), input = h('input', { class: 'de-field__input st-answer', inputmode: 'numeric', autocomplete: 'off', 'aria-label': 'তোমার উত্তর' });
-    const show = () => { left.textContent = bn(`${Math.max(0, ROUND_SECONDS - Math.floor((Date.now() - t0) / 1000))} সেকেন্ড · ${correct} সঠিক`); };
-    const ask = () => { q = GameLogic.mathQuestion(rnd); qEl.textContent = bn(`${q.a} ${q.op} ${q.b} = ?`); input.value = ''; input.focus(); };
-    const qEl = h('div', { class: 'st-big', 'aria-live': 'polite' });
-    const go = () => { if (over || input.value.trim() === '') return; total++; if (+ascii(input.value) === q.ans) correct++; show(); ask(); };
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
-    root.replaceChildren(left, h('section', { class: 'de-card st-q' }, qEl, input, h('button', { class: 'de-btn de-btn--primary', type: 'button', onclick: go, text: 'উত্তর দাও' })), h('button', { class: 'de-btn de-btn--text', type: 'button', onclick: end, text: 'এখানেই শেষ করি' }));
-    tick = setInterval(() => { show(); if (Date.now() - t0 >= ROUND_SECONDS * 1000) end(); }, 1000);
-    show(); ask();
-    return () => { over = true; clearInterval(tick); };
-  },
+  math_race: timedRace(GameLogic.mathQuestion),
+  times_table: timedRace(GameLogic.tableQuestion),
   word_match(root, done, rnd = Math.random) {
     const qs = GameLogic.shuffle(WORDS, rnd).slice(0, 5), given = [], t0 = Date.now(); let i = 0;
     const step = () => {
@@ -80,6 +84,7 @@ export const GAMES = {
     };
     draw();
   },
+  ...MORE_GAMES,
 };
 
 // ---- list of games, with the time left today ----
