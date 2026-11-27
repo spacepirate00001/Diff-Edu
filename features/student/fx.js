@@ -72,14 +72,16 @@ const sk = id => 'de_gstats_' + id;
 const read = id => { try { return JSON.parse(load(sk(id)) || '{}') || {}; } catch { return {}; } };
 const streakOf = (s, day) => (s.last === day || s.last === addDays(day, -1) ? s.streak || 0 : 0);
 export const stats = {
-  view(id) { const s = read(id), day = dhakaDay(); return { best: s.best || {}, streak: streakOf(s, day), today: s.day === day ? s.games || [] : [] }; },
+  view(id) { const s = read(id), day = dhakaDay(); return { best: s.best || {}, streak: streakOf(s, day), today: s.day === day ? s.games || [] : [], mons: (s.mon || []).length }; },
+  // A monster beaten for the first time goes into the collection. Returns true when it is new.
+  collect(id, key) { const s = read(id), mon = s.mon || []; if (mon.includes(key)) return false; mon.push(key); save(sk(id), JSON.stringify({ ...s, mon })); return true; },
   // Call once per finished round. Returns what to show on the result.
   record(id, game, points) {
     const s = read(id), day = dhakaDay(), best = s.best || {}, prev = best[game] || 0, today = s.day === day ? s.games || [] : [];
     const first = s.last !== day, streak = first ? streakOf(s, day) + 1 : s.streak || 1, wasDone = today.length >= MISSION;
     if (!today.includes(game)) today.push(game);
     if (points > prev) best[game] = points;
-    save(sk(id), JSON.stringify({ best, last: day, streak, day, games: today }));
+    save(sk(id), JSON.stringify({ ...s, best, last: day, streak, day, games: today }));
     return { prev, isBest: points > prev && prev > 0, streak, today: today.length, missionJust: !wasDone && today.length >= MISSION };
   },
 };

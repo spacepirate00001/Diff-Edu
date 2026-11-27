@@ -10,12 +10,13 @@ import { me, progressCard, noRecState } from './common.js';
 import { GameLogic, GAME_RULES, gameError } from './logic.js';
 import { MORE_GAMES } from './games-more.js';
 import { ACTION_GAMES } from './games-action.js';
+import { NEW_GAMES } from './games-new.js';
 
 const dhakaHour = () => Math.floor(sky.minutes() / 60) % 24;
-const EMOJI = { fpv_drone: '🚁', quick_fire: '⚡', math_race: '🔢', shoot_math: '🎈', memory_pairs: '🃏', letter_scramble: '🔤' };
+const EMOJI = { fpv_drone: '🚁', quick_fire: '⚡', math_race: '🔢', shoot_math: '🎈', memory_pairs: '🃏', letter_scramble: '🔤', haat_shop: '🛒', monster_battle: '⚔️', number_merge: '🎯', word_detective: '🕵️' };
 
 // Each game: run(root, done, rnd, { cls }). done({ correct, total, seconds }) when the round ends. rnd is injectable.
-export const GAMES = { ...MORE_GAMES, ...ACTION_GAMES };
+export const GAMES = { ...MORE_GAMES, ...ACTION_GAMES, ...NEW_GAMES };
 
 // ---- list of games, with the time left today ----
 async function usedToday(rec) { const r = await sel('game_sessions', `select=seconds&student_id=eq.${rec.id}&played_on=eq.${dhakaDay()}`); return r.kind === 'ok' ? rows(r).reduce((n, x) => n + (x.seconds || 0), 0) : null; }
@@ -64,13 +65,14 @@ export function gamePage(ctx, game) {
             h('p', { class: 'gx-big', text: `+${bn(pts)} পয়েন্ট` }),
             st.isBest ? h('span', { class: 'de-chip de-chip--good', text: `🏅 নতুন সেরা! আগে ছিল ${bn(st.prev)}` }) : st.prev ? h('span', { class: 'de-chip de-chip--plain', text: `তোমার সেরা: ${bn(Math.max(st.prev, pts))} পয়েন্ট` }) : null,
             st.missionJust ? h('span', { class: 'de-chip de-chip--good', text: '🎉 আজকের মিশন শেষ!' }) : h('span', { class: 'de-row__sub', text: `আজ ${bn(st.today)}টা আলাদা খেলা খেলেছ${st.streak > 1 ? ` · 🔥 টানা ${bn(st.streak)} দিন` : ''}` }),
+            ...(r.extra || []).map(t => h('span', { class: 'de-chip de-chip--good', text: t })),
             h('p', { class: 'de-row__sub', text: `আজ আরও ${bn(Math.floor((+res.data || 0) / 60))} মিনিট খেলা যাবে।` }),
             h('div', { class: 'st-actions' }, h('button', { class: 'de-btn de-btn--primary', type: 'button', onclick: () => { root.replaceChildren(); start(); }, text: 'আবার খেলো' }), h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: () => ctx.replace('/play/games'), text: 'অন্য খেলা' }))));
           root.querySelector('#page-title')?.focus({ preventScroll: true });
         } else root.replaceChildren(stateCard({ kind: res.kind === 'offline' ? 'offline' : 'error', title: res.kind === 'offline' ? 'ইশ, নেট হারিয়ে গেছে' : 'স্কোর জমা হয়নি', text: res.kind === 'offline' || res.kind === 'server' ? 'নেট চালু করে আবার পাঠাও। তোমার ফল আছে।' : gameError(res.data?.message), action: res.kind === 'offline' || res.kind === 'server' ? 'আবার পাঠাও' : 'খেলার তালিকা', onAction: res.kind === 'offline' || res.kind === 'server' ? send : () => ctx.replace('/play/games') }));
       };
       send();
-    }, Math.random, { cls: rec.class_level });
+    }, Math.random, { cls: rec.class_level, id: rec.id });
   };
   start();
   return { node: root, destroy() { dead = true; stop?.(); } };
