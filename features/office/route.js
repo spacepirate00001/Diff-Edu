@@ -12,6 +12,7 @@ export async function officePage(segs, ctx, query = {}) {
   if (name === 'admissions') return { ...base, title: 'ভর্তির খোঁজ', result: (await import('./admissions.js')).admissionsPage(ctx) };
   if (name === 'family') return { ...base, title: 'নতুন ছাত্র যোগ', result: (await import('./family.js')).familyPage(ctx) };
   if (name === 'feedback') return { ...base, title: 'মতামত', result: (await import('./feedback.js')).feedbackPage(ctx) };
+  if (name === 'people') return { ...base, title: 'মানুষ ও পিন', result: (await import('./people.js')).peoplePage(ctx) };
   if (name === 'notices') return { ...base, title: 'নোটিশ', result: (await import('./notices.js')).noticesPage(ctx) };
   return null;
 }
