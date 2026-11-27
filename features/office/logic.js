@@ -124,3 +124,37 @@ export const noticeWho = n => audienceName(n.audience) + (n.class_level ? ` · �
 export const archiveCall = (id, archived) => ({ name: 'set_notice_archived', args: { p_id: id, p_archived: !!archived } });
 export const deleteCall = id => ({ name: 'delete_archived_notice', args: { p_id: id } });
 export { money, monthKey };
+
+// ---- নতুন ছাত্র যোগ (admin-users create_family): one student and their guardian, all or nothing ----
+export const SHIFT_IDS = [['morning', 'সকাল'], ['afternoon', 'বিকাল'], ['night', 'রাত']];
+export const RELATIONS = ['মা', 'বাবা', 'অন্য'];
+const LOGIN_OK = /^[a-z0-9]{2,20}$/, PIN_OK = /^\d{4,6}$/, PHONE_OK = /^01\d{9}$/, SAME_DIGIT = /^(\d)\1{5}$/;
+const WEAK = new Set(['012345', '123456', '234567', '345678', '456789', '543210', '654321', '765432', '876543', '987654']);
+// A random 6-digit PIN, skipping the obvious ones (111111, 123456 ...). rnd gives a number from 0 up to 1000000 (not 1), tests pass a fixed one.
+export function newPin(rnd = () => { const b = new Uint32Array(1); do { crypto.getRandomValues(b); } while (b[0] >= 4294000000); return b[0] % 1000000; }) {
+  for (let i = 0; i < 50; i++) { const p = String(rnd()).padStart(6, '0'); if (!SAME_DIGIT.test(p) && !WEAK.has(p)) return p; }
+  return '482917';
+}
+export const loginOf = s => ascii(s).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
+export const digitsOf = (s, max) => ascii(s).replace(/\D/g, '').slice(0, max);
+export function validateFamily(f) {
+  const e = {}, name = String(f.name || '').trim(), gName = String(f.gName || '').trim(), login = loginOf(f.login), pin = digitsOf(f.pin, 6), phone = digitsOf(f.phone, 11), gPhone = digitsOf(f.gPhone, 11), gPin = digitsOf(f.gPin, 6);
+  if (!name) e.name = 'ছাত্রের নাম লিখুন।';
+  if (!LEVELS.includes(Number(f.cls))) e.cls = 'ক্লাস বেছে নিন।';
+  if (!digitsOf(f.roll, 9)) e.roll = 'রোল নম্বর দিন।';
+  if (!SHIFT_IDS.some(s => s[0] === f.shift)) e.shift = 'ব্যাচ বেছে নিন।';
+  if (!LOGIN_OK.test(login)) e.login = 'ইংরেজি ছোট অক্ষর বা সংখ্যা, ২ থেকে ২০টি। যেমন test1';
+  if (!PIN_OK.test(pin)) e.pin = 'পিন হবে ৪ থেকে ৬ সংখ্যার।';
+  if (phone && !PHONE_OK.test(phone)) e.phone = 'নম্বর ০১ দিয়ে শুরু, মোট ১১ সংখ্যা।';
+  if (!gName) e.gName = 'অভিভাবকের নাম লিখুন।';
+  if (!PHONE_OK.test(gPhone)) e.gPhone = 'নম্বর ০১ দিয়ে শুরু, মোট ১১ সংখ্যা।';
+  else if (gPhone === login) e.gPhone = 'ছাত্রের আইডি আর অভিভাবকের নম্বর আলাদা হতে হবে।';
+  if (!PIN_OK.test(gPin)) e.gPin = 'পিন হবে ৪ থেকে ৬ সংখ্যার।';
+  const student = { login_id: login, pin, full_name: name, class_level: Number(f.cls), roll: digitsOf(f.roll, 9), shift: f.shift }; if (phone) student.phone = phone;
+  const guardian = { full_name: gName, phone: gPhone, pin: gPin }; if (f.rel) guardian.relation = f.rel;
+  return { ok: !Object.keys(e).length, errors: e, value: { action: 'create_family', student, guardian } };
+}
+// The words to copy and send to the family. A guardian who already exists keeps the old PIN.
+export const familyText = r => ['ডিফ এডু', '', `ছাত্রের লগইন আইডি: ${r.sLogin}`, `পিন: ${r.sPin}`, '', `অভিভাবকের লগইন আইডি: ${r.gLogin}`, r.existed ? 'অভিভাবক আগে থেকেই আছেন, তাঁর পিন আগের মতোই।' : `পিন: ${r.gPin}`, '', 'প্রথমবার লগইন করে পিন বদলে নিন।'].join('\n');
+export const familyError = res => /already|taken|exists|duplicate|unique/i.test(JSON.stringify(res && res.data || '')) ? 'এই আইডি আগে থেকেই আছে, অন্যটা দিন।'
+  : res && res.kind === 'offline' ? 'নেট নেই। নেট এলে আবার চেষ্টা করুন।' : res && res.status === 403 ? 'শুধু অ্যাডমিন এটা করতে পারেন।' : 'যোগ করা যায়নি। আবার চেষ্টা করুন।';

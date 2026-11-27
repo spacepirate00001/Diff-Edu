@@ -111,3 +111,4 @@
 .tc-actions { display: flex; flex-wrap: wrap; gap: var(--de-s2); }
 .tc-actions > .de-btn { flex: 1 1 140px; width: auto; text-decoration: none; }
 .tc-body { margin: 0; font: var(--de-body); color: var(--de-ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.tc-pre { margin: 0; padding: var(--de-s3); white-space: pre-wrap; overflow-wrap: anywhere; font: var(--de-body); background: var(--de-brand-soft); color: var(--de-ink); border-radius: var(--de-r-md); user-select: all; }

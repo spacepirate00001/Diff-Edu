@@ -76,7 +76,7 @@ const R = [
   ['t_requests', 'অনুরোধ', 'request', 'teacher', 'more', 5, null],
   // admin
   ['a_fees', 'ফি', 'বকেয়া বেতন টাকা fee', 'admin', 'office', 6, 'fees'],
-  ['a_accounts', 'অ্যাকাউন্ট', 'হিসাব account', 'admin', 'office', 6, null],
+  ['a_accounts', 'নতুন ছাত্র যোগ', 'নতুন ভর্তি পরিবার অ্যাকাউন্ট আইডি পিন টেস্ট account', 'admin', 'office', 6, null],
   ['a_profiles', 'প্রোফাইল সম্পাদনা', 'প্রোফাইল বদলান profile', 'admin', 'office', 6, null],
   ['a_routine', 'রুটিন', 'সময়সূচি routine', 'admin', 'office', 6, null],
   ['a_corr', 'অনুরোধ ও নম্বর সংশোধন', 'সংশোধন correction', 'admin', 'office', 6, null],
@@ -113,7 +113,7 @@ export const LIVE_ROUTES = {
   // the teacher's exam work (step 5)
   t_marks: ['/more/marks', 'exam'], t_cards: ['/more/cards', 'file'], t_qupload: ['/more/upload', 'up'], t_qapprove: ['/more/approve', 'check'], t_qbank: ['/more/qbank', 'book'],
   // step 6: the admin's office and the teacher's honorarium
-  a_fees: ['/office/fees', 'coin'], a_honor: ['/office/honorarium', 'coin'], a_admissions: ['/office/admissions', 'people'], a_notices: ['/office/notices', 'bell'], t_honor: ['/more/honorarium', 'coin'],
+  a_fees: ['/office/fees', 'coin'], a_honor: ['/office/honorarium', 'coin'], a_admissions: ['/office/admissions', 'people'], a_accounts: ['/office/family', 'people'], a_notices: ['/office/notices', 'bell'], t_honor: ['/more/honorarium', 'coin'],
   // the student's (step 3)
   s_homework: ['/learn/homework', 'book'], s_syllabus: ['/learn/syllabus', 'book'], s_videos: ['/learn/materials?kind=video', 'play'], s_materials: ['/learn/materials', 'file'],
   s_mistakes: ['/learn/mistakes', 'check'], s_quiz: ['/learn/quiz', 'trophy'], s_exams: ['/learn/exams', 'exam'], s_results: ['/learn/results', 'chart'], s_revision: ['/learn/revision', 'clock'],
