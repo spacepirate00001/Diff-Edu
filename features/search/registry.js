@@ -115,7 +115,7 @@ export const LIVE_ROUTES = {
   // the teacher's exam work (step 5)
   t_marks: ['/more/marks', 'exam'], t_cards: ['/more/cards', 'file'], t_qupload: ['/more/upload', 'up'], t_qapprove: ['/more/approve', 'check'], t_qbank: ['/more/qbank', 'book'],
   // step 6: the admin's office and the teacher's honorarium
-  a_fees: ['/office/fees', 'coin'], a_honor: ['/office/honorarium', 'coin'], a_admissions: ['/office/admissions', 'people'], a_accounts: ['/office/family', 'people'], a_feedback: ['/office/feedback', 'chat'], a_profiles: ['/office/people', 'people'], a_corr: ['/office/corrections', 'phone'], a_notices: ['/office/notices', 'bell'], t_honor: ['/more/honorarium', 'coin'],
+  a_fees: ['/office/fees', 'coin'], a_honor: ['/office/honorarium', 'coin'], a_admissions: ['/office/admissions', 'people'], a_accounts: ['/office/family', 'people'], a_feedback: ['/office/feedback', 'chat'], a_profiles: ['/office/people', 'people'], a_routine: ['/office/routine', 'clock'], a_corr: ['/office/corrections', 'phone'], a_notices: ['/office/notices', 'bell'], t_honor: ['/more/honorarium', 'coin'],
   // the student's (step 3)
   s_homework: ['/learn/homework', 'book'], s_syllabus: ['/learn/syllabus', 'book'], s_videos: ['/learn/materials?kind=video', 'play'], s_materials: ['/learn/materials', 'file'],
   s_mistakes: ['/learn/mistakes', 'check'], s_quiz: ['/learn/quiz', 'trophy'], s_practice: ['/learn/practice', 'book'], s_exams: ['/learn/exams', 'exam'], s_results: ['/learn/results', 'chart'], s_revision: ['/learn/revision', 'clock'],
