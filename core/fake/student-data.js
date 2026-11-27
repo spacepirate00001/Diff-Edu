@@ -29,6 +29,11 @@ const PHRASES = [['p1', 'phrase', 'হ্যালো'], ['p2', 'phrase', 'ধ�
   .map(([id, kind, label]) => ({ id, kind, label }));
 const TEAM_NAMES = ['সূর্যতারা', 'নীল আকাশ', 'সবুজ পাতা', 'রামধনু', 'জোনাকি', 'বাঘের থাবা'];
 
+const PRACTICE = [
+  { id: 'pq1', subject: 'গণিত', chapter_name: 'ভগ্নাংশ', body: '১/২ + ১/৪ = কত?', options: ['৩/৪', '২/৬', '১/৬', '২/৪'], answer: '৩/৪' },
+  { id: 'pq2', subject: 'গণিত', chapter_name: 'গুণ', body: '৭ × ৮ = কত?', options: ['৫৪', '৫৬', '৬৪', '৪৮'], answer: '৫৬' },
+  { id: 'pq3', subject: 'ইংরেজি', chapter_name: null, body: 'Choose the right word: She ___ to school every day.', options: ['go', 'goes', 'going', 'gone'], answer: 'goes' },
+];
 export function createStudentData({ p, now, mem, gd }) {
   const today = () => dhakaDay(now());
   const st = mem.st = {
@@ -112,6 +117,9 @@ export function createStudentData({ p, now, mem, gd }) {
         case 'today_student': return ok({ day: today(), tasks: empty() ? [] : [{ id: 'h1', title: 'অনুশীলনী ৫.২', due_date: addDays(today(), 1) }, { id: 'h2', title: 'রচনা: আমার গ্রাম', due_date: addDays(today(), 3) }], next_exam: empty() ? null : { title: 'মাসিক পরীক্ষা', exam_date: addDays(today(), 9), days_left: 9 }, rewards: { stars: st.stars, streak_days: 12, last_active_date: today() },
           // not a real field yet: what a later server step may send (teacher note, next class). Fake mode only; the cards hide when it is missing (?preview=none)
           ...(p('preview') === 'none' ? {} : { preview: { teacher_note: { text: 'আজ ভগ্নাংশের অঙ্কে ভালো করেছ।', by: 'গণিতের শিক্ষক' }, next_class: { subject: 'ইংরেজি', teacher: 'রহিম স্যার', time_label: '৪:০০', period_label: 'বিকেল', room: '২ নম্বর রুম' } } }) });
+        case 'practice_subjects': return ok(p('practice') === 'none' ? [] : [{ subject: 'গণিত', n: 24 }, { subject: 'ইংরেজি', n: 12 }]);
+        case 'practice_questions': return ok(PRACTICE.filter(q => q.subject === body.p_subject).map(({ answer, ...q }) => q));
+        case 'practice_check': { const q = PRACTICE.find(x => x.id === body.p_id); return q ? ok({ right: q.answer === body.p_choice, answer: q.answer }) : bad('not_allowed'); }
         case 'submit_quiz': {
           const z = QUIZZES.find(x => x.id === body.p_quiz_id); if (!z) return bad('quiz not found');
           let correct = 0; z.questions.forEach((q, i) => { if (body.p_answers[i] === q.answer_index) correct++; });

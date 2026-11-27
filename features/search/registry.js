@@ -22,6 +22,7 @@ const R = [
   ['s_materials', 'উপকরণ', 'নোট বই material', 'student', 'study', 3, null],
   ['s_flash', 'ফ্ল্যাশকার্ড', 'flashcard', 'student', 'study', 3, null],
   ['s_mistakes', 'ভুল শুধরে নেওয়ার খাতা', 'ভুল mistake', 'student', 'study', 3, null],
+  ['s_practice', 'প্রশ্ন ব্যাংকে অনুশীলন', 'প্রশ্ন ব্যাংক অনুশীলন practice mcq', 'student', 'study', 3, null],
   ['s_askbox', 'প্রশ্ন বক্স', 'প্রশ্ন করো question', 'student', 'study', 3, null],
   ['s_ai', 'AI সহায়ক', 'ডিফি এআই ai tutor', 'student', 'study', 3, 'ai_tutor'],
   ['s_timer', 'ফোকাস টাইমার', 'টাইমার মনোযোগ timer', 'student', 'study', 3, null],
@@ -116,7 +117,7 @@ export const LIVE_ROUTES = {
   a_fees: ['/office/fees', 'coin'], a_honor: ['/office/honorarium', 'coin'], a_admissions: ['/office/admissions', 'people'], a_accounts: ['/office/family', 'people'], a_notices: ['/office/notices', 'bell'], t_honor: ['/more/honorarium', 'coin'],
   // the student's (step 3)
   s_homework: ['/learn/homework', 'book'], s_syllabus: ['/learn/syllabus', 'book'], s_videos: ['/learn/materials?kind=video', 'play'], s_materials: ['/learn/materials', 'file'],
-  s_mistakes: ['/learn/mistakes', 'check'], s_quiz: ['/learn/quiz', 'trophy'], s_exams: ['/learn/exams', 'exam'], s_results: ['/learn/results', 'chart'], s_revision: ['/learn/revision', 'clock'],
+  s_mistakes: ['/learn/mistakes', 'check'], s_quiz: ['/learn/quiz', 'trophy'], s_practice: ['/learn/practice', 'book'], s_exams: ['/learn/exams', 'exam'], s_results: ['/learn/results', 'chart'], s_revision: ['/learn/revision', 'clock'],
   s_report: ['/learn/report', 'file'], s_ratings: ['/learn/ratings', 'user'], s_goals: ['/learn/goals', 'check'], s_certs: ['/learn/certs', 'file'],
   s_flash: ['/learn/flash', 'file'], s_askbox: ['/learn/doubts', 'chat'], s_timer: ['/learn/focus', 'clock'], s_ai: ['/learn/diffy', 'help'], s_duel: ['/play/duel', 'people'],
   s_challenge: ['/play/tournament', 'trophy'], s_teams: ['/play/teams', 'people'], s_board: ['/play/board', 'chart'], s_games: ['/play/games', 'gamepad'], s_spell: ['/play/games', 'gamepad'],

@@ -5,7 +5,7 @@ import { tabIds } from '../roles/tabs.js';
 // The study pages of a guardian (features/study/study.js lists the same names; a test keeps them equal).
 export const STUDY_PAGES = ['report', 'results', 'att', 'homework', 'routine', 'revision', 'materials', 'ratings', 'goals', 'certs'];
 // The student's pages (step 3). /learn = "পড়া" and its sub-pages, /play = "খেলা", /me = the student's own profile. The word list is one place (tests read it).
-export const LEARN_PAGES = ['syllabus', 'materials', 'quiz', 'mistakes', 'revision', 'exams', 'results', 'report', 'homework', 'merit', 'ratings', 'goals', 'certs', 'flash', 'doubts', 'focus', 'diffy'];
+export const LEARN_PAGES = ['syllabus', 'materials', 'quiz', 'mistakes', 'practice', 'revision', 'exams', 'results', 'report', 'homework', 'merit', 'ratings', 'goals', 'certs', 'flash', 'doubts', 'focus', 'diffy'];
 export const PLAY_PAGES = ['tournament', 'teams', 'games', 'board', 'shop', 'decor', 'chat', 'duel'];
 // The teacher's pages (step 4). /class/* under "ক্লাস", /contact/* under "যোগাযোগ", /more/automation and /more/me under "আরও". One word list, tests read it.
 export const CLASS_PAGES = ['attend', 'rate', 'homework', 'students'];
