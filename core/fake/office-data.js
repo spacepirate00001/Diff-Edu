@@ -28,6 +28,12 @@ export function createOfficeData({ p, now, mem }) {
       { id: 'ad2', child_name: 'আরিফ হোসেন', class_level: 8, guardian_name: null, phone: '01898765432', preferred_shift: 'afternoon', note: null, status: 'called', staff_note: 'রবিবার আসবে বলেছে', handled_at: new Date(now() - 86400e3).toISOString(), created_at: new Date(now() - 4 * 86400e3).toISOString() },
       { id: 'ad3', child_name: 'নূর জাহান', class_level: 5, guardian_name: 'আব্দুল করিম', phone: '017-12', preferred_shift: null, note: null, status: 'new', staff_note: null, handled_at: null, created_at: new Date(now() - 9 * 86400e3).toISOString() },
       { id: 'ad4', child_name: 'তামিম ইকবাল', class_level: 9, guardian_name: 'ইকবাল হোসেন', phone: '01611223344', preferred_shift: 'night', note: null, status: 'admitted', staff_note: null, handled_at: new Date(now() - 5 * 86400e3).toISOString(), created_at: new Date(now() - 12 * 86400e3).toISOString() }],
+    periods: none ? [] : [
+      { shift: 'afternoon', slot: 1, class_level: 8, teacher_id: 'u-teacher', teacher: { full_name: 'রহিম উদ্দিন' } },
+      { shift: 'afternoon', slot: 1, class_level: 6, teacher_id: 'u-t2', teacher: { full_name: 'সালমা খাতুন' } },
+      { shift: 'afternoon', slot: 2, class_level: 8, teacher_id: 'u-t2', teacher: { full_name: 'সালমা খাতুন' } },
+      { shift: 'night', slot: 1, class_level: null, teacher_id: 'u-teacher', teacher: { full_name: 'রহিম উদ্দিন' } },
+    ],
     phoneReqs: none ? [] : [
       { id: 'pr1', student_id: 'k1', guardian_id: 'g1', old_phone: '01711223344', new_phone: '01711223355', owner: 'মা', note: 'নম্বরটা বন্ধ বলছে', student: { roll: '5', profile: { full_name: 'তাসনিম আক্তার' } }, guardian: { full_name: 'রুবিনা বেগম' }, reporter: { full_name: 'রহিম উদ্দিন' }, status: 'pending' },
       { id: 'pr2', student_id: 'k2', guardian_id: 'g2', old_phone: '01811000000', new_phone: null, owner: '', note: null, student: { roll: '12', profile: { full_name: 'রাফি' } }, guardian: { full_name: 'আনোয়ার হোসেন' }, reporter: { full_name: 'সালমা খাতুন' }, status: 'pending' }],
@@ -50,6 +56,8 @@ export function createOfficeData({ p, now, mem }) {
           return ok(m ? l.map(feeOut) : l);
         }
         case 'profiles': if (method === 'PATCH') return ok(null, 204); if ((q.get('role') || '').startsWith('in.')) return ok(none ? [] : PEOPLE); return acc.role === 'admin' && eqv(q, 'role') === 'teacher' ? ok(none ? [] : TEACHERS) : null;
+        case 'class_periods': return acc.role === 'admin' ? ok(o.periods) : null;
+        case 'staff_public': return acc.role === 'admin' ? ok(TEACHERS.map(t => ({ ...t, role: 'teacher' }))) : null;
         case 'students': return method === 'PATCH' ? ok(null, 204) : null;
         case 'phone_change_requests': return acc.role === 'admin' ? ok(o.phoneReqs.filter(r => r.status === 'pending')) : null;
         case 'class_logs': {
@@ -93,6 +101,12 @@ export function createOfficeData({ p, now, mem }) {
         return ok(n);
       }
       if (name === 'decide_phone_change') { const r = o.phoneReqs.find(x => x.id === body.p_id); if (!r || r.status !== 'pending') return ok({ message: 'already decided' }, 400); if (body.p_approve && !/^01[3-9]\d{8}$/.test(body.p_phone || r.new_phone || '')) return ok({ message: 'no valid number' }, 400); r.status = body.p_approve ? 'approved' : 'rejected'; return ok(null, 204); }
+      if (name === 'admin_set_period') {
+        const t = body.p_teacher && TEACHERS.find(x => x.id === body.p_teacher); if (body.p_teacher && !t) return ok({ message: 'teacher not found' }, 400);
+        o.periods = o.periods.filter(r => !(r.shift === body.p_shift && r.slot === body.p_slot && (r.class_level ?? 0) === (body.p_class ?? 0)));
+        if (t) o.periods.push({ shift: body.p_shift, slot: body.p_slot, class_level: body.p_class, teacher_id: t.id, teacher: { full_name: t.full_name } });
+        return ok(null, 204);
+      }
       if (name === 'set_notice_archived') { const n = o.notices.find(x => x.id === body.p_id); if (!n) return ok({ message: 'not found' }, 400); n.archived_at = body.p_archived ? new Date(now()).toISOString() : null; return ok(null, 204); }
       if (name === 'delete_archived_notice') { const n = o.notices.find(x => x.id === body.p_id); if (!n || !n.archived_at) return ok({ message: 'not in archive' }, 400); o.notices = o.notices.filter(x => x !== n); return ok(null, 204); }
       return null;

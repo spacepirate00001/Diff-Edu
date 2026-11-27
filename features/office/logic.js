@@ -206,3 +206,26 @@ export function phoneDecision(req, typed) {
 }
 export const rejectCall = req => ({ name: 'decide_phone_change', args: { p_id: req.id, p_approve: false, p_phone: null } });
 export const phoneReqError = res => /stale/.test(JSON.stringify(res?.data || '')) ? 'নম্বরটা এর মধ্যে বদলে গেছে, পাতা নতুন করে দেখুন।' : /already/.test(JSON.stringify(res?.data || '')) ? 'এটা আগেই ঠিক করা হয়েছে।' : res?.kind === 'offline' ? 'নেট নেই। নেট এলে আবার চেষ্টা করুন।' : 'হয়নি, আবার চেষ্টা করুন।';
+
+// ---- রুটিন (admin): who takes which class in which period (class_periods; admin_set_period sets or clears one cell) ----
+export const SLOTS = [1, 2, 3];
+export const slotName = n => ['১ম', '২য়', '৩য়'][n - 1] || `${bn(n)}ম`;
+// rows: class_periods { shift, slot, class_level (null = every class), teacher_id, teacher: { full_name } } -> [{ slot, cells: [{ cls, teacher_id, name }] }], "every class" first.
+export function routineGroups(rows, shift) {
+  return SLOTS.map(slot => ({ slot, cells: (rows || []).filter(r => r.shift === shift && Number(r.slot) === slot)
+    .map(r => ({ cls: r.class_level == null ? null : Number(r.class_level), teacher_id: r.teacher_id, name: r.teacher?.full_name || '' }))
+    .sort((a, b) => (a.cls ?? 0) - (b.cls ?? 0)) }));
+}
+export const cellName = cls => (cls == null ? 'সব ক্লাস একসাথে' : `ক্লাস ${bn(cls)}`);
+// How many periods each teacher takes in this shift (names sorted by load). -> [{ name, n }]
+export function teacherLoad(rows, shift) {
+  const m = new Map();
+  for (const r of rows || []) if (r.shift === shift && r.teacher_id) { const k = r.teacher?.full_name || '—'; (m.get(k) || m.set(k, new Set()).get(k)).add(Number(r.slot)); }
+  return [...m].map(([name, s]) => ({ name, n: s.size })).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'bn'));
+}
+// Setting a teacher fills the cell, no teacher clears it. A cell is one class (1-10) or every class (null) of one period.
+export function setPeriodCall(shift, slot, cls, teacherId) {
+  return { name: 'admin_set_period', args: { p_shift: shift, p_slot: slot, p_class: cls == null ? null : Number(cls), p_teacher: teacherId || null } };
+}
+export const routineError = res => /teacher not found/.test(JSON.stringify(res?.data || '')) ? 'এই শিক্ষক আর পাওয়া যাচ্ছে না। পাতা নতুন করে খুলুন।'
+  : res && res.kind === 'offline' ? 'নেট নেই। নেট এলে আবার চেষ্টা করুন।' : res && res.status === 403 ? 'শুধু অ্যাডমিন রুটিন বদলাতে পারেন।' : 'সংরক্ষণ হয়নি। আবার চেষ্টা করুন।';
