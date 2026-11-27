@@ -9,6 +9,7 @@ const eqv = (q, k) => { const v = q.get(k); return v && v.startsWith('eq.') ? v.
 const bound = (q, k, op) => { const g = q.getAll(k).find(x => x.startsWith(op + '.')); return g ? g.slice(op.length + 1) : null; };
 const monthOf = (iso, back) => { const [y, m] = iso.split('-').map(Number); const t = y * 12 + (m - 1) - back; return `${Math.floor(t / 12)}-${String(t % 12 + 1).padStart(2, '0')}-01`; };
 const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+export const PEOPLE = [{ id: 'p1', full_name: 'তাসনিম আক্তার', login_id: 'tasnim6', role: 'student', phone: null, students: [{ id: 'k1', class_level: 6, roll: '5', active: true }] }, { id: 'p2', full_name: 'রুবিনা বেগম', login_id: '01711223344', role: 'guardian', phone: '01711223344', students: [] }, { id: 'p3', full_name: 'রহিম উদ্দিন', login_id: 'rahim', role: 'teacher', phone: '01811223344', students: [] }];
 export const TEACHERS = [{ id: 'u-teacher', full_name: 'রহিম উদ্দিন' }, { id: 'u-t2', full_name: 'সালমা খাতুন' }, { id: 'u-t3', full_name: 'নাসির আহমেদ' }];
 
 export function createOfficeData({ p, now, mem }) {
@@ -45,7 +46,8 @@ export function createOfficeData({ p, now, mem }) {
           if ((q.get('status') || '').startsWith('in.')) l = l.filter(f => f.status !== 'paid');
           return ok(m ? l.map(feeOut) : l);
         }
-        case 'profiles': return acc.role === 'admin' && eqv(q, 'role') === 'teacher' ? ok(none ? [] : TEACHERS) : null;
+        case 'profiles': if (method === 'PATCH') return ok(null, 204); if ((q.get('role') || '').startsWith('in.')) return ok(none ? [] : PEOPLE); return acc.role === 'admin' && eqv(q, 'role') === 'teacher' ? ok(none ? [] : TEACHERS) : null;
+        case 'students': return method === 'PATCH' ? ok(null, 204) : null;
         case 'class_logs': {
           if (method === 'POST') { const r = body; if (!o.logs.some(x => x.teacher_id === acc.uid && x.day === r.day && x.label === r.label)) o.logs.push({ id: 'cl-' + o.logs.length + '-' + r.day, teacher_id: acc.uid, day: r.day, label: r.label }); return ok(null, 201); }
           if (method === 'DELETE') { o.logs = o.logs.filter(x => x.id !== eqv(q, 'id')); return ok(null, 204); }

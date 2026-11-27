@@ -158,3 +158,29 @@ export function validateFamily(f) {
 export const familyText = r => ['ডিফ এডু', '', `ছাত্রের লগইন আইডি: ${r.sLogin}`, `পিন: ${r.sPin}`, '', `অভিভাবকের লগইন আইডি: ${r.gLogin}`, r.existed ? 'অভিভাবক আগে থেকেই আছেন, তাঁর পিন আগের মতোই।' : `পিন: ${r.gPin}`, '', 'প্রথমবার লগইন করে পিন বদলে নিন।'].join('\n');
 export const familyError = res => /already|taken|exists|duplicate|unique/i.test(JSON.stringify(res && res.data || '')) ? 'এই আইডি আগে থেকেই আছে, অন্যটা দিন।'
   : res && res.kind === 'offline' ? 'নেট নেই। নেট এলে আবার চেষ্টা করুন।' : res && res.status === 403 ? 'শুধু অ্যাডমিন এটা করতে পারেন।' : 'যোগ করা যায়নি। আবার চেষ্টা করুন।';
+
+// ---- মানুষ (admin): find a person, fix their name, phone, class or roll, give a new PIN (admin-users reset_pin) ----
+export const PEOPLE_ROLES = [['student', 'ছাত্র'], ['guardian', 'অভিভাবক'], ['teacher', 'শিক্ষক']];
+// list: profile rows { id, full_name, login_id, role, phone, students: [{ id, class_level, roll, active }] }. q matches the name, login id or phone (Bangla or English digits).
+export function filterPeople(list, { q = '', role = '' } = {}) {
+  const k = ascii(q).trim().toLowerCase();
+  return (list || []).filter(p => (!role || p.role === role) && (!k || [p.full_name, p.login_id, p.phone].some(x => ascii(x || '').toLowerCase().includes(k))))
+    .sort((a, b) => String(a.full_name).localeCompare(String(b.full_name), 'bn'));
+}
+export const personSub = p => [PEOPLE_ROLES.find(r => r[0] === p.role)?.[1], p.students?.[0]?.class_level ? `ক্লাস ${bn(p.students[0].class_level)}` : null, p.students?.[0]?.roll ? `রোল ${bn(p.students[0].roll)}` : null, p.login_id].filter(Boolean).join(' · ');
+// What changed: only the fields that differ go to the server. -> { ok, errors, profile: {}, student: {} }
+export function personPatch(p, f) {
+  const errors = {}, profile = {}, student = {}, name = String(f.name || '').trim(), phone = digitsOf(f.phone, 11), s0 = p.students?.[0];
+  if (!name) errors.name = 'নাম লিখুন।';
+  if (phone && !PHONE_OK.test(phone)) errors.phone = 'নম্বর ০১ দিয়ে শুরু, মোট ১১ সংখ্যা।';
+  if (name && name !== p.full_name) profile.full_name = name;
+  if (phone !== (p.phone || '')) profile.phone = phone || null;
+  if (s0) {
+    if (!LEVELS.includes(Number(f.cls))) errors.cls = 'ক্লাস বেছে নিন।';
+    else if (Number(f.cls) !== Number(s0.class_level)) student.class_level = Number(f.cls);
+    const roll = digitsOf(f.roll, 9); if (!roll) errors.roll = 'রোল নম্বর দিন।'; else if (roll !== String(s0.roll ?? '')) student.roll = roll;
+  }
+  return { ok: !Object.keys(errors).length, errors, profile, student, changed: !!(Object.keys(profile).length || Object.keys(student).length) };
+}
+export const pinResetCall = (login, pin) => ({ action: 'reset_pin', login_id: loginOf(login), pin });
+export const pinResetText = (p, pin) => ['ডিফ এডু', '', `${p.full_name}-এর নতুন পিন`, `লগইন আইডি: ${p.login_id}`, `পিন: ${pin}`, '', 'ঢুকে নিজের পছন্দের পিন বানিয়ে নিন।'].join('\n');
