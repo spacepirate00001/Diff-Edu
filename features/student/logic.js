@@ -84,8 +84,8 @@ export function teamError(text) {
   return 'এখন হয়নি। একটু পরে আবার চেষ্টা করো।';
 }
 
-// ---- games (44-games.sql and pwa-dev/games.js): 10 points per right answer, +20 for a perfect round, 30 minutes a day, open from 6:00 to 22:00 Dhaka ----
-export const DAILY_SECONDS = 1800, ROUND_SECONDS = 60, MAX_SECONDS = 300, OPEN_FROM = 6, CLOSE_HOUR = 22;
+// ---- games (44-games.sql and pwa-dev/games.js): 10 points per right answer, +20 for a perfect round, 30 minutes a day, no opening hours ----
+export const DAILY_SECONDS = 1800, ROUND_SECONDS = 60, MAX_SECONDS = 300;
 export const GAME_RULES = {
   fpv_drone: ['FPV ড্রোন রেস', 'ড্রোনের চোখে দেখো! আঙুল টেনে ঠিক উত্তরের রিংয়ের ভেতর দিয়ে উড়ে যাও।'],
   quick_fire: ['চটজলদি', 'ঘড়ির সাথে দৌড়! ঠিক উত্তরে সময় বাড়ে, ৩ ভুলে খেলা শেষ।'],
@@ -100,7 +100,6 @@ export const GAME_RULES = {
 };
 export const GameLogic = {
   points: (correct, total) => correct * 10 + (total > 0 && correct === total ? 20 : 0),
-  isOpen: dhakaHour => dhakaHour >= OPEN_FROM && dhakaHour < CLOSE_HOUR,        // the server refuses before 6:00 as well (games_closed)
   secondsLeft: used => Math.max(0, DAILY_SECONDS - used),
   clampSeconds: ms => Math.min(MAX_SECONDS, Math.max(1, Math.round(ms / 1000))),
   mathQuestion(rnd) {
@@ -126,7 +125,6 @@ export const GameLogic = {
 };
 export function gameError(text) {
   const t = String(text || '');
-  if (/games_closed/.test(t)) return 'খেলা সকাল ৬টা থেকে রাত ১০টা পর্যন্ত। কাল আবার খেলো।';
   if (/daily_limit/.test(t)) return 'আজকের খেলার সময় (৩০ মিনিট) শেষ। কাল আবার খেলো।';
   return 'স্কোর জমা দেওয়া যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করো।';
 }

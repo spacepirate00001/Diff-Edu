@@ -149,8 +149,6 @@ export function createStudentData({ p, now, mem, gd }) {
         case 'invite_to_team': st.pending.push({ id: 'iv' + st.pending.length, team_id: st.members.find(m => m.student_id === SELF)?.team_id, student_id: body.p_student_id, via: 'invite', status: 'pending' }); return ok('iv');
         case 'leave_team': st.members = st.members.filter(m => m.student_id !== SELF); return ok(null, 204);
         case 'submit_game_session': {
-          const hour = Number(p('hour') ?? new Date(now() + 6 * 3600e3).getUTCHours());
-          if (hour >= 22 || hour < 6) return bad('games_closed');
           if (st.secondsToday + body.p_seconds > 1800) return bad('daily_limit');
           st.secondsToday += body.p_seconds; return ok(1800 - st.secondsToday);
         }

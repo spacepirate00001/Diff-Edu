@@ -1,10 +1,9 @@
-// শেখার খেলা (44-games.sql, 70-more-games.sql, 73-new-games.sql): six games. The server recomputes the score, caps play at 30 minutes a day and refuses play outside 6:00-22:00 (Dhaka).
+// শেখার খেলা (44-games.sql, 70-more-games.sql, 73-new-games.sql): six games. The server recomputes the score and caps play at 30 minutes a day (no opening hours any more).
 // This file is loaded only when a student opens "খেলা -> শেখার খেলা".
 import { h } from '../../ui/dom.js';
 import { confetti, fx, stats, MISSION } from './fx.js';
 import { emptyState, loading, stateCard } from '../../ui/states.js';
 import { sel, rpc, rows } from '../../core/api.js';
-import { sky } from '../../core/sky.js';
 import { bn, dhakaDay } from '../../core/bn.js';
 import { me, progressCard, noRecState } from './common.js';
 import { GameLogic, GAME_RULES, gameError } from './logic.js';
@@ -12,7 +11,6 @@ import { MORE_GAMES } from './games-more.js';
 import { ACTION_GAMES } from './games-action.js';
 import { NEW_GAMES } from './games-new.js';
 
-const dhakaHour = () => Math.floor(sky.minutes() / 60) % 24;
 const EMOJI = { fpv_drone: '🚁', quick_fire: '⚡', math_race: '🔢', shoot_math: '🎈', memory_pairs: '🃏', letter_scramble: '🔤', haat_shop: '🛒', monster_battle: '⚔️', number_merge: '🎯', word_detective: '🕵️' };
 
 // Each game: run(root, done, rnd, { cls }). done({ correct, total, seconds }) when the round ends. rnd is injectable.
@@ -29,7 +27,6 @@ export function gamesPage(ctx) {
     if (!rec) return root.replaceChildren(noRecState());
     const used = await usedToday(rec);
     if (dead) return;
-    if (!GameLogic.isOpen(dhakaHour())) return root.replaceChildren(progressCard(rec), stateCard({ kind: 'empty', title: 'এখন খেলার সময় নয়', text: 'খেলা সকাল ৬টা থেকে রাত ১০টা পর্যন্ত খোলা। একটু ঘুমিয়ে নাও, কাল আবার খেলো।' }));
     if (used == null) return root.replaceChildren(stateCard({ kind: 'offline', title: 'ইশ, নেট হারিয়ে গেছে', text: 'নেট চালু করে আবার চেষ্টা করো।', action: 'আবার চেষ্টা করো', onAction: () => ctx.replace('/play/games') }));
     const left = GameLogic.secondsLeft(used);
     if (left <= 0) return root.replaceChildren(progressCard(rec), stateCard({ kind: 'empty', title: 'আজকের খেলার সময় শেষ', text: 'দিনে ৩০ মিনিট খেলা যায়। কাল আবার খেলো। এখন চাইলে কুইজ দিতে পারো।', action: 'কুইজে যাও', onAction: () => ctx.go('/learn/quiz') }));
@@ -52,7 +49,6 @@ export function gamePage(ctx, game) {
   const start = async () => {
     const rec = await me();
     if (!rec || dead) return;
-    if (!GameLogic.isOpen(dhakaHour())) return root.replaceChildren(stateCard({ kind: 'empty', title: 'এখন খেলার সময় নয়', text: 'খেলা সকাল ৬টা থেকে রাত ১০টা পর্যন্ত।', action: 'ফিরে যাও', onAction: () => ctx.replace('/play/games') }));
     stop = GAMES[game](root, async r => {
       stop?.(); root.replaceChildren(loading(1));
       const send = async () => {
