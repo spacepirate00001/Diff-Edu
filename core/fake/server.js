@@ -25,6 +25,8 @@ export function createFake(params, { now = () => Date.now() } = {}) {
   const td = createTeacherData({ p, now, mem });
   const ed = createExamData({ p, now, mem });
   const od = createOfficeData({ p, now, mem });
+  const fb = [];   // feedback notes (72-app-feedback.sql)
+  const tname0 = t => t.split('?')[0];
   // Test hooks: the page can flip the state while it runs (offline banner demos).
   const api = { mem, setState(s) { mem.state = s; }, calls: [] };
   const kidsOf = acc => {
@@ -88,6 +90,8 @@ export function createFake(params, { now = () => Date.now() } = {}) {
     const t = route.replace('/rest/v1/', '');
     const need = (...roles) => (roles.includes(acc.role) ? null : ok({ message: 'only' }, 403));
 
+    if (route === '/rest/v1/rpc/send_feedback') { if (!body.p_message || String(body.p_message).trim().length < 3) return ok({ message: 'check' }, 400); fb.unshift({ id: 'fb' + fb.length, kind: body.p_kind, message: body.p_message, screen: body.p_screen, app: body.p_app, role: acc.role, status: 'new', created_at: new Date(now()).toISOString(), who: { full_name: acc.full_name } }); return ok('fb-new'); }
+    if (tname0(t) === 'app_feedback') { if (acc.role !== 'admin') return ok([]); if (method === 'PATCH') { const f = fb.find(x => 'eq.' + x.id === q.get('id')); if (f) f.status = body.status; return ok(null, 204); } return ok(fb); }
     if (route.startsWith('/rest/v1/rpc/')) {
       const name = t.replace('rpc/', '');
       if (acc.role === 'student') { const r = sd.rpc(name, body); if (r) return r; }
