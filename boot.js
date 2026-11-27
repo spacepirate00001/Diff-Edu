@@ -209,6 +209,10 @@ async function start() {
   }
   await migrateLegacy();
   sky.apply(); sky.startClock();
+  // The printed QR code (/?install=1) opens the coaching landing page + install guide first, then the normal start (as the old app did).
+  if (/[?&](install|guide)=1/.test(location.search)) {
+    try { const { DeGuide } = await import('./features/landing/guide.js'); if (DeGuide.wanted()) await DeGuide.show(); } catch (e) { console.error(e); } // a broken guide must never block the app
+  }
   if (session.has()) {
     const r = await loadMe();
     if (r.me) { if (!await enterApp()) return showNoApp(); }
