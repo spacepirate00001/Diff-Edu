@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://uwbyxwxfhrffrrqvheft.supabase.co https://api.open-meteo.com; object-src 'none'; base-uri 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'sha256-mbp0qvwkCl0SyWiOeioU1Y/4fwQyVjTD+NaeDv22ln0='; font-src 'self'; img-src 'self' data:; connect-src 'self' https://uwbyxwxfhrffrrqvheft.supabase.co https://api.open-meteo.com; object-src 'none'; base-uri 'self'">
 <meta name="referrer" content="same-origin">
 <title>ডিফ এডু</title>
 <meta name="theme-color" content="#FAF8FA" media="(prefers-color-scheme: light)">
@@ -11,10 +11,12 @@
 <meta name="description" content="ডিফ এডু, কুষ্টিয়া। নতুন অ্যাপ।">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="ui/assets/diff-edu-logo.svg" type="image/svg+xml">
+<style>.splash{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#FFF8EC;color:#1B171E;font-family:system-ui,sans-serif}@media (prefers-color-scheme:dark){.splash{background:#110D13;color:#F3EEF5}}.splash b{font-size:20px}.splash span{font-size:14px;opacity:.7}</style>
 <link rel="stylesheet" href="ui/tokens.css">
 <link rel="stylesheet" href="ui/components.css">
 <link rel="stylesheet" href="ui/today.css">
 <link rel="stylesheet" href="ui/app.css">
+<link rel="stylesheet" href="ui/motion.css">
 <script src="ui/weather.js" defer></script>
 <script src="ui/diffy.js" defer></script>
 <script src="features/today/v7.js" defer></script>

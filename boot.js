@@ -102,7 +102,7 @@ session.onExpired(() => { returnTo = router.here().path; toast('আবার ল
 
 // ---- showing a page ----
 function teardown() { try { page?.destroy?.(); } catch { /* ignore */ } page = null; if (shell) { shell.destroy(); shell = null; } view = null; }
-function finishBoot() { document.documentElement.classList.add('booted'); document.getElementById('splash')?.remove(); }
+function finishBoot() { document.documentElement.classList.add('booted'); const sp = document.getElementById('splash'); if (sp) { sp.classList.add('is-leaving'); setTimeout(() => sp.remove(), 200); } }
 const TITLES = { '/inbox': 'ইনবক্স', '/more/display': 'থিম ও লেখার সাইজ', '/more/help': 'সাহায্য', '/more/pending': 'আরও' };
 
 async function build(d) {

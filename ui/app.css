@@ -12,7 +12,7 @@ h1:focus, h2:focus, #main:focus, .full:focus { outline: none; }
 .fake-strip { flex: none; padding: var(--de-s1) var(--de-s3); background: var(--de-accent); color: var(--de-on-accent); font: var(--de-caption); text-align: center; }
 
 /* ---- first screen while the app wakes up (shows after 150 ms, so a fast start has no flash) ---- */
-.splash { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--de-s2); background: var(--v6-page); color: var(--de-ink); opacity: 0; animation: splash-in 0s 150ms forwards; }
+.splash { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--de-s2); background: var(--v6-page); color: var(--de-ink); }
 .splash b { font: var(--de-heading); }
 .splash span { font: var(--de-caption); color: var(--de-ink-muted); }
 @keyframes splash-in { to { opacity: 1; } }
