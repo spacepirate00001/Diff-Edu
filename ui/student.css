@@ -88,3 +88,35 @@
 .exam-q legend + * { clear: both; }
 .de-msg .chat-who { display: block; }
 .st-qtext { margin: 0; font: var(--de-heading); color: var(--de-ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* game feel: top bar, time bar, combo line, number pad, answer chips */
+.gm-top { display: flex; flex-direction: column; gap: var(--de-s2); }
+.gm-hud { display: flex; align-items: center; justify-content: space-between; gap: var(--de-s2); font: var(--de-label); color: var(--de-ink); }
+.gm-info { flex: 1 1 auto; min-width: 0; }
+.gm-hearts { letter-spacing: 2px; }
+.gm-snd { min-height: 36px; padding: 0 var(--de-s2); }
+.gm-bar { height: 10px; border-radius: 99px; background: var(--de-line-ui); overflow: hidden; }
+.gm-bar > i { display: block; height: 100%; width: 100%; background: var(--de-brand); border-radius: inherit; transition: width 0.12s linear; }
+.gm-bar.is-low > i { background: var(--de-bad-solid); }
+.gm-combo { min-height: 28px; text-align: center; font: var(--de-heading); color: var(--de-brand-text); }
+.gm-combo.pop { animation: gm-pop 0.35s ease-out; }
+.gm-box { display: flex; flex-direction: column; }
+.gm-ans { min-height: 56px; display: flex; align-items: center; justify-content: center; font: var(--de-display); color: var(--de-brand-text); border-bottom: 3px solid var(--de-line-ui); }
+.gm-pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--de-s2); }
+.gm-key { min-height: 56px; font: var(--de-title); color: var(--de-ink); background: var(--de-raised); border: 2px solid var(--de-line-ui); border-radius: var(--de-r-md); cursor: pointer; touch-action: manipulation; }
+.gm-key:active { background: var(--de-press); }
+.gm-key:focus-visible { outline: var(--de-focus) solid var(--de-ring); outline-offset: 2px; }
+.gm-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--de-s2); }
+.gm-chip { display: flex; align-items: center; justify-content: center; min-height: 44px; padding: var(--de-s2); border-radius: var(--de-r-md); font: var(--de-label); text-align: center; overflow-wrap: anywhere; }
+.gm-note { min-height: 20px; }
+.gm-built { letter-spacing: 3px; }
+.gm-mission { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--de-s3); }
+.gm-dots { display: flex; gap: 6px; }
+.gm-dots i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--de-line-ui); }
+.gm-dots i.is-on { background: var(--de-good-solid); border-color: var(--de-good-solid); }
+.gm-best { color: var(--de-brand-text); }
+.st-card--w { font-size: 15px; line-height: 20px; padding: 4px; overflow-wrap: anywhere; }
+.gm-shake { animation: gm-shake 0.3s; }
+@keyframes gm-pop { 0% { transform: scale(0.6); opacity: 0.2; } 60% { transform: scale(1.25); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes gm-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+@media (prefers-reduced-motion: reduce) { .gm-combo.pop, .gm-shake { animation: none; } .gm-bar > i { transition: none; } }
