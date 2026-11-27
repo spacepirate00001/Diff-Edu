@@ -15,6 +15,7 @@ import { initialsOf } from '../today/today.js';
 import { openPending } from '../offline/pending-sheet.js';
 import { refreshApp } from '../update/update-banner.js';
 import { confirmBox } from '../../ui/dialog.js';
+import { canGetApk, openApkSheet } from '../update/apk-nudge.js';
 
 const row = navRow;
 export function moreTab(ctx) {
@@ -38,6 +39,7 @@ export function moreTab(ctx) {
     role === 'guardian' ? row({ ic: 'user', text: 'প্রোফাইল ও সন্তান', sub: 'আপনার ও সন্তানদের তথ্য', onclick: () => ctx.go('/more/profile') }) : null,
     role === 'guardian' ? row({ ic: 'info', text: 'গোপনীয়তা', sub: 'সন্তানের সম্মতি, তথ্য মুছে ফেলা', onclick: () => ctx.go('/more/privacy') }) : null,
     pendingRow,
+    canGetApk() ? row({ ic: 'down', text: 'অ্যান্ড্রয়েড অ্যাপ ডাউনলোড', sub: 'নোটিফিকেশন ও নেট ছাড়া কাজের জন্য', onclick: () => openApkSheet() }) : null,
     row({ ic: 'phone', text: 'অফিসে ফোন করুন', sub: OFFICE_PHONE_BN, href: 'tel:' + OFFICE_PHONE }),
     row({ ic: 'chat', text: 'মতামত দিন', sub: 'সমস্যা, পরামর্শ বা ভালো লাগার কথা', onclick: async () => (await import('../feedback/feedback.js')).openFeedback('আরও') }),
     row({ ic: 'help', text: 'সাহায্য', onclick: () => ctx.go('/more/help') }),
