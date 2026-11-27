@@ -36,8 +36,8 @@ html.booted .boot-fail:not(.show) { display: none; }
 .nav-slot { flex: none; }
 .ab { padding: var(--de-s2) var(--de-s2) var(--de-s2) var(--de-s4); }
 .ab-title { font: var(--de-heading); margin: 0; }
-.appbar-logo { display: grid; place-items: center; width: 40px; height: 40px; flex: none; }
-.appbar-logo img { height: 28px; width: auto; }
+.appbar-logo { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: var(--de-r-md); background: var(--de-brand-deep); }   /* gold logo stays on a plum tile */
+.appbar-logo img { height: 24px; width: auto; }
 .de-appbar__action { position: relative; }
 .bell__n { position: absolute; top: 4px; inset-inline-end: 2px; }
 .de-banner--info { background: var(--de-brand-soft); }
@@ -224,7 +224,9 @@ button.kid-bar { cursor: pointer; }
 .more-row:last-child { border-bottom: 0; }
 .more-row.is-disabled { cursor: default; color: var(--de-ink-muted); }
 .more-row--danger { color: var(--de-bad); }
-.more-ic { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: var(--de-r-full); background: var(--de-brand-soft); color: var(--de-brand-text); }
+.more-ic { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: var(--de-r-md); background: var(--de-brand-soft); color: var(--de-brand-text); }
+.more-ic--warn { background: var(--de-warn-soft); color: var(--de-warn); }   /* waiting */
+.more-ic--bad { background: var(--de-bad-soft); color: var(--de-bad); }   /* needs fixing */
 .me-card { display: flex; align-items: center; gap: var(--de-s3); padding: var(--de-s3) 0; border-bottom: var(--de-border) solid var(--de-line); }
 .me-av { width: 48px; height: 48px; background: var(--de-brand-soft); color: var(--de-brand-text); font: var(--de-heading); }
 .me-t { display: flex; flex-direction: column; min-width: 0; font: var(--de-body); }

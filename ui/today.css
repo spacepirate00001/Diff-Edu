@@ -10,7 +10,7 @@
   --v6-a: #A6D6F2; --v6-b: #BFE3F8; --v6-c: #D3E9F7; --v6-ink: #1A0B21; --v6-ink2: #2B1236;   /* fallbacks until weather.js runs */
   --v6-page: #FFF8EC; --v6-tab: #FFF8EC; --v6-edge: #DDCBE3; --v6-acc: #D4B95A;
   --v6-cloud: rgba(255, 255, 255, 0.8); --v6-star: #F6EFD3; --v6-moon: #F6EFD3;
-  --v6-over: 24px;      /* how far the hero climbs into the sky */
+  --v6-over: 20px;      /* how far the hero climbs into the sky */
   --stars: 0;
 }
 
@@ -43,7 +43,7 @@ body { background: var(--v6-page); color: var(--de-ink); font: var(--de-body); }
 
 /* SKY STAGE: the last block of the header, under every line of text, above the hero. Sun and moon live only here (the hero covers its bottom --v6-over px).
    They ride an arc: left = east, right = west. left (%) and --oy (px) are set by JS from the real sunrise and sunset; the dotted track shows the path. */
-.v7-stage { height: 132px; margin: var(--de-s2) calc(-1 * var(--de-s4)) 0; }
+.v7-stage { height: 72px; margin: var(--de-s2) calc(-1 * var(--de-s4)) 0; }
 .v7-track { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .v7-track path { fill: none; stroke: var(--v6-ink2); stroke-opacity: 0.38; stroke-width: 2; stroke-dasharray: 1 8; stroke-linecap: round; }
 .v6-orb { left: 50%; bottom: calc(var(--v6-over) + 12px + var(--oy, 0px)); width: 30px; height: 30px; margin-left: -15px; border-radius: 50%; opacity: 0; }
@@ -51,6 +51,9 @@ body { background: var(--v6-page); color: var(--de-ink); font: var(--de-body); }
 .v6-moon { bottom: calc(var(--v6-over) + 14px + var(--oy, 0px)); width: 26px; height: 26px; margin-left: -13px; background: var(--v6-moon); box-shadow: inset -7px -2px 0 0 rgba(212, 185, 90, 0.6), 0 0 16px 4px rgba(246, 239, 211, 0.25); }
 .v6-sky[data-wx="hot"] .v6-sun { box-shadow: 0 0 0 10px rgba(255, 190, 40, 0.34), 0 0 38px 16px rgba(255, 170, 30, 0.42); }
 .v6-sky[data-wx="rain"] .v6-sun, .v6-sky[data-wx="storm"] .v6-sun, .v6-sky[data-wx="overcast"] .v6-sun, .v6-sky[data-wx="fog"] .v6-sun { filter: saturate(0.5) blur(1.5px); }
+
+/* design review 2026-11-27: the sky is a short quiet band now, two clouds only, so the score card comes up the screen */
+.v6-cloud--a, .v6-cloud--d { display: none; }
 
 /* round stars, fade in with the dusk (opacity --stars) */
 .v6-stars { inset: 0 0 45% 0; opacity: var(--stars); color: var(--v6-star);
@@ -98,7 +101,7 @@ body { background: var(--v6-page); color: var(--de-ink); font: var(--de-body); }
 .v6-wx { margin: 0; font: var(--de-caption); color: var(--v6-ink2); }
 
 /* ---- cards: soft rounded, outline in the weather's tint ---- */
-.v6-card { display: flex; flex-direction: column; gap: var(--de-s2); min-width: 0; padding: var(--de-s4); color: var(--de-ink); background: var(--de-raised); border: 2px solid var(--v6-edge); border-radius: var(--de-r-lg); box-shadow: var(--de-shadow-card); }
+.v6-card { display: flex; flex-direction: column; gap: var(--de-s2); min-width: 0; padding: var(--de-s4); color: var(--de-ink); background: var(--de-raised); border: 1px solid var(--v6-edge); border-radius: var(--de-r-lg); box-shadow: var(--de-shadow-card); }
 .de-nudge.v6-card { background: var(--de-brand-soft); }
 .v6-notice.v6-card { background: var(--de-accent-soft); flex-direction: row; align-items: center; width: 100%; min-height: var(--de-touch); padding: var(--de-s2) var(--de-s4); text-align: start; font: inherit; cursor: pointer; }
 .v6-card .de-week { gap: var(--de-s2); padding-block: var(--de-s1); }
@@ -138,8 +141,8 @@ body { background: var(--v6-page); color: var(--de-ink); font: var(--de-body); }
 .v7-hero--a { gap: var(--de-s3); padding: var(--de-s4) var(--de-s4) 0; border: 1.5px solid var(--de-gold-line); overflow: hidden; }
 .v7-hero--a .v7-row { align-items: center; }
 .v7-hero--a .v7-info { align-items: flex-start; flex: 1; gap: var(--de-s2); }
-.v7-ribbon { margin: 0 calc(-1 * var(--de-s4)); padding: var(--de-s3) var(--de-s4); background: var(--de-accent); color: var(--de-on-accent); font: var(--de-body); }
-.v7-ribbon .de-today__cap, .v7-ribbon .tg-quote { color: var(--de-on-accent); }
+.v7-ribbon { margin: 0 calc(-1 * var(--de-s4)); padding: var(--de-s3) var(--de-s4); background: var(--de-accent-soft); border-top: 2px solid var(--de-accent); color: var(--de-ink); font: var(--de-body); }   /* soft gold strip, gold only as the hairline */
+.v7-ribbon .de-today__cap, .v7-ribbon .tg-quote { color: var(--de-ink); }
 .v7-ribbon .tg-quote { padding: 0; border: 0; }
 .v7-hero--a:not(:has(.v7-ribbon)) { padding-bottom: var(--de-s4); }
 
@@ -176,7 +179,7 @@ body { background: var(--v6-page); color: var(--de-ink); font: var(--de-body); }
 .v7-hero--c .tg-quote { padding: var(--de-s3) 0 0; border-top: 2px dashed var(--de-line-ui); color: var(--de-ink); font: var(--de-body); }
 
 .v6-stickers { display: flex; flex-wrap: wrap; gap: var(--de-s3); padding: var(--de-s1) var(--de-s2); }
-.v6-ask { gap: var(--de-s2); min-height: 56px; border: 2px solid var(--de-brand-text); border-radius: var(--de-r-full); background: var(--de-raised); box-shadow: var(--de-shadow-sticker); }
+.v6-ask { gap: var(--de-s2); min-height: 48px; border: 1px solid var(--de-line-ui); border-radius: var(--de-r-full); background: var(--de-raised); box-shadow: none; }
 .v6-ask .de-mascot { --df: 32px; }
 
 /* ---- tab bar: tinted by the weather, the current tab is a rounded pill ---- */
