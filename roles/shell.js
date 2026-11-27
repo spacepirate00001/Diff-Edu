@@ -19,6 +19,7 @@ export function createShell(root, ctx, { fakeUpdate = false } = {}) {
   root.replaceChildren(screen);
   const stopBanner = mountBanner(banners);
   mountUpdate(update, { fakeShow: fakeUpdate });
+  if (!fakeUpdate) setTimeout(() => import('../features/update/apk-nudge.js').then(m => m.maybeAskForApk()).catch(() => {}), 2500); // Android only, at most every 3 days
   let page = null, tabId = null;
 
   const paintBells = () => {
