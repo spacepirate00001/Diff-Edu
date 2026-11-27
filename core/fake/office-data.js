@@ -28,6 +28,9 @@ export function createOfficeData({ p, now, mem }) {
       { id: 'ad2', child_name: 'আরিফ হোসেন', class_level: 8, guardian_name: null, phone: '01898765432', preferred_shift: 'afternoon', note: null, status: 'called', staff_note: 'রবিবার আসবে বলেছে', handled_at: new Date(now() - 86400e3).toISOString(), created_at: new Date(now() - 4 * 86400e3).toISOString() },
       { id: 'ad3', child_name: 'নূর জাহান', class_level: 5, guardian_name: 'আব্দুল করিম', phone: '017-12', preferred_shift: null, note: null, status: 'new', staff_note: null, handled_at: null, created_at: new Date(now() - 9 * 86400e3).toISOString() },
       { id: 'ad4', child_name: 'তামিম ইকবাল', class_level: 9, guardian_name: 'ইকবাল হোসেন', phone: '01611223344', preferred_shift: 'night', note: null, status: 'admitted', staff_note: null, handled_at: new Date(now() - 5 * 86400e3).toISOString(), created_at: new Date(now() - 12 * 86400e3).toISOString() }],
+    phoneReqs: none ? [] : [
+      { id: 'pr1', student_id: 'k1', guardian_id: 'g1', old_phone: '01711223344', new_phone: '01711223355', owner: 'মা', note: 'নম্বরটা বন্ধ বলছে', student: { roll: '5', profile: { full_name: 'তাসনিম আক্তার' } }, guardian: { full_name: 'রুবিনা বেগম' }, reporter: { full_name: 'রহিম উদ্দিন' }, status: 'pending' },
+      { id: 'pr2', student_id: 'k2', guardian_id: 'g2', old_phone: '01811000000', new_phone: null, owner: '', note: null, student: { roll: '12', profile: { full_name: 'রাফি' } }, guardian: { full_name: 'আনোয়ার হোসেন' }, reporter: { full_name: 'সালমা খাতুন' }, status: 'pending' }],
     notices: none ? [] : [
       { id: 'nt1', title: 'শুক্রবার মডেল টেস্ট', body: 'সকাল ৯টায় সবাই সময়মতো আসবে।\nকলম ও প্রবেশপত্র আনবে।', audience: 'all', class_level: null, created_at: new Date(now() - 2 * 3600e3).toISOString(), archived_at: null },
       { id: 'nt2', title: 'বার্ষিক ক্রীড়া', body: 'ক্লাস ৮-এর শিক্ষার্থীদের জন্য।', audience: 'students', class_level: 8, created_at: new Date(now() - 6 * 86400e3).toISOString(), archived_at: null },
@@ -48,6 +51,7 @@ export function createOfficeData({ p, now, mem }) {
         }
         case 'profiles': if (method === 'PATCH') return ok(null, 204); if ((q.get('role') || '').startsWith('in.')) return ok(none ? [] : PEOPLE); return acc.role === 'admin' && eqv(q, 'role') === 'teacher' ? ok(none ? [] : TEACHERS) : null;
         case 'students': return method === 'PATCH' ? ok(null, 204) : null;
+        case 'phone_change_requests': return acc.role === 'admin' ? ok(o.phoneReqs.filter(r => r.status === 'pending')) : null;
         case 'class_logs': {
           if (method === 'POST') { const r = body; if (!o.logs.some(x => x.teacher_id === acc.uid && x.day === r.day && x.label === r.label)) o.logs.push({ id: 'cl-' + o.logs.length + '-' + r.day, teacher_id: acc.uid, day: r.day, label: r.label }); return ok(null, 201); }
           if (method === 'DELETE') { o.logs = o.logs.filter(x => x.id !== eqv(q, 'id')); return ok(null, 204); }
@@ -88,6 +92,7 @@ export function createOfficeData({ p, now, mem }) {
         for (const s of ROSTER) { if (body.p_class_level && s.class_level !== body.p_class_level) continue; if (o.fees.some(f => f.student_id === s.id && f.month === body.p_month)) continue; o.fees.push({ id: `f-${s.id}-g`, student_id: s.id, month: body.p_month, amount: body.p_amount, paid_amount: 0, status: 'due' }); n++; }
         return ok(n);
       }
+      if (name === 'decide_phone_change') { const r = o.phoneReqs.find(x => x.id === body.p_id); if (!r || r.status !== 'pending') return ok({ message: 'already decided' }, 400); if (body.p_approve && !/^01[3-9]\d{8}$/.test(body.p_phone || r.new_phone || '')) return ok({ message: 'no valid number' }, 400); r.status = body.p_approve ? 'approved' : 'rejected'; return ok(null, 204); }
       if (name === 'set_notice_archived') { const n = o.notices.find(x => x.id === body.p_id); if (!n) return ok({ message: 'not found' }, 400); n.archived_at = body.p_archived ? new Date(now()).toISOString() : null; return ok(null, 204); }
       if (name === 'delete_archived_notice') { const n = o.notices.find(x => x.id === body.p_id); if (!n || !n.archived_at) return ok({ message: 'not in archive' }, 400); o.notices = o.notices.filter(x => x !== n); return ok(null, 204); }
       return null;
