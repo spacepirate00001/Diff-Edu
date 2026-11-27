@@ -1,0 +1,89 @@
+/* The student's own screens (step 3). Loaded with the student's first page, not in the first download. Tokens only: no colour literal here.
+   Pairs used (all in audit/contrast-audit.mjs): ink on raised / brand-soft / good-soft / warn-soft, ink-muted on raised, brand-text on raised / brand-soft, line-ui borders. */
+.st-page { display: flex; flex-direction: column; gap: var(--de-s3); min-width: 0; }
+.st-center { text-align: center; margin: 0; }
+.st-row { display: flex; align-items: center; justify-content: space-between; gap: var(--de-s3); min-height: var(--de-touch); }
+.st-actions { display: flex; flex-wrap: wrap; gap: var(--de-s2); }
+.st-actions .de-btn { flex: 1 1 140px; }
+.st-big { font: var(--de-display); color: var(--de-ink); text-align: center; overflow-wrap: anywhere; }
+.st-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--de-s2); }
+.st-list li { display: flex; align-items: flex-start; gap: var(--de-s2); font: var(--de-body); color: var(--de-ink); }
+.st-list .de-diamond { flex: none; margin: var(--de-s2) var(--de-s1) 0; }
+.st-go { width: auto; min-height: var(--de-touch); flex: none; padding-inline: var(--de-s4); }
+.de-row:has(> .st-go) { flex-wrap: wrap; }
+.de-row:has(> .st-go) > .de-row__main { flex: 1 1 140px; min-width: 0; }
+.st-me { background: var(--de-brand-soft); border-radius: var(--de-r-md); }
+.st-board { display: flex; flex-direction: column; gap: var(--de-s2); }
+
+/* আমার অগ্রগতি */
+.st-prog { gap: var(--de-s2); }
+.st-prog__row { display: flex; align-items: center; justify-content: space-between; gap: var(--de-s3); flex-wrap: wrap; }
+.st-prog__n { display: inline-flex; align-items: center; gap: var(--de-s2); color: var(--de-ink); }
+.st-prog__n b { font: var(--de-display); }
+.st-prog__n span { font: var(--de-label); color: var(--de-ink-muted); }
+.st-prog__n .de-icon, .st-stars__n .de-icon { width: 28px; height: 28px; color: var(--de-chart-hi); fill: currentColor; }
+.st-stars__n { display: inline-flex; align-items: center; gap: var(--de-s2); }
+
+/* tiles of the খেলা tab, game list and shop */
+.st-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--de-s3); }
+.st-tile { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: var(--de-s1); min-width: 0; min-height: 112px; padding: var(--de-s3); text-align: start;
+  color: var(--de-ink); background: var(--de-raised); border: 2px solid var(--de-line-ui); border-radius: var(--de-r-lg); font: inherit; cursor: pointer; box-shadow: var(--de-shadow-card); }
+.st-tile.is-on { border-color: var(--de-brand-text); background: var(--de-brand-soft); }
+.st-tile:active { background: var(--de-press); }
+.st-tile:focus-visible, .st-opt:focus-visible, .st-card:focus-visible { outline: var(--de-focus) solid var(--de-ring); outline-offset: 2px; }
+.st-tile__e { font-size: 30px; line-height: 36px; color: var(--de-brand-text); }
+.st-tile__e .de-icon { width: 32px; height: 32px; }
+.st-tile__t { font: var(--de-heading); overflow-wrap: anywhere; }
+.st-tile__s { font: var(--de-caption); color: var(--de-ink-muted); overflow-wrap: anywhere; }
+.st-tile.is-on .st-tile__s { color: var(--de-ink); }
+
+/* quiz / game question card */
+.st-player { display: flex; flex-direction: column; gap: var(--de-s3); }
+.st-q { display: flex; flex-direction: column; gap: var(--de-s3); }
+.st-q__t { margin: 0; font: var(--de-title); color: var(--de-ink); overflow-wrap: anywhere; }
+.st-opts { display: flex; flex-direction: column; gap: var(--de-s2); }
+.st-opt { display: flex; align-items: center; justify-content: space-between; gap: var(--de-s3); width: 100%; min-height: 56px; padding: var(--de-s3) var(--de-s4); text-align: start; color: var(--de-ink); background: var(--de-raised);
+  border: 2px solid var(--de-line-ui); border-radius: var(--de-r-md); font: var(--de-body); cursor: pointer; overflow-wrap: anywhere; }
+.st-opt:active { background: var(--de-press); }
+.st-opt[aria-disabled="true"] { cursor: default; }
+.st-opt.is-right { border-color: var(--de-good); background: var(--de-good-soft); color: var(--de-ink); }
+.st-opt.is-wrong { border-color: var(--de-warn); background: var(--de-warn-soft); color: var(--de-ink); }
+.st-opt .de-icon { flex: none; color: var(--de-good); }
+.st-say { margin: 0; min-height: 24px; font: var(--de-label); color: var(--de-ink); }
+.st-answer { text-align: center; font: var(--de-title); }
+
+/* result of a quiz or game */
+.st-result { align-items: center; text-align: center; gap: var(--de-s3); }
+.st-result__n { margin: 0; font: var(--de-display); color: var(--de-ink); }
+.st-result .st-actions { width: 100%; }
+
+/* memory pairs */
+.st-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--de-s2); }
+.st-card { min-height: 64px; font-size: 28px; color: var(--de-ink); background: var(--de-raised); border: 2px solid var(--de-line-ui); border-radius: var(--de-r-md); cursor: pointer; }
+.st-card.is-gone { background: var(--de-good-soft); border-color: var(--de-good); }
+
+/* decor stage and profile */
+.st-stage { align-items: center; text-align: center; gap: var(--de-s2); min-height: 150px; justify-content: center; }
+.st-stage[data-frame] { border-width: 3px; }
+.st-stage__m { font-size: 64px; line-height: 72px; }
+.st-stage__s { font-size: 26px; line-height: 32px; min-height: 32px; }
+.st-who { align-items: center; text-align: center; gap: var(--de-s2); }
+.st-who__av { width: 88px; height: 88px; font-size: 44px; }
+.st-who__n { font: var(--de-title); color: var(--de-ink); }
+.st-tick { min-height: var(--de-touch); min-width: 96px; justify-content: center; }
+.exam-until { margin: 0; font: var(--de-label); color: var(--de-ink-muted); }
+.exam-result { align-items: center; text-align: center; }
+.exam-result .gx-big { color: var(--de-ink); }
+
+/* flashcards */
+.st-flash { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--de-s3); min-height: 200px; width: 100%; padding: var(--de-s5); text-align: center; color: var(--de-ink); font: inherit; cursor: pointer; border: 2px solid var(--de-line-ui); }
+.st-flash.is-back { background: var(--de-brand-soft); border-color: var(--de-brand-text); }
+.st-flash.is-back .de-row__sub { color: var(--de-ink); }
+.st-flash__t { font: var(--de-title); overflow-wrap: anywhere; }
+.st-flash:focus-visible { outline: var(--de-focus) solid var(--de-ring); outline-offset: 2px; }
+
+/* the exam question: the question sits inside its card (the old legend straddled the border and broke over two lines) */
+.exam-q { padding-top: var(--de-s4); }
+.exam-q legend { float: left; width: 100%; padding: 0; margin: 0 0 var(--de-s2); }
+.exam-q legend + * { clear: both; }
+.de-msg .chat-who { display: block; }

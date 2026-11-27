@@ -1,0 +1,221 @@
+/* আজ v7 (v6 + a clear sun stage + three hero variants ?hero=a|b|c). v6: the whole screen follows the real weather and the sun. Friendly rounded cards (no diamond cuts), a sky that meets the page in a soft curve,
+   a plum hero, ডিফি on the hero. Every colour that changes is set by weather.js as --v6-* (and --de-fun-*) on <html>; this file only uses them.
+   Contrast of every pair is checked by v6-audit.mjs. Added on top of tokens.css + components.css. */
+@property --v6-a { syntax: "<color>"; inherits: true; initial-value: #A6D6F2; }
+@property --v6-b { syntax: "<color>"; inherits: true; initial-value: #BFE3F8; }
+@property --v6-c { syntax: "<color>"; inherits: true; initial-value: #D3E9F7; }
+@property --v6-ink { syntax: "<color>"; inherits: true; initial-value: #1A0B21; }
+@property --v6-ink2 { syntax: "<color>"; inherits: true; initial-value: #2B1236; }
+:root {
+  --v6-a: #A6D6F2; --v6-b: #BFE3F8; --v6-c: #D3E9F7; --v6-ink: #1A0B21; --v6-ink2: #2B1236;   /* fallbacks until weather.js runs */
+  --v6-page: #FFF8EC; --v6-tab: #FFF8EC; --v6-edge: #DDCBE3; --v6-acc: #D4B95A;
+  --v6-cloud: rgba(255, 255, 255, 0.8); --v6-star: #F6EFD3; --v6-moon: #F6EFD3;
+  --v6-over: 24px;      /* how far the hero climbs into the sky */
+  --stars: 0;
+}
+
+/* ---- screen shell ---- */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--v6-page); color: var(--de-ink); font: var(--de-body); }
+[hidden] { display: none !important; }
+.tg-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.tg-screen { height: 100%; max-width: 30rem; margin: 0 auto; background: var(--v6-page); }
+.tg-col { display: flex; flex-direction: column; gap: var(--de-s1); min-width: 0; }
+.tg-col--end { align-items: flex-end; text-align: end; }
+.tg-caption-end { flex: none; text-align: end; }
+.tg-quote { margin: 0; }
+.tg-quote-by { display: block; padding-top: var(--de-s1); }
+.tg-heading { margin: 0; font: var(--de-heading); color: var(--de-ink); }
+.tg-child { display: block; width: 100%; min-height: var(--de-touch); margin: 0; padding: 0; border: 0; background: transparent; font: var(--de-heading); text-align: start; cursor: pointer; }
+.tg-child:disabled { cursor: default; }
+.v6-body { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; background: var(--v6-page); }
+
+/* ---- the sky: gradient from three stops, a soft curve at the bottom ---- */
+.v6-sky {
+  position: relative; overflow: hidden; color: var(--v6-ink);
+  padding: calc(var(--de-s3) + env(safe-area-inset-top)) var(--de-s4) 0;
+  background: linear-gradient(180deg, var(--v6-a), var(--v6-b), var(--v6-c));
+  border-radius: 0 0 50% 50% / 0 0 26px 26px;
+}
+.v6-sky > i, .v7-stage > i { position: absolute; display: block; pointer-events: none; }
+.v6-sky > :not(i) { position: relative; z-index: 2; }
+
+/* SKY STAGE: the last block of the header, under every line of text, above the hero. Sun and moon live only here (the hero covers its bottom --v6-over px).
+   They ride an arc: left = east, right = west. left (%) and --oy (px) are set by JS from the real sunrise and sunset; the dotted track shows the path. */
+.v7-stage { height: 132px; margin: var(--de-s2) calc(-1 * var(--de-s4)) 0; }
+.v7-track { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.v7-track path { fill: none; stroke: var(--v6-ink2); stroke-opacity: 0.38; stroke-width: 2; stroke-dasharray: 1 8; stroke-linecap: round; }
+.v6-orb { left: 50%; bottom: calc(var(--v6-over) + 12px + var(--oy, 0px)); width: 30px; height: 30px; margin-left: -15px; border-radius: 50%; opacity: 0; }
+.v6-sun { background: var(--de-accent); border: var(--de-sticker-edge-w) solid var(--de-sticker-edge); box-shadow: 0 0 0 7px rgba(212, 185, 90, 0.28), 0 0 22px 8px rgba(212, 185, 90, 0.3); }
+.v6-moon { bottom: calc(var(--v6-over) + 14px + var(--oy, 0px)); width: 26px; height: 26px; margin-left: -13px; background: var(--v6-moon); box-shadow: inset -7px -2px 0 0 rgba(212, 185, 90, 0.6), 0 0 16px 4px rgba(246, 239, 211, 0.25); }
+.v6-sky[data-wx="hot"] .v6-sun { box-shadow: 0 0 0 10px rgba(255, 190, 40, 0.34), 0 0 38px 16px rgba(255, 170, 30, 0.42); }
+.v6-sky[data-wx="rain"] .v6-sun, .v6-sky[data-wx="storm"] .v6-sun, .v6-sky[data-wx="overcast"] .v6-sun, .v6-sky[data-wx="fog"] .v6-sun { filter: saturate(0.5) blur(1.5px); }
+
+/* round stars, fade in with the dusk (opacity --stars) */
+.v6-stars { inset: 0 0 45% 0; opacity: var(--stars); color: var(--v6-star);
+  background:
+    radial-gradient(circle at 52% 14%, currentColor 1.5px, transparent 2.5px), radial-gradient(circle at 66% 30%, currentColor 1px, transparent 2px),
+    radial-gradient(circle at 80% 12%, currentColor 1.8px, transparent 2.8px), radial-gradient(circle at 92% 34%, currentColor 1.2px, transparent 2.2px),
+    radial-gradient(circle at 74% 52%, currentColor 1px, transparent 2px), radial-gradient(circle at 58% 62%, currentColor 1.3px, transparent 2.3px),
+    radial-gradient(circle at 88% 70%, currentColor 1.5px, transparent 2.5px), radial-gradient(circle at 44% 40%, currentColor 1px, transparent 2px); }
+
+/* clouds live in the scene strip under the text; JS hides the ones the weather does not need */
+.v6-cloud { height: 16px; border-radius: var(--de-r-full); background: var(--v6-cloud); }
+.v6-cloud::before, .v6-cloud::after { content: ""; position: absolute; bottom: 6px; width: 20px; height: 20px; border-radius: 50%; background: inherit; }
+.v6-cloud::before { left: 18%; } .v6-cloud::after { left: 46%; width: 14px; height: 14px; }
+.v6-cloud--a { left: 44%; bottom: calc(var(--v6-over) + 58px); width: 62px; }
+.v6-cloud--b { left: 16%; bottom: calc(var(--v6-over) + 40px); width: 46px; }
+.v6-cloud--c { left: 66%; bottom: calc(var(--v6-over) + 36px); width: 54px; }
+.v6-cloud--d { left: 4%; bottom: calc(var(--v6-over) + 62px); width: 48px; }
+.v6-sky[data-wx="overcast"] .v6-cloud, .v6-sky[data-wx="rain"] .v6-cloud, .v6-sky[data-wx="storm"] .v6-cloud { transform: scale(1.25); }
+
+/* rain streaks over the whole sky (thin, low contrast so text stays clear), fog bands, lightning flash */
+.v6-rain, .v6-fog, .v6-flash { display: none; }
+.v6-sky:not([data-rain="0"]) > .v6-rain { display: block; inset: 0; --rs: 24px 56px; --ra: 0.3;
+  background: linear-gradient(98deg, transparent 46%, rgba(255, 255, 255, var(--ra)) 48%, transparent 50%) 0 0 / var(--rs); }
+.v6-sky[data-rain="2"] > .v6-rain { --rs: 18px 42px; --ra: 0.38; }
+.v6-sky[data-rain="3"] > .v6-rain { --rs: 15px 34px; --ra: 0.3; background-image: linear-gradient(98deg, transparent 46%, rgba(190, 200, 255, var(--ra)) 48%, transparent 50%); }
+.v6-sky[data-fog="1"] > .v6-fog { display: block; left: -20%; right: -20%; bottom: 0; height: 110px;
+  background: radial-gradient(ellipse 45% 70% at 30% 85%, rgba(255, 255, 255, 0.75), transparent), radial-gradient(ellipse 40% 60% at 78% 60%, rgba(255, 255, 255, 0.6), transparent); }
+.v6-sky[data-flash="1"] > .v6-flash { display: block; inset: 0; background: rgba(200, 195, 255, 0.22); opacity: 0; }
+
+/* ---- text zone ---- */
+.v6-brand { display: flex; align-items: center; gap: var(--de-s3); }
+.v6-logo { display: grid; place-items: center; width: 44px; height: 44px; flex: none; background: var(--de-brand-deep); border-radius: var(--de-r-md); box-shadow: var(--de-shadow-sticker); }
+.v6-logo img { display: block; height: 28px; width: auto; }
+.v6-brand__t { display: flex; flex-direction: column; }
+.v6-brand__t b { font: var(--de-heading); color: var(--v6-ink2); }
+.v6-brand__t span { font: var(--de-caption); letter-spacing: 0.08em; color: var(--v6-ink2); }
+.v6-child { display: flex; align-items: center; gap: var(--de-s3); margin-top: var(--de-s2); }
+.v6-avatar { width: 44px; height: 44px; background: var(--de-brand-soft); color: var(--de-brand-text); border: var(--de-sticker-edge-w) solid var(--de-raised); box-shadow: var(--de-shadow-sticker); }
+.v6-child__t { display: flex; flex-direction: column; min-width: 0; }
+.v6-childbtn { width: auto; color: var(--v6-ink); font: var(--de-title); overflow-wrap: anywhere; }
+.v6-childbtn:focus-visible { outline: var(--de-focus) solid var(--v6-ink); outline-offset: var(--de-focus); }
+.v6-child__sub { font: var(--de-caption); color: var(--v6-ink2); }
+.v6-greet { margin: var(--de-s2) 0 0; font: var(--de-heading); color: var(--v6-ink); }
+.v6-greet__hi { color: var(--v6-ink2); }
+.v6-wx { margin: 0; font: var(--de-caption); color: var(--v6-ink2); }
+
+/* ---- cards: soft rounded, outline in the weather's tint ---- */
+.v6-card { display: flex; flex-direction: column; gap: var(--de-s2); min-width: 0; padding: var(--de-s4); color: var(--de-ink); background: var(--de-raised); border: 2px solid var(--v6-edge); border-radius: var(--de-r-lg); box-shadow: var(--de-shadow-card); }
+.de-nudge.v6-card { background: var(--de-brand-soft); }
+.v6-notice.v6-card { background: var(--de-accent-soft); flex-direction: row; align-items: center; width: 100%; min-height: var(--de-touch); padding: var(--de-s2) var(--de-s4); text-align: start; font: inherit; cursor: pointer; }
+.v6-card .de-week { gap: var(--de-s2); padding-block: var(--de-s1); }
+.v6-cards .de-banner { border-radius: var(--de-r-lg); }
+
+.v6-cards { position: relative; z-index: 1; display: flex; flex-direction: column; gap: var(--de-s3); padding: 0 var(--de-s4) var(--de-s5); margin-top: calc(-1 * var(--v6-over)); }
+.v6-cards > * { flex-shrink: 0; }
+.v6-cards > .de-empty { margin-top: var(--de-s5); }
+/* ---- hero: three layouts, picked by ?hero=a|b|c. All share: plum + gold identity, rounded shapes, a faint weather tint (--v6-acc, 14-22 percent at most; v7-audit checks it). ---- */
+@property --v7-p { syntax: "<number>"; inherits: true; initial-value: 0; }
+.v7-hero { position: relative; display: flex; flex-direction: column; min-width: 0; color: var(--de-on-brand); border-radius: var(--de-r-xl); box-shadow: var(--de-shadow-hero); }
+.v7-hero .tg-col { min-width: 0; }
+.v7-row { display: flex; align-items: center; justify-content: space-between; gap: var(--de-s3); min-width: 0; }
+.v7-numrow { display: flex; align-items: baseline; gap: var(--de-s1); }
+.v7-big { font: 700 48px/52px var(--de-font); font-variant-numeric: tabular-nums; }
+.v7-of { font: var(--de-heading); opacity: 1; }
+.v7-hero .de-today__cap { overflow-wrap: anywhere; }
+.v7-dfy { flex: none; }
+.v7-dfy .de-mascot { --df: 56px; position: relative; }
+.v7-say { display: flex; align-items: center; gap: var(--de-s2); min-width: 0; }
+.v7-say .de-bubble { overflow-wrap: anywhere; }
+.v7-hero .de-stars { flex-wrap: wrap; }
+.v6-extra { position: absolute; inset: 0; overflow: visible; }
+.dw-a { fill: var(--de-fun-coral); stroke: var(--de-brand-deep); stroke-width: 2.2; stroke-linejoin: round; }
+.dw-l { fill: none; stroke: var(--de-brand-deep); stroke-width: 2.4; stroke-linecap: round; }
+.dw-g { fill: var(--de-brand-deep); } .dw-s { fill: none; stroke: #fff; stroke-opacity: 0.55; stroke-width: 1.6; stroke-linecap: round; }
+.dw-c { fill: var(--de-fun-sky); stroke: var(--de-brand-deep); stroke-width: 1.6; stroke-linejoin: round; }
+.v7-glow { background: radial-gradient(circle at 100% 0, color-mix(in srgb, var(--v6-acc) 22%, transparent), transparent 62%), linear-gradient(145deg, var(--de-hero-from), var(--de-brand-deep)); }
+
+/* score ring: a gold arc on a faint track; the number sits inside, "of 10" under it */
+.v7-ring { --v7-p: 0; position: relative; display: grid; place-content: center; justify-items: center; flex: none; width: 124px; height: 124px; text-align: center; }
+.v7-ring::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--de-accent) calc(var(--v7-p) * 1%), var(--de-on-brand-line) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px)); mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px)); }
+.v7-ring > * { position: relative; }
+
+/* a: score-first */
+.v7-hero--a { gap: var(--de-s3); padding: var(--de-s4) var(--de-s4) 0; border: 1.5px solid var(--de-gold-line); overflow: hidden; }
+.v7-hero--a .v7-row { align-items: center; }
+.v7-hero--a .v7-info { align-items: flex-start; flex: 1; gap: var(--de-s2); }
+.v7-ribbon { margin: 0 calc(-1 * var(--de-s4)); padding: var(--de-s3) var(--de-s4); background: var(--de-accent); color: var(--de-on-accent); font: var(--de-body); }
+.v7-ribbon .de-today__cap, .v7-ribbon .tg-quote { color: var(--de-on-accent); }
+.v7-ribbon .tg-quote { padding: 0; border: 0; }
+.v7-hero--a:not(:has(.v7-ribbon)) { padding-bottom: var(--de-s4); }
+
+/* b: story card, plum top, cream bottom, the attendance tab sits on the seam */
+.v7-hero--b { overflow: hidden; border: 2px solid var(--de-brand-deep); }
+.v7-top { display: flex; align-items: center; justify-content: space-between; gap: var(--de-s3); padding: var(--de-s4) var(--de-s4) 30px; }
+.v7-top .tg-col { gap: var(--de-s2); }
+.v7-bot { position: relative; display: flex; flex-direction: column; gap: var(--de-s3); padding: 30px var(--de-s4) var(--de-s4); color: var(--de-ink);
+  background: linear-gradient(color-mix(in srgb, var(--v6-acc) 14%, transparent), color-mix(in srgb, var(--v6-acc) 14%, transparent)), var(--de-accent-soft); }
+.v7-tab { position: absolute; top: -18px; left: var(--de-s4); max-width: calc(100% - 2 * var(--de-s4)); padding: var(--de-s2) var(--de-s4); border: 3px solid var(--de-accent-soft); font: var(--de-label); white-space: normal; }
+.v7-bot .de-bubble { background: var(--de-raised); color: var(--de-ink); border: 2px solid var(--de-brand-text); }
+.v7-bot .de-bubble:focus-visible { outline-color: var(--de-ring); }
+.v7-bot .de-mascot-btn:focus-visible { outline-color: var(--de-ring); }
+.v7-bot .tg-quote { padding: 0; border: 0; color: var(--de-ink); font: var(--de-body); }
+.v7-bot .de-today__cap { color: var(--de-ink-muted); }
+
+/* c: sticker card, light, thick plum outline, gold corner tab, the score is a big sticker */
+.v7-hero--c { gap: var(--de-s3); padding: 44px var(--de-s4) var(--de-s4); color: var(--de-ink); border: 4px solid var(--de-brand); overflow: hidden;
+  background: linear-gradient(color-mix(in srgb, var(--v6-acc) 14%, transparent), color-mix(in srgb, var(--v6-acc) 14%, transparent)), var(--de-raised); }
+.v7-corner { position: absolute; top: 0; left: 0; padding: var(--de-s1) var(--de-s4) var(--de-s1) var(--de-s3); border-radius: 0 0 var(--de-r-xl) 0; background: var(--de-accent); color: var(--de-on-accent); font: var(--de-label); }
+.v7-hero--c .de-today__cap, .v7-hero--c .v7-sub { color: var(--de-ink-muted); }
+.v7-sticker { display: grid; place-content: center; justify-items: center; flex: none; width: 116px; height: 116px; border: 4px solid var(--de-raised); border-radius: 50%; background: var(--de-fun-sunny); color: var(--de-on-fun);
+  box-shadow: var(--de-shadow-sticker), 0 0 0 3px var(--de-brand); text-align: center; transform: rotate(-5deg); }
+.v7-sticker[data-tier="mint"] { background: var(--de-fun-mint); }
+.v7-sticker[data-tier="sky"] { background: var(--de-fun-sky); }
+.v7-sticker .v7-big { font-size: 46px; line-height: 48px; }
+.v7-hero--c .v7-info { align-items: flex-start; flex: 1; gap: var(--de-s2); }
+.v7-pill { padding: var(--de-s2) var(--de-s4); border: 2px solid var(--de-brand); font: var(--de-label); white-space: normal; background: var(--de-fun-mint); color: var(--de-on-fun); }
+.v7-pill--sky { background: var(--de-fun-sky); }
+.v7-hero--c .de-stars .de-star { background: var(--de-line); }
+.v7-hero--c .de-stars .de-star--on { background: var(--de-brand-text); }
+.v7-hero--c .v7-say .de-bubble { background: var(--de-brand-soft); color: var(--de-ink); }
+.v7-hero--c .de-bubble:focus-visible, .v7-hero--c .de-mascot-btn:focus-visible { outline-color: var(--de-ring); }
+.v7-hero--c .tg-quote { padding: var(--de-s3) 0 0; border-top: 2px dashed var(--de-line-ui); color: var(--de-ink); font: var(--de-body); }
+
+.v6-stickers { display: flex; flex-wrap: wrap; gap: var(--de-s3); padding: var(--de-s1) var(--de-s2); }
+.v6-ask { gap: var(--de-s2); min-height: 56px; border: 2px solid var(--de-brand-text); border-radius: var(--de-r-full); background: var(--de-raised); box-shadow: var(--de-shadow-sticker); }
+.v6-ask .de-mascot { --df: 32px; }
+
+/* ---- tab bar: tinted by the weather, the current tab is a rounded pill ---- */
+.v6 .de-bottomnav { flex: none; background: var(--v6-tab); border-top: 2px solid var(--v6-edge); padding: var(--de-s1) 0 env(safe-area-inset-bottom); }
+.v6 .de-bottomnav__item { justify-content: flex-start; min-height: 56px; }
+.v6 .de-bottomnav__item .de-icon { box-sizing: content-box; padding: 3px 16px; border-radius: var(--de-r-full); }
+.v6 .de-bottomnav__item.is-on { background: transparent; }
+.v6 .de-bottomnav__item.is-on::before { display: none; }
+.v6 .de-bottomnav__item.is-on .de-icon { background: var(--de-brand); color: var(--de-on-brand); }
+.v6 .de-bottomnav__badge { left: calc(50% + 14px); }
+
+/* ---- motion: all of it off when the phone asks for reduced motion ---- */
+@media (prefers-reduced-motion: no-preference) {
+  .v6-sun { animation: v6-glow 3200ms ease-in-out infinite; }
+  .v6-cloud--a { animation: v6-drift 9s ease-in-out infinite alternate; }
+  .v6-cloud--b { animation: v6-drift 12s ease-in-out infinite alternate-reverse; }
+  .v6-cloud--c { animation: v6-drift 10s ease-in-out infinite alternate; }
+  .v6-stars { animation: v6-twinkle 4s ease-in-out infinite alternate; }
+  .v6-sky:not([data-rain="0"]) > .v6-rain { animation: v6-fall 1.8s linear infinite; }
+  .v6-sky[data-rain="2"] > .v6-rain { animation-duration: 1s; }
+  .v6-sky[data-rain="3"] > .v6-rain { animation-duration: 0.65s; }
+  .v6-sky[data-fog="1"] > .v6-fog { animation: v6-fog 16s ease-in-out infinite alternate; }
+  .v6-sky[data-flash="1"] > .v6-flash { animation: v6-flash 8s linear infinite; }
+  .v7-ring::before { animation: v7-ring var(--de-t-count) var(--de-ease) both; }
+  :root[data-wx^="rain"], :root[data-wx^="storm"], :root[data-wx^="drizzle"] { --de-t-bob: 6s; }   /* a calmer ডিফি in the rain */
+  .v6-ready, .v6-ready *:not(.v6-rain):not(.v6-flash) { transition: background-color 2.5s linear, border-color 2.5s linear, color 2.5s linear; }
+  .v6-ready .v6-sky.v6-sky { transition: --v6-a 2.5s linear, --v6-b 2.5s linear, --v6-c 2.5s linear, --v6-ink 2.5s linear, --v6-ink2 2.5s linear; }
+}
+@keyframes v6-glow { 50% { transform: scale(1.08); } }
+@keyframes v6-drift { to { transform: translateX(14px); } }
+@keyframes v6-twinkle { to { filter: brightness(0.7); } }
+@keyframes v6-fall { to { background-position: 0 56px; } }
+@keyframes v6-fog { to { transform: translateX(8%); } }
+@keyframes v6-flash { 0%, 89%, 92%, 95%, 100% { opacity: 0; } 90% { opacity: 1; } 93.5% { opacity: 0.7; } }
+@keyframes v7-ring { from { --v7-p: 0; } }
+
+/* ---- large text ---- */
+:root[data-text="large"] .v7-big { font-size: 56px; line-height: 60px; }
+:root[data-text="large"] .v7-ring { width: 148px; height: 148px; }
+:root[data-text="large"] .v7-sticker { width: 136px; height: 136px; }
+:root[data-text="large"] .v6-logo, :root[data-text="large"] .v6-avatar { width: 52px; height: 52px; }
+:root[data-text="large"] .v6-notice .de-notice__text { white-space: normal; }

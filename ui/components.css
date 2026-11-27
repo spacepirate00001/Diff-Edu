@@ -1,0 +1,1551 @@
+/*
+ * Diff Edu components ("Blue Diamond"). Every value comes from tokens.css.
+ * The 16 components:
+ *   1  .de-appbar          top bar on brand-deep
+ *   2  .de-bottomnav       four-column bottom tab bar
+ *   3  .de-today           hero card for today's number
+ *   4  .de-card, .de-stat  raised card and stat tile (.de-stat-grid)
+ *   5  .de-row, .de-rows   list row and its container
+ *   6  .de-student-row     one student's row inside a class
+ *   7  .de-stepper         score stepper: [-] value [+]
+ *   8  .de-chip            status pill (now, good, warn, bad, plain)
+ *   9  .de-btn             button (primary, accent, secondary, text, danger)
+ *  10  .de-field           labelled text input
+ *  11  .de-pinpad          PIN keypad and PIN dots
+ *  12  .de-sheet           bottom sheet with scrim
+ *  13  .de-savebar         save status strip after a write
+ *  14  .de-banner          full-width notice inside a page
+ *  15  .de-empty           empty or error state
+ *  16  .de-skeleton        loading placeholder block
+ * Shared helpers: .de-screen, .de-screen__body, .de-avatar, .de-icon,
+ *                 .de-check, .de-week
+ * Fun layer (step 0b, sections 29-36): mascot, speech bubble, stars, stickers, wiggle, squish, wave, confetti.
+ * Added in step 0: .de-dialog (confirm), .de-toast, .de-badge, .de-chart (bars) and
+ * .de-spark (sparkline), .de-empty--offline / --error, filter chips (button.de-chip).
+ */
+
+/* Shared helpers: screen shell, body padding, avatar, icon, check box, week strip. */
+.de-screen {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--de-surface);
+  color: var(--de-ink);
+  font: var(--de-body);
+}
+
+.de-screen__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--de-s3);
+  padding: var(--de-s4);
+}
+
+.de-screen__body > * {
+  flex-shrink: 0;   /* cards keep their height; the body scrolls instead */
+}
+
+.de-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: var(--de-r-full);
+  background: var(--de-on-brand-fill);
+  color: var(--de-on-brand);
+  font: var(--de-label);
+  overflow: hidden;
+}
+.de-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.de-avatar--solid {
+  background: var(--de-brand-soft);
+  color: var(--de-brand-text);
+}
+.de-avatar--lg {
+  width: var(--de-touch);
+  height: var(--de-touch);
+}
+
+.de-icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.de-check {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: var(--de-r-sm);
+  border: 2px solid var(--de-line-ui);
+  background: transparent;
+  color: var(--de-on-brand);
+}
+.de-check .de-icon {
+  width: 16px;
+  height: 16px;
+}
+.de-check.is-on {
+  background: var(--de-good-solid);
+  border-color: var(--de-good-solid);
+}
+
+.de-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--de-s1);
+  text-align: center;
+}
+.de-week__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--de-s1);
+  font: var(--de-caption);
+  color: var(--de-ink-muted);
+}
+.de-week__dot {
+  display: block;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--de-r-full);
+  background: var(--de-good-soft);
+  border: 2px solid var(--de-good);
+}
+.de-week__dot--absent {
+  background: var(--de-bad-soft);
+  border-color: var(--de-bad);
+}
+.de-week__dot--none {
+  background: transparent;
+  border: 2px dashed var(--de-line-ui);
+}
+.de-week__dot--today {
+  background: var(--de-good-solid);
+  border-color: var(--de-good-solid);
+  outline: calc(var(--de-focus) + var(--de-border)) solid var(--de-accent);
+}
+
+/* 1. Appbar: top bar on brand-deep with back button, titles and one action. */
+.de-appbar {
+  display: flex;
+  align-items: center;
+  gap: var(--de-s3);
+  padding: var(--de-s4);
+  background: var(--de-brand-deep);
+  color: var(--de-on-brand);
+}
+.de-appbar__back,
+.de-appbar__action {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: var(--de-touch);
+  min-height: var(--de-touch);
+  border: 0;
+  border-radius: var(--de-r-md);
+  background: transparent;
+  color: var(--de-on-brand);
+  cursor: pointer;
+}
+.de-appbar__back {
+  width: var(--de-touch);
+  height: var(--de-touch);
+  border-radius: var(--de-r-full);
+}
+.de-appbar__action {
+  padding: 0 var(--de-s2);
+  font: var(--de-label);
+}
+.de-appbar__titles {
+  flex: 1;
+  min-width: 0;
+}
+.de-appbar__title {
+  display: block;
+  font: var(--de-heading);
+  color: var(--de-on-brand);
+}
+.de-appbar__sub {
+  display: block;
+  font: var(--de-caption);
+  color: var(--de-on-brand-muted);
+}
+.de-appbar__back:focus-visible,
+.de-appbar__action:focus-visible {
+  outline: var(--de-focus) solid var(--de-accent);
+  outline-offset: var(--de-focus);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .de-appbar__back,
+  .de-appbar__action {
+    transition: transform var(--de-t-press) var(--de-ease);
+  }
+}
+.de-appbar__back:active,
+.de-appbar__action:active {
+  transform: scale(0.98);
+}
+
+/* 2. Bottom nav: four equal columns on raised surface; .is-on = current tab. */
+.de-bottomnav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--de-raised);
+  border-top: var(--de-border) solid var(--de-line);
+}
+.de-bottomnav__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--de-s1);
+  min-height: var(--de-touch);
+  padding: var(--de-s1) 0;
+  border: 0;
+  background: transparent;
+  color: var(--de-ink-muted);
+  font: var(--de-caption);
+  cursor: pointer;
+}
+.de-bottomnav__item .de-icon {
+  width: 22px;
+  height: 22px;
+}
+.de-bottomnav__item.is-on {
+  color: var(--de-brand-text);
+  background: var(--de-brand-soft);
+  font-weight: 700;
+}
+.de-bottomnav__item.is-on::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  height: 3px;
+  border-radius: 0 0 var(--de-r-sm) var(--de-r-sm);
+  background: var(--de-brand-text);
+}
+.de-bottomnav__badge {
+  position: absolute;
+  top: var(--de-s1);
+  left: calc(50% + var(--de-s2));
+  padding: 0 var(--de-s1);
+  border-radius: var(--de-r-full);
+  background: var(--de-bad-solid);
+  color: var(--de-on-brand);
+  font: var(--de-caption);
+  font-variant-numeric: tabular-nums;
+}
+.de-bottomnav__item:focus-visible {
+  outline: var(--de-focus) solid var(--de-ring);
+  outline-offset: var(--de-focus);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .de-bottomnav__item {
+    transition: transform var(--de-t-press) var(--de-ease);
+  }
+}
+.de-bottomnav__item:active {
+  transform: scale(0.98);
+  background-image: linear-gradient(var(--de-press), var(--de-press));
+}
+
+/* 3. Today hero: brand-deep card with the big number, caption and a quote. */
+.de-today {
+  display: flex;
+  flex-direction: column;
+  gap: var(--de-s3);
+  padding: var(--de-s4);
+  border-radius: var(--de-r-xl);
+  background: linear-gradient(145deg, var(--de-hero-from), var(--de-brand-deep));
+  box-shadow: inset 0 0 0 var(--de-border) var(--de-gold-line), var(--de-shadow-hero);
+  color: var(--de-on-brand);
+  position: relative;
+  overflow: hidden;
+}
+.de-today > * {
+  position: relative;
+}
+.de-today::before {
+  content: "";
+  position: absolute;
+  top: -48px;
+  right: -48px;
+  width: 96px;
+  height: 96px;
+  background: var(--de-diamond);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+.de-today__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--de-s3);
+}
+.de-today__big {
+  font: var(--de-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--de-on-brand);
+}
+.de-today__cap {
+  font: var(--de-caption);
+  color: var(--de-on-brand-muted);
+}
+.de-today__quote {
+  font: var(--de-body);
+  padding-top: var(--de-s3);
+  border-top: var(--de-border) solid var(--de-on-brand-line);
+  color: var(--de-on-brand);
+}
+
+/* 4. Card and stat tile: raised surface with a hairline border. */
+.de-card,
+.de-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--de-s2);
+  padding: var(--de-s4);
+  background: var(--de-raised);
+  border: var(--de-border) solid var(--de-line);
+  border-radius: var(--de-r-lg);
+  box-shadow: var(--de-shadow-card);
+  color: var(--de-ink);
+}
+.de-stat__label {
+  font: var(--de-caption);
+  color: var(--de-ink-muted);
+}
+.de-stat__value {
+  font: var(--de-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--de-ink);
+}
+.de-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--de-s3);
+}
+
+/* 5. Row: a list item; button/link rows press and show focus. */
+.de-row {
+  display: flex;
+  align-items: center;
+  gap: var(--de-s3);
+  min-height: var(--de-touch);
+  color: var(--de-ink);
+}
+.de-row__main {
+  flex: 1;
+  min-width: 0;
+}
+.de-row__title {
+  display: block;
+  font: var(--de-body);
+  color: var(--de-ink);
+}
+.de-row__sub {
+  display: block;
+  font: var(--de-caption);
+  color: var(--de-ink-muted);
+}
+.de-rows {
+  display: flex;
+  flex-direction: column;
+}
+.de-rows > .de-row + .de-row,
+.de-rows > .de-student-row + .de-student-row {
+  border-top: var(--de-border) solid var(--de-line);
+}
+a.de-row,
+button.de-row {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+a.de-row:focus-visible,
+button.de-row:focus-visible {
+  outline: var(--de-focus) solid var(--de-ring);
+  outline-offset: var(--de-focus);
+}
+@media (prefers-reduced-motion: no-preference) {
+  a.de-row,
+  button.de-row {
+    transition: transform var(--de-t-press) var(--de-ease);
+  }
+}
+a.de-row:active,
+button.de-row:active {
+  transform: scale(0.98);
+}
+
+/* 6. Student row: a .de-row for one student; absent students use muted text, not opacity. */
+.de-student-row {
+  align-items: center;
+}
+.de-student-row__end {
+  display: flex;
+  align-items: center;
+  gap: var(--de-s2);
+  flex: none;
+}
+.de-student-row.is-absent .de-row__title,
+.de-student-row.is-absent .de-row__sub {
+  color: var(--de-ink-disabled);
+}
+
+/* 7. Stepper: score control with a 48px key on each side and a 32px value. */
+.de-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--de-s1);
+  font-variant-numeric: tabular-nums;
+}
+.de-stepper__key {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: var(--de-touch);
+  min-width: var(--de-touch);
+  min-height: var(--de-touch);
+  padding: 0;
+  border: 1.5px solid var(--de-line-ui);
+  border-radius: var(--de-r-sm);
+  background: var(--de-raised);
+  color: var(--de-brand-text);
+  font: var(--de-heading);
+  cursor: pointer;
+}
+.de-stepper__key:focus-visible {
+  outline: var(--de-focus) solid var(--de-ring);
+  outline-offset: var(--de-focus);
+}
+.de-stepper__key:disabled {
+  color: var(--de-ink-disabled);
+  cursor: not-allowed;
+}
+.de-stepper__value {
+  width: 32px;
+  text-align: center;
+  font: var(--de-heading);
+  font-variant-numeric: tabular-nums;
+  color: var(--de-ink);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .de-stepper__key {
+    transition: transform var(--de-t-press) var(--de-ease);
+  }
+}
+.de-stepper__key:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* 8. Chip: small status pill. The default is plain (brand-soft). */
+.de-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--de-s1);
+  padding: var(--de-s1) var(--de-s3);
+  border-radius: var(--de-r-full);
+  background: var(--de-brand-soft);
+  color: var(--de-brand-text);
+  font: var(--de-caption);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.de-chip--now {
+  background: var(--de-accent);
+  color: var(--de-on-accent);
+}
+.de-chip--good {
+  background: var(--de-good-soft);
+  color: var(--de-good);
+}
+.de-chip--warn {
+  background: var(--de-warn-soft);
+  color: var(--de-warn);
+}
+.de-chip--bad {
+  background: var(--de-bad-soft);
+  color: var(--de-bad);
+}
+button.de-chip {
+  min-height: var(--de-touch);
+  padding: 0 var(--de-s4);
+  border: 0;
+  font: var(--de-label);
+  cursor: pointer;
+}
+button.de-chip:focus-visible {
+  outline: var(--de-focus) solid var(--de-ring);
+  outline-offset: var(--de-focus);
+}
+.de-chip.is-on {
+  background: var(--de-brand);
+  color: var(--de-on-brand);
+}
+.de-chip--plain {
+  background: var(--de-brand-soft);
+  color: var(--de-brand-text);
+}
+
+/* 9. Button: full width by default. Variants set --de-btn-fg (the colour the spinner uses). */
+.de-btn {
+  --de-btn-fg: var(--de-brand-text);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--de-s2);
+  width: 100%;
+  min-height: var(--de-touch);
+  margin: 0;
+  padding: 0 var(--de-s4);
+  border: 0;
+  border-radius: var(--de-r-md);
+  background: transparent;
+  color: var(--de-btn-fg);
+  font: var(--de-label);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.de-btn:focus-visible {
+  outline: var(--de-focus) solid var(--de-ring);
+  outline-offset: var(--de-focus);
+}
+.de-btn--primary {
+  --de-btn-fg: var(--de-on-brand);
+  background: var(--de-brand);
+  color: var(--de-on-brand);
+}
+.de-btn--accent {
+  --de-btn-fg: var(--de-on-accent);
+  background: var(--de-accent);
+  color: var(--de-on-accent);
+}
+.de-btn--secondary {
+  background: transparent;
+  border: 1.5px solid var(--de-line-ui);
+  color: var(--de-brand-text);
+}
+.de-btn--text {
+  width: auto;
+  padding: 0 var(--de-s3);
+  background: transparent;
+  color: var(--de-brand-text);
+}
+.de-btn--danger {
+  --de-btn-fg: var(--de-on-brand);
+  background: var(--de-bad-solid);
+  color: var(--de-on-brand);
+}
+.de-btn[disabled],
+.de-btn.is-disabled {
+  background: var(--de-line);
+  border-color: var(--de-line);
+  color: var(--de-ink-disabled);
+  cursor: not-allowed;
+}
+.de-btn.is-loading {
+  color: transparent;
+  pointer-events: none;
+}
+.de-btn.is-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 2px solid var(--de-btn-fg);
+  border-top-color: transparent;
+  border-radius: var(--de-r-full);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .de-btn {
+    transition: transform var(--de-t-press) var(--de-ease);
+  }
+  .de-btn.is-loading::after {
+    animation: de-spin var(--de-t-spin) linear infinite;
+  }
+  @keyframes de-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+.de-btn:active:not([disabled]):not(.is-disabled) {
+  transform: scale(0.98);
+}
+
+/* 10. Field: labelled text input with optional help text. */
+.de-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--de-s2);
+  color: var(--de-ink);
+}
+.de-field__label {
+  font: var(--de-label);
+  color: var(--de-ink);
+}
+.de-field__input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--de-touch);
+  padding: 0 var(--de-s4);
+  border: 1.5px solid var(--de-line-ui);
+  border-radius: var(--de-r-md);
+  background: var(--de-raised);
+  color: var(--de-ink);
+  font: var(--de-body);
+}
+.de-field__input::placeholder {
+  color: var(--de-ink-muted);
+}
+.de-field__input:focus {
+  border-color: var(--de-ring);
+}
+.de-field__input:focus-visible {
+  outline: var(--de-focus) solid var(--de-ring);
+  outline-offset: var(--de-focus);
+}
+.de-field__input:disabled {
+  background: var(--de-surface);
+  color: var(--de-ink-disabled);
+}
+.de-field__help {
+  font: var(--de-caption);
+  color: var(--de-ink-muted);
+}
+.de-field.is-error .de-field__input,
+.de-field__input.is-error {
+  border-color: var(--de-bad);
+}
+.de-field.is-error .de-field__help {
+  color: var(--de-bad);
+}
+/* On brand-deep (login screen). */
+.de-field--on-brand {
+  color: var(--de-on-brand);
+}
+.de-field--on-brand .de-field__label {
+  color: var(--de-on-brand-muted);
+}
+.de-field--on-brand .de-field__input {
+  background: var(--de-on-brand-fill);
+  border-color: var(--de-on-brand-line);
+  color: var(--de-on-brand);
+}
+.de-field--on-brand .de-field__input::placeholder {
+  color: var(--de-on-brand-muted);
+}
+.de-field--on-brand .de-field__input:focus {
+  border-color: var(--de-accent);
+}
+.de-field--on-brand .de-field__input:focus-visible {
+  outline-color: var(--de-accent);
+}
+.de-field--on-brand .de-field__help {
+  color: var(--de-on-brand-muted);
+}
+
+/* 11. Pinpad: 3-column keypad and four PIN dots, designed for brand-deep. */
+.de-pinpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--de-s2);
+  width: 100%;
+}
+.de-pinpad__key {
+  min-height: var(--de-touch);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--de-r-md);
+  background: var(--de-on-brand-fill);
+  color: var(--de-on-brand);
+  font: var(--de-heading);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.de-pinpad__key--go {
+  background: var(--de-accent);
+  color: var(--de-on-accent);
+  font: var(--de-label);
+}
+.de-pinpad__key:focus-visible {
+  outline: var(--de-focus) solid var(--de-accent);
+  outline-offset: var(--de-focus);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .de-pinpad__key {
+    transition: transform var(--de-t-press) var(--de-ease);
+  }
+}
+.de-pinpad__key:active {
+  transform: scale(0.98);
+}
+.de-pindots {
+  display: flex;
+  justify-content: center;
+  gap: var(--de-s3);
+}
+.de-pindots__dot {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--de-r-full);
+  border: 2px solid var(--de-accent);
+  background: transparent;
+}
+.de-pindots__dot.is-on {
+  background: var(--de-accent);
+}
+
+/* 12. Sheet: bottom sheet over a scrim; open with .is-open on both the sheet and the scrim. */
+.de-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  background: var(--de-scrim);
+}
+.de-sheet-scrim.is-open {
+  display: block;
+}
+.de-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 11;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--de-s4);
+  padding: var(--de-s5) var(--de-s4);
+  background: var(--de-raised);
+  border-radius: var(--de-r-lg) var(--de-r-lg) 0 0;
+  box-shadow: var(--de-shadow-float);
+  color: var(--de-ink);
+  font: var(--de-body);
+  transform: translateY(100%);
+  visibility: hidden;
+}
+.de-sheet.is-open {
+  transform: translateY(0);
+  visibility: visible;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .de-sheet {
+    transition: transform var(--de-t-sheet) var(--de-ease), visibility var(--de-t-sheet) var(--de-ease);
+  }
+}
+.de-sheet__handle {
+  align-self: center;
+  width: 36px;
+  height: 4px;
+  border-radius: var(--de-r-full);
+  background: var(--de-line);
+}
+.de-sheet__title {
+  font: var(--de-heading);
+  color: var(--de-ink);
+}
+
+/* 13. Savebar: status strip after a write (saved, queued or failed). */
+.de-savebar {
+  display: flex;
+  align-items: center;
+  gap: var(--de-s2);
+  padding: var(--de-s2) var(--de-s3);
+  border-radius: var(--de-r-md);
+  font: var(--de-caption);
+}
+.de-savebar--saved {
+  background: var(--de-good-soft);
+  color: var(--de-good);
+}
+.de-savebar--queued {
+  background: var(--de-warn-soft);
+  color: var(--de-warn);
+}
+.de-savebar--failed {
+  background: var(--de-bad-soft);
+  color: var(--de-bad);
+}
+.de-savebar__action {
+  min-height: var(--de-touch);
+  margin-inline-start: auto;
+  padding: 0 var(--de-s2);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: var(--de-label);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.de-savebar__action:focus-visible {
+  outline: var(--de-focus) solid var(--de-ring);
+  outline-offset: var(--de-focus);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .de-savebar__action {
+    transition: transform var(--de-t-press) var(--de-ease);
+  }
+}
+.de-savebar__action:active {
+  transform: scale(0.98);
+}
+
+/* 14. Banner: full-width notice inside the page (info or warn). */
+.de-banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--de-s1);
+  padding: var(--de-s3) var(--de-s4);
+  border-radius: var(--de-r-lg);
+  color: var(--de-ink);
+}
+.de-banner__title {
+  font: var(--de-label);
+  color: var(--de-ink);
+}
+.de-banner__text {
+  font: var(--de-caption);
+  color: var(--de-ink);
+}
+.de-banner--info {
+  background: var(--de-brand-soft);
+}
+.de-banner--warn {
+  background: var(--de-warn-soft);
+}
+.de-banner--warn .de-banner__title {
+  color: var(--de-warn);
+}
+
+/* 15. Empty state: centred icon, title, text and an optional button. */
+.de-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--de-s3);
+  padding: var(--de-s6) var(--de-s4);
+  text-align: center;
+}
+.de-empty__icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--de-r-full);
+  background: var(--de-brand-soft);
+  color: var(--de-brand-text);
+}
+.de-empty__icon .de-icon {
+  width: 24px;
+  height: 24px;
+}
+.de-empty__title {
+  font: var(--de-heading);
+  color: var(--de-ink);
+}
+.de-empty__text {
+  font: var(--de-body);
+  color: var(--de-ink-muted);
+}
+.de-empty .de-btn {
+  width: auto;
+}
+.de-empty--offline .de-empty__icon {
+  background: var(--de-warn-soft);
+  color: var(--de-warn);
+}
+.de-empty--error .de-empty__icon {
+  background: var(--de-bad-soft);
+  color: var(--de-bad);
+}
+
+/* 16. Skeleton: loading placeholder that pulses only when motion is allowed. */
+.de-skeleton {
+  display: block;
+  background: var(--de-line);
+  border-radius: var(--de-r-md);
+}
+.de-skeleton--line {
+  height: 16px;
+}
+.de-skeleton--title {
+  width: 60%;
+  height: 24px;
+}
+.de-skeleton--card {
+  height: 96px;
+  border-radius: var(--de-r-lg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .de-skeleton {
+    animation: de-pulse var(--de-t-pulse) ease-in-out infinite;
+  }
+  @keyframes de-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+}
+
+/* 17. Dialog: centred confirm box (use .de-sheet-scrim behind it); open with .is-open. */
+.de-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 12;
+  box-sizing: border-box;
+  width: calc(100% - 2 * var(--de-s4));
+  max-width: 22rem;
+  display: none;
+  flex-direction: column;
+  gap: var(--de-s3);
+  padding: var(--de-s5);
+  background: var(--de-raised);
+  border: var(--de-border) solid var(--de-line);
+  border-radius: var(--de-r-lg);
+  box-shadow: var(--de-shadow-float);
+  color: var(--de-ink);
+  font: var(--de-body);
+  transform: translate(-50%, -50%);
+}
+.de-dialog.is-open {
+  display: flex;
+}
+.de-dialog__title {
+  font: var(--de-heading);
+  color: var(--de-ink);
+}
+.de-dialog__text {
+  margin: 0;
+  color: var(--de-ink-muted);
+}
+.de-dialog__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--de-s2);
+}
+
+/* 18. Toast: short message at the bottom; role="status". Action is optional. */
+.de-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--de-s3);
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: var(--de-s1) var(--de-s4);
+  min-height: var(--de-touch);
+  border-radius: var(--de-r-md);
+  background: var(--de-toast-bg);
+  color: var(--de-toast-fg);
+  font: var(--de-label);
+  box-shadow: var(--de-shadow-float);
+}
+.de-toast__action {
+  min-height: var(--de-touch);
+  margin-inline-start: auto;
+  padding: 0 var(--de-s2);
+  border: 0;
+  background: transparent;
+  color: var(--de-toast-action);
+  font: var(--de-label);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.de-toast__action:focus-visible {
+  outline: var(--de-focus) solid var(--de-toast-action);
+  outline-offset: var(--de-focus);
+}
+.de-toast--fixed {
+  position: fixed;
+  left: var(--de-s4);
+  right: var(--de-s4);
+  bottom: calc(var(--de-s7) + var(--de-s5));
+  z-index: 13;
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+/* 19. Badge: small count or dot (not tappable). */
+.de-badge {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--de-s1);
+  border-radius: var(--de-r-full);
+  background: var(--de-bad-solid);
+  color: var(--de-on-brand);
+  font: var(--de-caption);
+  font-variant-numeric: tabular-nums;
+}
+.de-badge--dot {
+  min-width: 10px;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+}
+
+/* 20. Chart: bars via --v (0-100). Wrap in role="img" with a Bangla aria-label. */
+.de-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--de-s2);
+  height: 120px;
+}
+.de-chart__col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--de-s1);
+  font: var(--de-caption);
+  color: var(--de-ink-muted);
+}
+.de-chart__bar {
+  width: 100%;
+  height: calc(var(--v, 0) * 1%);
+  min-height: var(--de-s1);
+  border-radius: var(--de-r-sm) var(--de-r-sm) 0 0;
+  background: var(--de-chart);
+}
+.de-chart__bar--hi {
+  background: var(--de-chart-hi);
+}
+.de-spark {
+  display: block;
+  width: 100%;
+  height: 40px;
+  fill: none;
+  stroke: var(--de-chart);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* 21. Brand bar: logo, name and "SINCE ২০০৯" on brand-deep, sits above the appbar. */
+.de-brandbar {
+  display: flex;
+  align-items: center;
+  gap: var(--de-s2);
+  padding: var(--de-s3) var(--de-s4) 0;
+  background: var(--de-brand-deep);
+  color: var(--de-on-brand);
+}
+.de-brandbar__logo {
+  display: block;
+  width: auto;
+  height: 32px;
+  flex: none;
+}
+.de-brandbar__name {
+  font: var(--de-label);
+  color: var(--de-on-brand);
+}
+.de-brandbar__since {
+  margin-inline-start: auto;
+  font: var(--de-caption);
+  letter-spacing: 0.08em;
+  color: var(--de-accent);   /* 7:1 on brand-deep, in the audit */
+}
+
+/* 22. Greeting: time-of-day hello to the guardian. Plain text, no card. */
+.de-greeting {
+  display: flex;
+  align-items: center;
+  gap: var(--de-s2);
+  margin: 0;
+  font: var(--de-heading);
+  color: var(--de-ink);
+}
+.de-greeting__hi {
+  color: var(--de-brand-text);
+}
+
+/* 23. Diamond: small gold diamond for empty states and sparing accents. Decoration only. */
+.de-diamond {
+  display: block;
+  width: 10px;
+  height: 10px;
+  margin: var(--de-s2) auto;
+  background: var(--de-diamond-solid);
+  transform: rotate(45deg);
+}
+
+/* 24. Entrance: add .de-enter and --i (0,1,2...) to a card. Off when motion is reduced. */
+@keyframes de-enter {
+  from { opacity: 0; transform: translateY(16px) scale(0.94); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .de-enter {
+    animation: de-enter var(--de-t-pop) var(--de-ease-spring) both;   /* springy: overshoots a little */
+    animation-delay: calc(var(--i, 0) * var(--de-stagger));
+  }
+}
+
+/* 25. Notice strip: one line, tappable, latest notice from the coaching. */
+.de-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--de-s3);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--de-touch);
+  margin: 0;
+  padding: var(--de-s2) var(--de-s4);
+  border: var(--de-border) solid var(--de-line);
+  border-radius: var(--de-r-md);
+  background: var(--de-accent-soft);
+  color: var(--de-ink);
+  font: var(--de-label);
+  text-align: start;
+  cursor: pointer;
+}
+.de-notice .de-icon {
+  color: var(--de-brand-text);
+}
+.de-notice__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root[data-text="large"] .de-notice__text {
+  white-space: normal;
+}
+.de-notice:focus-visible {
+  outline: var(--de-focus) solid var(--de-ring);
+  outline-offset: var(--de-focus);
+}
+.de-notice:active {
+  background-image: linear-gradient(var(--de-press), var(--de-press));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .de-notice {
+    transition: transform var(--de-t-press) var(--de-ease);
+  }
+}
+.de-notice:active {
+  transform: scale(0.99);
+}
+
+/* 26. Next class: time block, subject, teacher and room. Lives in a .de-card. */
+.de-next {
+  display: flex;
+  align-items: center;
+  gap: var(--de-s3);
+}
+.de-next__time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+  min-width: 56px;
+  padding: var(--de-s2);
+  border-radius: var(--de-r-md);
+  background: var(--de-accent-soft);
+  color: var(--de-ink);
+  font: var(--de-label);
+  text-align: center;
+}
+.de-next__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* 27. Streak: one line under the week dots. */
+.de-streak {
+  display: flex;
+  align-items: center;
+  gap: var(--de-s2);
+  font: var(--de-label);
+  color: var(--de-brand-text);
+}
+.de-streak .de-diamond {
+  flex: none;
+  margin: 0 var(--de-s1);
+}
+
+/* 28. Trend: seven bars of the last seven days. --v is 0-100, today gets --hi. */
+.de-trend {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--de-s1);
+  text-align: center;
+}
+.de-trend__col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--de-s1);
+  font: var(--de-caption);
+  color: var(--de-ink-muted);
+}
+.de-trend__track {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  height: 72px;
+}
+.de-trend__bar {
+  width: 70%;
+  height: calc(var(--v, 0) * 1%);
+  min-height: var(--de-s1);
+  border-radius: var(--de-r-sm) var(--de-r-sm) 0 0;
+  background: var(--de-chart);
+}
+.de-trend__bar--hi {
+  background: var(--de-chart-hi);
+}
+.de-trend__bar--none {
+  height: 0;
+  min-height: 0;
+  border-top: 2px dashed var(--de-line-ui);
+  border-radius: 0;
+  background: transparent;
+}
+.de-trend__val {
+  color: var(--de-ink);
+}
+.de-trend__val--hi {
+  font-weight: 700;
+}
+
+
+/* ===== Fun layer (step 0b). Everything that moves sits in no-preference; the static look is complete without it. ===== */
+
+/* 29. Mascot ডিফি: gold-and-plum diamond. Painted by diffy.js. Size: --df (default 56px). Decoration; the button around it carries the label. */
+.de-mascot {
+  display: inline-block;
+  width: var(--df, 56px);
+  height: var(--df, 56px);
+  flex: none;
+  line-height: 0;
+}
+.de-mascot svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.de-mascot--sm { --df: 28px; }
+.de-mascot--lg { --df: 96px; }
+.df-body { fill: var(--de-accent); stroke: var(--de-brand-text); stroke-width: 5; stroke-linejoin: round; }
+.df-shine { fill: var(--de-shine); }
+.df-f { fill: none; stroke: var(--de-brand-deep); stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
+.df-m, .df-eye { fill: var(--de-brand-deep); }
+.df-cheek { fill: var(--de-fun-coral); opacity: 0.8; }
+.df-sky { fill: var(--de-fun-sky); }
+.df-mint { fill: var(--de-fun-mint); }
+.df-coral { fill: var(--de-fun-coral); }
+.df-skyline { fill: none; stroke: var(--de-fun-sky); stroke-width: 3; stroke-linecap: round; }
+.de-mascot-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  box-sizing: border-box;
+  width: 56px;
+  min-width: var(--de-touch);
+  height: 56px;
+  min-height: var(--de-touch);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--de-r-full);
+  background: transparent;
+  cursor: pointer;
+}
+.de-mascot-btn:focus-visible {
+  outline: var(--de-focus) solid var(--de-accent);   /* sits on brand-deep in the hero */
+  outline-offset: var(--de-focus);
+}
+@keyframes de-bob { 50% { transform: translateY(-3px); } }
+@keyframes de-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+@keyframes de-wave { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 60% { transform: rotate(10deg); } }
+@keyframes de-hop { 0% { transform: none; } 35% { transform: translateY(-12px) scale(0.92, 1.1); } 70% { transform: translateY(0) scale(1.1, 0.88); } 100% { transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .de-mascot svg { animation: de-bob var(--de-t-bob) ease-in-out infinite; }
+  .de-mascot--wave svg { transform-origin: 50% 90%; animation: de-wave var(--de-t-bob) ease-in-out infinite; }
+  .df-eye { transform-box: fill-box; transform-origin: center; animation: de-blink var(--de-t-blink) infinite; }
+  .de-mascot.is-hop svg { animation: de-hop var(--de-t-hop) var(--de-ease-spring); }
+}
+
+/* 30. Speech bubble: the mascot's line, in the hero (on brand-deep) */
+.de-today__fun {
+  display: flex;
+  align-items: center;
+  gap: var(--de-s2);
+}
+.de-bubble {
+  flex: 1;
+  min-width: 0;
+  padding: var(--de-s2) var(--de-s3);
+  border-radius: var(--de-r-bubble);
+  background: var(--de-on-brand-fill);
+  color: var(--de-on-brand);
+  font: var(--de-label);
+  box-sizing: border-box;
+  min-height: var(--de-touch);
+  margin: 0;
+  border: 0;
+  text-align: start;
+  cursor: pointer;
+}
+.de-bubble:focus-visible {
+  outline: var(--de-focus) solid var(--de-accent);
+  outline-offset: var(--de-focus);
+}
+
+/* 31. Stars: today's score as up to five stars (clip-path star, gold on brand-deep). The number stays the main read. */
+.de-stars {
+  display: flex;
+  gap: var(--de-s1);
+}
+.de-star {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: var(--de-on-brand-line);
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+.de-star--on { background: var(--de-accent); }
+@keyframes de-starpop { from { transform: scale(0) rotate(-40deg); } }
+@media (prefers-reduced-motion: no-preference) {
+  .de-star--on { animation: de-starpop var(--de-t-pop) var(--de-ease-spring) both; animation-delay: calc(300ms + var(--k, 0) * 120ms); }
+}
+
+/* 32. Sticker: tilted badge with a thick soft outline. Colour = --de-fun-*; text is always --de-on-fun. Use at most two per screen. */
+.de-sticker {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--de-s1);
+  padding: var(--de-s1) var(--de-s3);
+  border: var(--de-sticker-edge-w) solid var(--de-sticker-edge);
+  border-radius: var(--de-r-xl);
+  background: var(--de-fun-sunny);
+  color: var(--de-on-fun);
+  box-shadow: var(--de-shadow-sticker);
+  font: var(--de-label);
+  transform: rotate(-3deg);
+}
+.de-sticker--mint { background: var(--de-fun-mint); transform: rotate(2.5deg); }
+.de-sticker--coral { background: var(--de-fun-coral); transform: rotate(-2deg); }
+.de-sticker--sky { background: var(--de-fun-sky); transform: rotate(3deg); }
+.de-sticker .de-star { width: 14px; height: 14px; background: var(--de-on-fun); }
+.de-sticker .de-diamond { margin: 0 var(--de-s1); background: var(--de-on-fun); }
+.de-streak--fun { flex-wrap: wrap; }
+
+/* 33. Wiggle: the streak diamond shakes now and then */
+@keyframes de-wiggle {
+  0%, 55%, 100% { transform: rotate(45deg) scale(1); }
+  62% { transform: rotate(25deg) scale(1.25); }
+  70% { transform: rotate(65deg) scale(1.25); }
+  80% { transform: rotate(38deg) scale(1.1); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .de-wiggle { animation: de-wiggle var(--de-t-wiggle) ease-in-out infinite; }
+}
+
+/* 34. Squish: pressing a card or the hero presses it in a little */
+@media (prefers-reduced-motion: no-preference) {
+  .de-card, .de-today { transition: transform var(--de-t-press) var(--de-ease-spring); }
+  .de-card:active, .de-today:active { transform: scale(0.97); }
+}
+
+/* 35. Header edge: one wrapper (.de-header) around brand bar + app bar, straight edge with a thin gold hairline.
+   Replaced the old wave. To swap the header concept later, change only this block and the wrapper's children. */
+.de-header {
+  flex: none;
+  border-bottom: 1px solid var(--de-accent);
+  background: var(--de-brand-deep);
+}
+
+/* 36. Confetti: one burst, made by JS only when motion is allowed. Gold, plum, mint, coral. */
+.de-confetti {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 20;
+}
+.de-confetti i {
+  position: absolute;
+  top: calc(-1 * var(--de-s3));
+  left: calc(var(--x) * 1%);
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--c);
+}
+@keyframes de-fall { to { transform: translate(var(--dx), 105vh) rotate(var(--r)); } }
+@media (prefers-reduced-motion: no-preference) {
+  .de-confetti i { animation: de-fall var(--de-t-confetti) cubic-bezier(0.3, 0.6, 0.5, 1) var(--w) both; }
+}
+
+/* Empty state with the mascot instead of an icon */
+.de-empty .de-mascot { --df: 96px; }
+
+/* 37. Ask ডিফি: full-height chat sheet (uses .de-sheet-scrim + .de-sheet; JS in ask-diffy.js). */
+.de-ask {
+  height: 92vh;
+  height: 92dvh;
+  max-height: 44rem;
+  padding: 0;
+  gap: 0;
+}
+.de-ask__head {
+  display: flex;
+  align-items: center;
+  gap: var(--de-s2);
+  padding: var(--de-s2) var(--de-s2) var(--de-s2) var(--de-s4);
+  border-bottom: 1px solid var(--de-line);
+}
+.de-ask__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font: var(--de-heading);
+  overflow-wrap: anywhere;
+}
+.de-ask__title:focus { outline: none; }
+.de-ask__x, .de-ask__send {
+  box-sizing: border-box;
+  flex: none;
+  min-width: var(--de-touch);
+  min-height: var(--de-touch);
+  margin: 0;
+  border: 0;
+  border-radius: var(--de-r-md);
+  font: var(--de-label);
+  cursor: pointer;
+}
+.de-ask__x { background: transparent; color: var(--de-ink); }
+.de-ask__send { padding: 0 var(--de-s4); background: var(--de-brand); color: var(--de-on-brand); }
+.de-ask__send:disabled { opacity: 0.5; cursor: default; }
+.de-ask__x:focus-visible, .de-ask__send:focus-visible, .de-msg__t:focus-visible {
+  outline: var(--de-focus) solid var(--de-ring);
+  outline-offset: var(--de-focus);
+}
+.de-ask__count, .de-ask__priv {
+  margin: 0;
+  padding: var(--de-s1) var(--de-s4);
+  color: var(--de-ink-muted);
+  font: var(--de-caption);
+}
+.de-ask__log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--de-s3);
+  padding: var(--de-s3) var(--de-s4);
+}
+.de-ask__log:focus-visible { outline: var(--de-focus) solid var(--de-ring); outline-offset: calc(-1 * var(--de-focus)); }
+.de-ask > .de-banner { flex: none; margin: var(--de-s1) var(--de-s4); }
+.de-msg {
+  box-sizing: border-box;
+  max-width: 90%;
+  padding: var(--de-s2) var(--de-s3);
+  font: var(--de-body);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.de-msg--me {
+  align-self: flex-end;
+  border-radius: var(--de-r-lg) var(--de-r-lg) var(--de-s1) var(--de-r-lg);
+  background: var(--de-brand);
+  color: var(--de-on-brand);
+}
+.de-msg--bot {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--de-s2);
+  border-radius: var(--de-r-lg) var(--de-r-lg) var(--de-r-lg) var(--de-s1);
+  background: var(--de-brand-soft);
+  color: var(--de-ink);
+}
+.de-msg__t {
+  box-sizing: border-box;
+  min-height: var(--de-touch);
+  padding: 0 var(--de-s3);
+  border: var(--de-border) solid var(--de-line-ui);
+  border-radius: var(--de-r-md);
+  background: var(--de-raised);
+  color: var(--de-brand-text);
+  font: var(--de-label);
+  cursor: pointer;
+}
+.de-msg__sub { color: var(--de-ink-muted); font: var(--de-caption); white-space: normal; }
+.de-dots { display: flex; gap: var(--de-s1); padding: var(--de-s2) 0; }
+.de-dots i { width: 8px; height: 8px; border-radius: var(--de-r-full); background: var(--de-brand-text); }
+@keyframes de-dot { 40% { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: no-preference) {
+  .de-dots i { animation: de-dot 900ms ease-in-out infinite; }
+  .de-dots i:nth-child(2) { animation-delay: 150ms; }
+  .de-dots i:nth-child(3) { animation-delay: 300ms; }
+}
+.de-ask__chips { display: flex; flex-wrap: wrap; gap: var(--de-s2); padding: var(--de-s1) var(--de-s4) var(--de-s2); }
+.de-ask__form { display: flex; gap: var(--de-s2); padding: var(--de-s2) var(--de-s4) calc(var(--de-s3) + env(safe-area-inset-bottom)); }
+.de-ask__form .de-field__input { flex: 1; min-width: 0; min-height: var(--de-touch); }
+
+/* 38. Nudges card ("ডিফি মনে করাচ্ছে"): up to 3 short reminders from rules, plus who can see them. */
+.de-nudge { display: flex; flex-direction: column; gap: var(--de-s2); }
+.de-nudge__head { display: flex; align-items: center; gap: var(--de-s2); }
+.de-nudge__list { display: flex; flex-direction: column; gap: var(--de-s2); margin: 0; padding: 0; list-style: none; }
+.de-nudge__list li { display: flex; align-items: flex-start; gap: var(--de-s2); }
+.de-nudge__list .de-diamond { flex: none; margin: var(--de-s2) var(--de-s1) 0; }
+.de-nudge__who { color: var(--de-ink-muted); font: var(--de-caption); }
+.de-btn--ask { gap: var(--de-s2); }
