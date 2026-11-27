@@ -56,7 +56,7 @@
     msg('পরীক্ষা লোড হচ্ছে…');
     let ex;
     try { ex = await call('POST', '/rest/v1/rpc/start_exam', { p_exam: examId }); }
-    catch (err) { return msg(startMessage ? startMessage(err && err.status) : 'পরীক্ষা এখন খোলা যাচ্ছে না। ইন্টারনেট দেখে আবার চেষ্টা করুন।'); }
+    catch (err) { return msg(startMessage ? startMessage(err && err.status) : 'পরীক্ষা এখন খোলা যাচ্ছে না। ইন্টারনেট দেখে আবার চেষ্টা করো।'); }
 
     const questions = arrange(ex.questions, rnd);
     const picks = {};
@@ -95,7 +95,7 @@
         const refused = err.status >= 400 && err.status < 500;
         root.innerHTML = examHtml(ex.title, questions, picks, refused
           ? 'এই পরীক্ষা আগেই জমা হয়েছে বা এখন জমা নেওয়া যাচ্ছে না।'
-          : 'জমা হয়নি। ইন্টারনেট দেখে আবার জমা দিন।', ex.deadline_at);
+          : 'জমা হয়নি। ইন্টারনেট দেখে আবার জমা দাও।', ex.deadline_at);
       }
     });
   }
