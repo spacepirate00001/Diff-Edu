@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'">
+<meta name="referrer" content="same-origin">
+<title>রিপোর্ট কার্ড</title>
+<link rel="stylesheet" href="ui/tokens.css">
+<link rel="stylesheet" href="ui/components.css">
+<link rel="stylesheet" href="print.css">
+<script type="module" src="print.js"></script>
+</head>
+<body>
+<div class="print-bar no-print">
+  <a class="de-btn de-btn--secondary" href="./#/study/report">ফিরে যান</a>
+  <button class="de-btn de-btn--primary" id="go" type="button">প্রিন্ট করুন / PDF করুন</button>
+</div>
+<p class="no-print print-hint" id="hint">কার্ড সাজানো হচ্ছে…</p>
+<main id="sheets"></main>
+</body>
+</html>

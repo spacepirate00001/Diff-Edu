@@ -1,0 +1,122 @@
+/* Print and PDF look of the weekly report card: ported from pwa-dev/reports.js (black and white, two A5 cards per A4). Colours here are print colours, not app tokens. */
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+    body{font-family:'Noto Sans Bengali','Hind Siliguri',sans-serif;color:#000;margin:0;background:#fff;font-size:12px;font-weight:600}
+
+    .pc{width:210mm;height:148.5mm;padding:7mm;background:#fff}
+
+    .tk{height:100%;display:flex;flex-direction:column;border:1.8px solid #000;border-radius:14px;overflow:hidden;position:relative;background:#fff}
+
+    
+    
+    .bar{background:#fff;color:#000;display:flex;align-items:center;gap:11px;padding:5px 16px 4px;flex:none;border-bottom:4.5px double #000}
+
+    .bar img{height:40px;filter:brightness(0)}
+.bt{flex:1;display:flex;flex-direction:column;gap:1px}
+.bt b{font-size:19px;line-height:1.35}
+.bt span{font-size:9.5px;letter-spacing:1.8px;opacity:1}
+
+    .bi{display:flex;gap:7px}
+.bi svg{width:17px;height:17px}
+
+    .kd{background:#000;color:#fff;border-radius:20px;padding:3px 13px;font-size:11px;font-weight:700;white-space:nowrap}
+
+    .fs{display:flex;padding:5px 16px 3px;border-bottom:1.2px solid #000;position:relative}
+
+    .fd small{display:block;font-size:9.5px;letter-spacing:.5px;color:#000}
+.fd b{font-size:13px;white-space:nowrap}
+.fd em{font-style:normal;font-size:9.5px;font-weight:600}
+
+    .fs .fd{padding:0 12px;border-left:.6px solid #000}
+.fs .fd:first-child{padding-left:0;border-left:0}
+.fs .nm{flex:1;min-width:0}
+.fs .nm b{font-size:20px;line-height:1.45;display:block;overflow:hidden;text-overflow:ellipsis;margin-top:-2px}
+.fs .pd b{font-size:11px}
+
+    .bd{display:flex;gap:16px;padding:8px 16px 0;flex:1;min-height:0;position:relative}
+
+    .lc{flex:1;display:flex;flex-direction:column;gap:8px}
+.bd{overflow:hidden}
+
+    .d1 td{padding:1.3px 5px;font-size:11.5px}
+.d1 th{padding:2px 5px}
+.d2 td{padding:.6px 5px;font-size:10.5px}
+.d2 th{padding:1px 5px}
+.d2 .sx .fd b{font-size:13px}
+
+    table{border-collapse:collapse;width:100%}
+
+    th{font-size:9.5px;font-weight:700;letter-spacing:.4px;text-align:center;padding:3px 5px;border-bottom:1.2px solid #000}
+
+    td{text-align:center;padding:3.8px 5px;border-bottom:.7px solid #000;font-size:12px}
+th:first-child,td:first-child{text-align:left}
+
+    td small{font-size:9.5px}
+td.ob,td.gr{font-weight:700}
+td.pv{font-size:10.5px;color:#000}
+td i{font-weight:600;font-size:9.5px}
+
+    tr.tot td{border-top:1.2px solid #000;border-bottom:0;font-weight:700;padding-top:5px}
+
+    .sx{display:flex;gap:8px;margin-top:auto}
+.sx .fd{flex:1;border:1px solid #000;border-radius:8px;padding:3px 10px;background:#fff}
+.sx .fd b{font-size:15px}
+
+    .sd{width:150px;display:flex;flex-direction:column;align-items:center;gap:12px}
+
+    .rk{width:100%;border:1.4px solid #000;border-radius:12px;text-align:center;padding:5px 4px 6px;background:#fff}
+.rk small{display:block;font-size:10px}
+.rk b{display:block;font-size:36px;line-height:1.25}
+.rk span{font-size:10px}
+
+    .rk em{display:block;font-style:normal;font-weight:700;font-size:10.5px;margin-top:3px;border-top:.6px solid #000;padding-top:2px}
+
+    .stp{width:86px;height:86px;border-radius:50%;border:2px solid #000;outline:1px solid #000;outline-offset:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-10deg);background:#fff}
+
+    .stp small{font-size:10px;letter-spacing:1px}
+.stp b{font-size:30px;line-height:1}
+
+    .ms{margin:5px 16px 0;padding:3px 10px;border-left:3px solid #000;font-size:11.5px;line-height:1.35;position:relative}
+
+    .tn{margin:4px 16px 0;display:flex;align-items:flex-end;gap:8px;font-size:9.5px}
+.tn i{flex:1;border-bottom:1px dotted #000;height:15px}
+
+    .sg{display:flex;justify-content:space-between;align-items:flex-end;padding:12px 26px 4px}
+.sg svg{width:24px;height:24px;opacity:.5;margin-bottom:2px}
+.sg span{border-top:1px solid #000;width:26%;text-align:center;font-size:9.5px;padding-top:2px}
+
+    .ft{display:flex;align-items:center;justify-content:center;gap:7px;margin:0 16px;padding:3px 0 5px;border-top:.8px solid #000;font-size:10px;position:relative}
+.ft img{height:17px;filter:brightness(0)}
+.ft b{font-size:10.5px}
+.ft u{width:4px;height:4px;border-radius:50%;background:#000}
+.ft span{font-style:italic;letter-spacing:.3px}
+
+    .rb{border:1px solid #000;border-radius:10px;padding:5px 12px 4px;display:flex;flex-direction:column;gap:3px;background:rgba(255,255,255,.9)}
+.rh{font-weight:700;font-size:11.5px}
+.rh small{font-size:9.5px}
+
+    .rr{display:flex;align-items:center;gap:10px}
+.rr span{width:120px;font-size:11px}
+.rt{flex:1;height:10px;border:1.3px solid #000;border-radius:6px;overflow:hidden}
+.rt i{display:block;height:100%;background:#000}
+.rr b{width:52px;text-align:right;font-size:12.5px}
+.rr b small{font-size:9.5px}
+.rn{font-size:9.5px;text-align:right}
+
+    .rb{padding:4px 12px 3px;gap:2px}
+.rr{gap:8px}
+.rr span{font-size:10.5px}
+.rt{height:9px}
+.rn{font-size:9px}
+
+/* screen: the sheet is shown as a paper on grey; print: only the paper */
+body{font-family:var(--de-font,'Anek Bangla','Noto Sans Bengali',sans-serif)}
+.print-bar{display:flex;gap:12px;padding:12px 16px;background:#fff;position:sticky;top:0;z-index:2;border-bottom:1px solid #000}
+.print-bar .de-btn{flex:1}
+.print-hint{margin:8px 16px;font-size:14px;color:#000}
+@media screen{body{background:#ddd}section{width:210mm;max-width:100%;margin:12px auto;background:#fff;position:relative;overflow-x:auto}.cut{position:absolute;left:0;right:0;top:148.5mm;border-top:1px dashed #000;height:0}.cut span{position:absolute;left:5mm;top:-9px;font-size:13px;background:#fff;padding:0 3px}}
+@page{size:A4;margin:0}
+section{page-break-after:always;height:297mm;position:relative}section:last-child{page-break-after:auto}
+.cut{position:absolute;left:0;right:0;top:148.5mm;border-top:1px dashed #000;height:0}.cut span{position:absolute;left:5mm;top:-9px;font-size:13px;background:#fff;padding:0 3px}
+@media print{.no-print{display:none!important}body{background:#fff}}
+.print-bar .de-btn--secondary{background:#fff;color:#000;border:1.5px solid #000}.print-bar .de-btn--primary{background:#000;color:#fff}

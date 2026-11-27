@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+<!-- ডিফি weather extras, drawn on the same 64 box as diffy-sprite.svg. Painted over the face by today-guardian-v6.js; colours: .dw-* in today-guardian-v6.css -->
+<symbol id="dw-umbrella"><path class="dw-a" d="M5 7Q32-26 59 7Q52 2 45.500 7Q39 2 32 7Q25 2 18.500 7Q12 2 5 7z"/><path class="dw-l" d="M32 7V-1M32 7v6"/></symbol>
+<symbol id="dw-sunglasses"><path class="dw-g" d="M15 27h14v8q0 3-3 3h-8q-3 0-3-3zM35 27h14v8q0 3-3 3h-8q-3 0-3-3zM29 29h6"/><path class="dw-s" d="M18 29.500h6M38 29.500h6"/></symbol>
+<symbol id="dw-scarf"><path class="dw-c" d="M19.500 44.500Q32 49 44.500 44.500L41 52Q32 55 23 52z"/><path class="dw-c" d="M38 51l5 10-6 1-3-9z"/></symbol>
+</svg>

@@ -1,0 +1,126 @@
+// Step 6 (admin office + the teacher's honorarium): fees, honorarium, admission inquiries, notices. Pure (no DOM, no network), so node --test can check it.
+// Contracts are the live ones: fees (+ payments ledger: rpc record_payment, generate_monthly_fees), class_logs / pay_rates / honorarium_payments,
+// admission_inquiries (+ 69 status), notices (+ rpc set_notice_archived / delete_archived_notice).
+import { bn, ascii, money, MONTHS, cleanPhone } from '../../core/bn.js';
+import { dueOf, feeState, monthKey, METHODS } from '../fees/logic.js';
+
+export { dueOf, feeState };
+export const LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const addMonthsKey = (key, n) => { const [y, m] = key.split('-').map(Number); const i = y * 12 + (m - 1) + n; return `${Math.floor(i / 12)}-${String(i % 12 + 1).padStart(2, '0')}`; };
+export const shiftMonth = addMonthsKey;
+export const monthStart = key => key + '-01';
+export const monthName = key => { const [y, m] = key.split('-').map(Number); return `${MONTHS[m - 1]} ${bn(y)}`; };
+export const nextMonthStart = key => addMonthsKey(key, 1) + '-01';
+export const keyOfDay = iso => String(iso).slice(0, 7);
+
+// ================= fees =================
+// A row here: { id, student_id, month, amount, paid_amount, status, student: { class_level, roll, name, phone } }
+export const FEE_FILTERS = [['all', 'সব'], ['due', 'বাকি'], ['partial', 'কিছু বাকি'], ['paid', 'পরিশোধিত'], ['owed2', '২+ মাস বাকি']];
+export const feeKind = f => (dueOf(f) <= 0 ? 'paid' : Number(f.paid_amount || 0) > 0 ? 'partial' : 'due');
+// owed: { student_id: number of months with something due } over every month, not only this one
+export function feeSummary(rows) {
+  const s = { n: rows.length, paid: 0, partial: 0, due: 0, amount: 0, collected: 0, left: 0 };
+  for (const f of rows) { s[feeKind(f)]++; s.amount += Number(f.amount || 0); s.collected += Math.min(Number(f.paid_amount || 0), Number(f.amount || 0)); s.left += dueOf(f); }
+  return s;
+}
+const norm = s => ascii(String(s ?? '')).replace(/\s+/g, ' ').trim().toLowerCase();
+export function filterFees(rows, { filter = 'all', level = null, q = '', owed = {} } = {}) {
+  const t = norm(q);
+  return rows.filter(f => (filter === 'all' || (filter === 'owed2' ? (owed[f.student_id] || 0) >= 2 && dueOf(f) > 0 : feeKind(f) === filter))
+    && (!level || f.student?.class_level === level) && (!t || norm(f.student?.name).includes(t) || norm(f.student?.roll) === t || norm(f.student?.login).includes(t)))
+    .sort((a, b) => (a.student?.class_level || 0) - (b.student?.class_level || 0) || (parseInt(a.student?.roll, 10) || 999) - (parseInt(b.student?.roll, 10) || 999));
+}
+// months owed per student, from the unpaid fee rows of every month
+export function owedMonths(unpaidRows) { const m = {}; for (const f of unpaidRows) if (dueOf(f) > 0) m[f.student_id] = (m[f.student_id] || 0) + 1; return m; }
+// cash taken at the desk, or a bKash / Nagad payment the parent made outside the app. -> { ok, errors: {amount, trx}, value }
+export function validatePayment({ method, amount, trx, due }) {
+  const errors = {}, a = Number(ascii(amount)), t = String(trx ?? '').trim();
+  if (!(method in METHODS)) errors.method = 'কীভাবে দিলেন বেছে নিন';
+  if (!(a > 0)) errors.amount = 'টাকার অঙ্ক দিন';
+  else if (a > due) errors.amount = `বাকির (${money(due)}) চেয়ে বেশি নেওয়া যাবে না`;
+  else if (Math.round(a * 100) !== a * 100) errors.amount = 'পয়সার হিসাব দুই ঘর পর্যন্ত';
+  if ((method === 'bkash' || method === 'nagad') && t.length < 6) errors.trx = 'ট্রানজেকশন আইডি লিখুন (অন্তত ৬ অক্ষর)';
+  if (t.length > 40) errors.trx = 'আইডি খুব বড়';
+  return { ok: !Object.keys(errors).length, errors, value: { method, amount: a, trx: t || null } };
+}
+// Cash has no id of its own: one is made when the sheet opens and kept for every retry, so a second tap or a repeat after a lost answer is the same payment (the ledger treats the same method + id + amount as one).
+export const cashRef = uuid => 'app-' + uuid;
+export const paymentCall = ({ fee, value, ref }) => ({ name: 'record_payment', args: { p_method: value.method, p_trx_id: value.trx || (value.method === 'cash' ? ref : null), p_amount: value.amount, p_allocations: [{ fee_id: fee.id, amount: value.amount }] } });
+export const PAY_ERR = [[/more than the fee/, 'বাকির চেয়ে বেশি নেওয়া যাবে না'], [/already recorded with different/, 'এই আইডি আগে অন্য অঙ্কে জমা হয়েছে'], [/reversed/, 'এই আইডির পেমেন্ট বাতিল হয়েছিল, নতুন আইডি দিন']];
+export const payError = text => (PAY_ERR.find(([re]) => re.test(String(text || ''))) || [null, 'জমা সংরক্ষণ হয়নি, আবার চেষ্টা করুন'])[1];
+// "this month's fees for everyone" (amount per student; optionally one class)
+export function validateGenerate({ amount, class_level }) {
+  const a = Number(ascii(amount)), errors = {};
+  if (!(a > 0 && a <= 100000)) errors.amount = 'মাসিক ফি-এর অঙ্ক দিন';
+  if (class_level != null && !LEVELS.includes(Number(class_level))) errors.class_level = 'ক্লাস ঠিক নয়';
+  return { ok: !Object.keys(errors).length, errors, value: { amount: a, class_level: class_level == null ? null : Number(class_level) } };
+}
+export const generateCall = (monthKeyStr, { amount, class_level }) => ({ name: 'generate_monthly_fees', args: { p_month: monthStart(monthKeyStr), p_amount: amount, p_class_level: class_level } });
+export const feeRowName = f => f.student?.name || 'শিক্ষার্থী';
+
+// ================= honorarium =================
+export const LOG_BACK_DAYS = 7;   // a teacher may add a class for today or the 7 days before (class_logs policy)
+export const LABEL_MAX = 60;
+export const classLogRow = ({ coaching_id, uid, day, label }) => ({ coaching_id, teacher_id: uid, day, label });
+export const CLASS_LOG_PATH = '/rest/v1/class_logs?on_conflict=teacher_id,day,label';
+export const CLASS_LOG_PREFER = 'return=minimal,resolution=ignore-duplicates';
+export const validateLabel = t => { const s = String(t ?? '').replace(/\s+/g, ' ').trim(); return !s ? { ok: false, why: 'কোন ক্লাস নিলেন লিখুন' } : s.length > LABEL_MAX ? { ok: false, why: `${bn(LABEL_MAX)} অক্ষরের মধ্যে লিখুন` } : { ok: true, label: s }; };
+// A teacher's own periods of the day become one-tap labels: "বিকাল · ১ম ক্লাস · ক্লাস ৬".
+export const periodLabel = (p, names) => `${names.shift(p.shift)} · ${names.slot(p.slot)} ক্লাস${p.levels ? ' · ক্লাস ' + p.levels.map(bn).join(',') : ''}`;
+// teachers + their logs, rates and payments -> one card each. logs: { teacherId: count }, rates: { teacherId: per_class }, paid: { teacherId: { classes, amount } }
+export function honorCards({ teachers, logs = {}, rates = {}, paid = {} }) {
+  return teachers.map(t => {
+    const classes = logs[t.id] || 0, rate = Number(rates[t.id] || 0), p = paid[t.id] || null;
+    return { id: t.id, name: t.full_name || 'শিক্ষক', classes, rate, amount: Math.round(classes * rate * 100) / 100, paid: p, canPay: !p && classes > 0 && rate > 0, noRate: !p && classes > 0 && !(rate > 0) };
+  }).sort((a, b) => (a.paid ? 1 : 0) - (b.paid ? 1 : 0) || a.name.localeCompare(b.name, 'bn'));
+}
+export const payableTotal = cards => { const l = cards.filter(c => c.canPay); return { n: l.length, amount: l.reduce((s, c) => s + c.amount, 0) }; };
+export const validateRate = v => { const n = Number(ascii(v)); return v === '' || v == null || !(n >= 0 && n <= 100000) || Math.round(n * 100) !== n * 100 ? { ok: false, why: 'প্রতি ক্লাসের টাকা দিন (০ থেকে ১,০০,০০০)' } : { ok: true, value: n }; };
+export const rateRow = ({ coaching_id, teacher_id, per_class, now = Date.now() }) => ({ teacher_id, coaching_id, per_class, updated_at: new Date(now).toISOString() });
+export const honorPayRow = ({ coaching_id, teacher_id, month, classes, amount, uid }) => ({ teacher_id, month, coaching_id, classes, amount, paid_by: uid });
+export const HONOR_PAY_PATH = '/rest/v1/honorarium_payments?on_conflict=teacher_id,month';
+// Days a teacher can still add or remove a class: today and the 7 days before, and not once the month is paid.
+export const canEditLog = ({ day, today, paid }) => !paid && day <= today && day >= addDaysIso(today, -LOG_BACK_DAYS);
+export function addDaysIso(iso, n) { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+export const logDays = today => Array.from({ length: LOG_BACK_DAYS + 1 }, (_, i) => addDaysIso(today, -i));
+
+// ================= admission inquiries =================
+export const ADMIT_STATUS = { new: 'নতুন', called: 'ফোন করা হয়েছে', admitted: 'ভর্তি হয়েছে', dropped: 'আর আসবে না' };
+export const ADMIT_FILTERS = [['open', 'চলমান'], ['new', 'নতুন'], ['called', 'ফোন করা হয়েছে'], ['admitted', 'ভর্তি হয়েছে'], ['dropped', 'বাদ']];
+export const SHIFT_BN = { morning: 'সকাল', afternoon: 'বিকাল', night: 'রাত' };
+export const admitMatches = (x, filter) => (filter === 'open' ? x.status === 'new' || x.status === 'called' : x.status === filter);
+export const admitCounts = list => { const c = { new: 0, called: 0, admitted: 0, dropped: 0 }; for (const x of list) if (x.status in c) c[x.status]++; return { ...c, open: c.new + c.called }; };
+export function admitStatusPatch({ status, note }) {
+  const patch = {};
+  if (status != null) { if (!(status in ADMIT_STATUS)) return { ok: false, why: 'অবস্থা ঠিক নয়' }; patch.status = status; }
+  if (note != null) { const n = String(note).replace(/\s+/g, ' ').trim(); if (n.length > 300) return { ok: false, why: 'নোট ৩০০ অক্ষরের মধ্যে রাখুন' }; patch.staff_note = n || null; }
+  return { ok: true, patch };
+}
+// Bangladeshi mobile numbers: call link and WhatsApp link (no leading 0, country code 880). null when the number is not a mobile.
+export function phoneLinks(raw) {
+  const p = cleanPhone(raw);
+  if (!/^01\d{9}$/.test(p || '')) return null;
+  return { tel: 'tel:+88' + p, wa: 'https://wa.me/88' + p, show: bn(p) };
+}
+export const admitWhatsApp = (x, office = 'ডিফ এডু') => `${office}: ${x.child_name || 'আপনার সন্তান'}-এর ভর্তির আবেদনের জন্য ধন্যবাদ। আমরা আপনার সাথে কথা বলতে চাই।`;
+// Needs a call: new, and the oldest first.
+export const sortAdmit = list => list.slice().sort((a, b) => ((a.status === 'new' ? 0 : 1) - (b.status === 'new' ? 0 : 1)) || String(a.status === 'new' ? a.created_at : b.created_at).localeCompare(String(a.status === 'new' ? b.created_at : a.created_at)));
+
+// ================= notices (admin) =================
+export const NOTICE_AUDIENCE = [['all', 'সকলে'], ['guardians', 'অভিভাবক'], ['students', 'শিক্ষার্থী'], ['teachers', 'শিক্ষক']];
+export const audienceName = a => (NOTICE_AUDIENCE.find(x => x[0] === a) || [0, 'সকলে'])[1];
+export const TITLE_MAX = 120, BODY_MAX = 2000;
+export function validateNoticeForm({ title, body, audience, class_level }) {
+  const errors = {}, t = String(title ?? '').trim(), b = String(body ?? '').trim();
+  if (!t) errors.title = 'শিরোনাম লিখুন'; else if (t.length > TITLE_MAX) errors.title = `শিরোনাম ${bn(TITLE_MAX)} অক্ষরের মধ্যে`;
+  if (!b) errors.body = 'বিস্তারিত লিখুন'; else if (b.length > BODY_MAX) errors.body = `বিস্তারিত ${bn(BODY_MAX)} অক্ষরের মধ্যে`;
+  if (!NOTICE_AUDIENCE.some(a => a[0] === audience)) errors.audience = 'কাদের জন্য বেছে নিন';
+  if (class_level != null && !LEVELS.includes(Number(class_level))) errors.class_level = 'ক্লাস ঠিক নয়';
+  return { ok: !Object.keys(errors).length, errors, value: { title: t, body: b, audience, class_level: class_level == null ? null : Number(class_level) } };
+}
+// live = not archived. Newest first.
+export const splitNotices = list => ({ live: list.filter(n => !n.archived_at).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))), archived: list.filter(n => n.archived_at).sort((a, b) => String(b.archived_at).localeCompare(String(a.archived_at))) });
+export const noticeWho = n => audienceName(n.audience) + (n.class_level ? ` · ক্লাস ${bn(n.class_level)}` : '');
+export const archiveCall = (id, archived) => ({ name: 'set_notice_archived', args: { p_id: id, p_archived: !!archived } });
+export const deleteCall = id => ({ name: 'delete_archived_notice', args: { p_id: id } });
+export { money, monthKey };

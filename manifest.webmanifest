@@ -1,33 +1,16 @@
 {
-  "name": "ডিফ এডু",
+  "name": "ডিফ এডু (নতুন অ্যাপ)",
   "short_name": "ডিফ এডু",
-  "description": "ডিফ এডু — অভিভাবক ও শিক্ষার্থীর অ্যাপ",
-  "lang": "bn",
-  "dir": "ltr",
+  "description": "ডিফ এডু, কুষ্টিয়া",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#28142E",
+  "lang": "bn",
+  "background_color": "#FAF8FA",
   "theme_color": "#3B1F42",
   "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "../icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "../icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "../icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

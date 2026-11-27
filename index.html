@@ -3,31 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-hashes' 'sha256-MguIPR6qNR8D3B+eAlK+bIRTZe8t3wkOY4B/56Me9FU=' 'sha256-DavgSs6atApltgVW9A1LtQmDOadsiwyc4r5AjFMf1qA=' 'sha256-EvJ2d2Hi6ZWt7ja3QYEQ0M98bpid6l/t9/KIXszBzTY='; style-src 'self' 'unsafe-inline'; connect-src 'self' https://uwbyxwxfhrffrrqvheft.supabase.co; img-src 'self' data: blob: https://uwbyxwxfhrffrrqvheft.supabase.co https://i.ytimg.com; frame-src https://www.youtube-nocookie.com; media-src 'self' blob: https://uwbyxwxfhrffrrqvheft.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://uwbyxwxfhrffrrqvheft.supabase.co https://api.open-meteo.com; object-src 'none'; base-uri 'self'">
 <meta name="referrer" content="same-origin">
 <title>ডিফ এডু</title>
 <meta name="theme-color" content="#3B1F42">
-<meta name="description" content="ডিফ এডু — Different Academic & Exam Care">
+<meta name="description" content="ডিফ এডু, কুষ্টিয়া। নতুন অ্যাপ।">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="ডিফ এডু">
-<link rel="stylesheet" href="style.css">
+<link rel="icon" href="ui/assets/diff-edu-logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="ui/tokens.css">
+<link rel="stylesheet" href="ui/components.css">
+<link rel="stylesheet" href="ui/today.css">
+<link rel="stylesheet" href="ui/app.css">
+<script src="ui/weather.js" defer></script>
+<script src="ui/diffy.js" defer></script>
+<script src="features/today/v7.js" defer></script>
+<script type="module" src="boot.js"></script>
 </head>
 <body>
-<header id="bar" hidden>
-  <button id="back" aria-label="ফিরে যান" hidden><svg viewBox="0 0 24 24"><path d="M15 5L8 12L15 19" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-  <div class="ttl"><h1 id="title">ডিফ এডু</h1><div class="sub" id="sub" hidden></div></div>
-  <div id="trail"></div>
-  <div id="hx" hidden></div>
-</header>
-<main id="view" aria-live="polite"></main>
-<div id="toast" role="status"></div>
-<script src="icons.js"></script>
-<script src="guide.js"></script>
-<script src="app.js"></script>
+<div id="app">
+  <div id="splash" class="splash" role="status">
+    <img src="ui/assets/diff-edu-logo.svg" alt="" width="56" height="74">
+    <b>Diff Edu</b>
+    <span>ডিফ এডু খুলছে…</span>
+  </div>
+  <div id="boot-fail" class="boot-fail">
+    <p>অ্যাপ খোলা যায়নি। ইন্টারনেট দেখে আবার খুলুন।</p>
+    <a class="de-btn de-btn--primary" href="./">আবার খুলুন</a>
+  </div>
+</div>
+<div id="live" class="sr-only" role="status" aria-live="polite"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<noscript><p class="boot-fail show">এই অ্যাপ চালাতে জাভাস্ক্রিপ্ট চালু করতে হবে।</p></noscript>
 </body>
 </html>
