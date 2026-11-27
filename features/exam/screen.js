@@ -29,6 +29,6 @@ export function examPage(ctx, examId) {
     return r.data;
   };
   const queue = (method, path, body) => outbox.submit({ uid: session.uid(), method, path, body, label: 'পরীক্ষার তথ্য' });
-  load().then(() => globalThis.DeExam.open({ root, examId, call, queue, startMessage: examStartMessage, onDone: id => showResult(root, id, ctx) }), () => { root.textContent = 'পরীক্ষা এখন খোলা যাচ্ছে না। ইন্টারনেট দেখে আবার চেষ্টা করুন।'; });
+  load().then(() => globalThis.DeExam.open({ root, examId, call, queue, startMessage: examStartMessage, onDone: id => showResult(root, id, ctx) }), () => { root.textContent = 'পরীক্ষা এখন খোলা যাচ্ছে না। ইন্টারনেট দেখে আবার চেষ্টা করো।'; });
   return { node: root };
 }

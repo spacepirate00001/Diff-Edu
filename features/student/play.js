@@ -190,8 +190,8 @@ export function decorPage() {
           h('button', { class: 'de-btn de-btn--primary', type: 'button', onclick: async e => {
             e.currentTarget.disabled = true;
             const r = await rpc('set_decor', { p_student_id: rec.id, p_mascot: s.mascot, p_frame: s.frame, p_backdrop: s.backdrop, p_stickers: s.placed });
-            e.currentTarget.disabled = false; toast(r.kind === 'ok' ? 'সংরক্ষিত হয়েছে!' : r.kind === 'offline' ? 'নেট নেই, নেট এলে আবার চেষ্টা করো।' : 'সংরক্ষণ হয়নি। আবার চেষ্টা করো।');
-          }, text: 'সংরক্ষণ করো' })]
+            e.currentTarget.disabled = false; toast(r.kind === 'ok' ? 'সেভ হয়ে গেছে!' : r.kind === 'offline' ? 'নেট নেই, নেট এলে আবার চেষ্টা করো।' : 'সেভ হয়নি। আবার চেষ্টা করো।');
+          }, text: 'সেভ করো' })]
           : emptyState('এখনো কোনো মাসকট বা স্টিকার নেই', 'নতুন জিনিস পেলে এখানে সাজাতে পারবে।'),
         rest.length ? [section('আরও যা পাওয়া যাবে'), h('div', { class: 'de-card more-card' }, ...rest.map(x => h('div', { class: 'de-row gx-line is-dim' }, h('span', { class: 'de-row__main' }, h('span', { class: 'de-row__title', text: `${x.emoji} ${x.label}` }), h('span', { class: 'de-row__sub', text: `${bn(x.stars_price)} স্টার · অফিস দিলে পাবে` })))),
           h('p', { class: 'de-row__sub gx-note', text: 'এগুলো এখন অফিস থেকে দেওয়া হয়। স্টার দিয়ে কেনার সুবিধা পরে আসবে।' }))] : null);
