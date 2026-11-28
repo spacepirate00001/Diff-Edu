@@ -79,7 +79,9 @@ export function createExamData({ p, now, mem }) {
   };
   const withSubj = r => ({ ...r, subject: r.subject_id ? subjOf(r.subject_id) : null });
   const pick = (list, q, ...keys) => list.filter(r => keys.every(k => { const e = eqv(q, k), i = inv(q, k); return (!e || String(r[k]) === e) && (!i || i.includes(String(r[k]))); }));
+  const classify = body => { let n = 0; for (const i of ex.items) if (i.source_id === body?.source_id && i.status === 'pending' && (!i.chapter_hint || /^[০-৯\d.]+$/.test(i.chapter_hint))) { i.chapter_hint = 'ভগ্নাংশ'; n++; } return ok({ updated: n, total: n }); };
   return {
+    classify,
     table(t, q, method, body, path) {
       switch (t) {
         case 'subjects': return ok(pick(SUBJ, q, 'class_level'));

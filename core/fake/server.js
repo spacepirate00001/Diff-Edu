@@ -135,6 +135,7 @@ export function createFake(params, { now = () => Date.now() } = {}) {
       }
     }
     if (route.startsWith('/storage/v1/object/sources/')) return acc.role === 'teacher' || acc.role === 'admin' ? ed.upload(route) : ok({ message: 'forbidden' }, 403);
+    if (route === '/functions/v1/classify-chapters') return acc.role === 'teacher' || acc.role === 'admin' ? ed.classify(body) : ok({ message: 'staff only' }, 403);
     if (route === '/functions/v1/extract-source') return acc.role === 'teacher' || acc.role === 'admin' ? ed.worker() : ok({ message: 'staff only' }, 403);
     if (route === '/functions/v1/admin-users') return acc.role === 'admin' ? (body?.student?.login_id === 'taken' ? ok({ error: 'student login_id already exists' }, 400) : ok({ ok: true, student_id: 'fk-new', guardian_existed: false })) : ok({ message: 'admin only' }, 403);
     if (route.startsWith('/functions/v1/')) { const g = gd.fn(route.replace('/functions/v1/', ''), body); return g || ok({ message: 'function not found' }, 404); }

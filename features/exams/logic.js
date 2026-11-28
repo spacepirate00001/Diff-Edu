@@ -137,6 +137,8 @@ export function suggestOf(it) {
   }
   return null;
 }
+// A chapter label the AI should replace: empty, a bare number, a code ("ch-10"), "মডেল টেস্ট", "অধ্যায়-১" (same rule as the classify-chapters function).
+export const chapterJunk = s => typeof s !== 'string' || /^\s*$|^[\s০-৯0-9.,;:\-–—_/()]+$|^ch[-_ ]?[\d, ]+$|মডেল\s*টেস্ট|^অধ্যায়[\s\-–—]*[\d০-৯]*\s*$|^chapter[\s\-]*\d*$|^unit[\s\-]*\d*$/i.test(s);
 export const approveCall = (ids, { visibility = null, chapter_id = null, subject = null } = {}) => ({ name: 'approve_source_items', args: { p_ids: ids, p_visibility: visibility, p_chapter_id: chapter_id, p_subject: subject } });
 export const rejectCall = ids => ({ name: 'reject_source_items', args: { p_ids: ids } });
 export const REASON = { not_pending: 'আগেই নিষ্পত্তি হয়েছে', no_class: 'সোর্সে ক্লাস নেই', no_subject: 'বিষয় দিন', bad_type: 'ধরন বাছুন', body_too_long: 'প্রশ্ন খুব বড়', mcq_options: 'অন্তত দুটি অপশন দিন',

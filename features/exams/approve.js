@@ -9,8 +9,8 @@ import { toast } from '../../ui/toast.js';
 import { dataPage } from '../../ui/datapage.js';
 import { stateCard } from '../../ui/states.js';
 import { bn, agoText } from '../../core/bn.js';
-import { QT, LAB, mcqBad, needsLook, isSafe, splitItems, suggestOf, approveCall, rejectCall, approveResult, editPatch, sourceCards, KIND_BN } from './logic.js';
-import { loadSources, loadItems, loadChapters, callApprove, patchItem } from './data.js';
+import { chapterJunk, QT, LAB, mcqBad, needsLook, isSafe, splitItems, suggestOf, approveCall, rejectCall, approveResult, editPatch, sourceCards, KIND_BN } from './logic.js';
+import { loadSources, loadItems, loadChapters, callApprove, patchItem, classifyChapters } from './data.js';
 
 // ---- the waiting sources ----
 export function approveListPage(ctx) {
@@ -24,6 +24,7 @@ export function approveListPage(ctx) {
 }
 
 // ---- one source ----
+const triedAi = new Set();
 export function approveSourcePage(ctx, sourceId) {
   let filter = 'all', visibility = 'practice', chapterId = '', subjectText = '';
   return dataPage({
@@ -33,6 +34,11 @@ export function approveSourcePage(ctx, sourceId) {
     empty: () => stateCard({ kind: 'empty', title: 'সব প্রশ্ন দেখা হয়ে গেছে', text: 'অনুমোদন করা প্রশ্ন "প্রশ্ন ব্যাংক"-এ আছে।', action: 'প্রশ্ন ব্যাংক', onAction: () => ctx.go('/more/qbank') }),
     draw: (d, reload) => {
       const { source, chapters } = d;
+      const aiNote = h('p', { class: 'tc-cap', 'aria-live': 'polite' });
+      if (!triedAi.has(sourceId) && d.items.some(x => chapterJunk(x.chapter_hint))) {
+        triedAi.add(sourceId); aiNote.textContent = 'AI প্রতিটি প্রশ্নের অধ্যায় বাছছে…';
+        classifyChapters(sourceId).then(changed => { if (changed) reload(); else aiNote.textContent = ''; });
+      }
       let items = d.items.slice();
       const { safe, look } = splitItems(items);
       const needSubject = !source.subject_name;
@@ -55,6 +61,7 @@ export function approveSourcePage(ctx, sourceId) {
         return h('li', { class: 'tc-q-card' },
           h('div', { class: 'tc-wrap' }, h('span', { class: 'de-chip', text: QT[it.qtype] || it.qtype }), it.marks != null ? h('span', { class: 'de-chip', text: `মান ${bn(it.marks)}` }) : null, ...flags.map(f => h('span', { class: 'de-chip de-chip--warn', text: f }))),
           it.review_note ? h('p', { class: 'tc-line is-warn', text: sug ? `AI-র পরামর্শ: ${sug.text}। পাতার সাথে মিলিয়ে নিন।` : it.review_note }) : null,
+          !chapterJunk(it.chapter_hint) ? h('p', { class: 'tc-cap', text: `অধ্যায়: ${it.chapter_hint}${it.topic_suggestion ? ' · ' + it.topic_suggestion : ''}` }) : null,
           h('p', { class: 'tc-q', text: it.body }),
           (it.options || []).length ? h('ol', { class: 'tc-opts' }, ...it.options.map((o, i) => h('li', { class: String(o) === ans ? 'is-ans' : sug?.idx === i ? 'is-sug' : '' }, h('span', { class: 'tc-lab', text: LAB[i] || bn(i + 1) }), h('span', { text: String(o) + (String(o) === ans ? ' ✓' : '') })))) : (ans ? h('p', { class: 'tc-cap', text: 'উত্তর: ' + ans }) : null),
           it.source_ref ? h('p', { class: 'tc-cap', text: it.source_ref }) : null,
@@ -77,7 +84,7 @@ export function approveSourcePage(ctx, sourceId) {
       paint();
       return [h('section', { class: 'de-card tc-card' }, h('h2', { class: 'tc-h', text: source.title }), h('p', { class: 'tc-sub', text: `${KIND_BN[source.kind] || ''} · ক্লাস ${bn(source.class_level || '—')}${source.subject_name ? ' · ' + source.subject_name : ''}` }),
         chipRow('কারা পাবে', [chip('ছাত্ররাও অনুশীলনে পাবে', visibility === 'practice', () => { visibility = 'practice'; reload(); }), chip('শুধু শিক্ষকরা', visibility === 'reserved', () => { visibility = 'reserved'; reload(); })]),
-        subj?.el, chapters.length ? chSel : null, h('p', { class: 'tc-cap', text: 'অধ্যায় আর কারা পাবে, এই একই পছন্দ সব অনুমোদনে লাগবে।' })), head, listBox];
+        subj?.el, chapters.length ? chSel : null, h('p', { class: 'tc-cap', text: 'অধ্যায় আর কারা পাবে, এই একই পছন্দ সব অনুমোদনে লাগবে।' })), aiNote, head, listBox];
     },
   });
 }
