@@ -169,7 +169,27 @@ export async function loadSources() {
   const pend = {}, appr = {}, bad = {};
   for (const x of rows(it)) { const m = x.status === 'pending' ? pend : x.status === 'approved' ? appr : null; if (m) m[x.source_id] = (m[x.source_id] || 0) + 1; }
   for (const x of rows(jb)) if (x.status === 'failed') bad[x.source_id] = (bad[x.source_id] || 0) + 1;
-  return { kind: 'ok', data: src.map(x => ({ ...x, subject_name: subjectName(x.subject), pending: pend[x.id] || 0, approved: appr[x.id] || 0, jobsFailed: bad[x.id] || 0 })) };
+  const out = src.map(x => ({ ...x, subject_name: subjectName(x.subject), pending: pend[x.id] || 0, approved: appr[x.id] || 0, jobsFailed: bad[x.id] || 0 }));
+  freeSpace(out, rows(jb));   // quietly, in the background
+  return { kind: 'ok', data: out };
+}
+// Once every question of a source is decided and every part was read, its uploaded file pieces are no use any more: delete them to free space (questions stay).
+// A source with a pending question, a part still waiting or one that failed keeps its pieces (a retry needs them).
+const CLEANED = 'de.sources.cleaned';
+const cleanedSet = () => { try { return new Set(JSON.parse(localStorage.getItem(CLEANED) || '[]')); } catch { return new Set(); } };
+async function freeSpace(srcs, jobs) {
+  try {
+    const done = cleanedSet();
+    const ready = srcs.filter(x => x.kind !== 'text' && x.status === 'done' && !x.pending && !done.has(x.id) && jobs.some(j => j.source_id === x.id) && jobs.filter(j => j.source_id === x.id).every(j => j.status === 'done'));
+    for (const x of ready) {
+      const jr = rows(await sel('source_jobs', `select=storage_path&source_id=eq.${x.id}&storage_path=not.is.null&limit=1000`));
+      const paths = jr.map(j => j.storage_path).filter(Boolean);
+      const r = paths.length ? await request('DELETE', '/storage/v1/object/sources', { prefixes: paths }) : { kind: 'ok' };
+      if (r.kind !== 'ok') continue;
+      done.add(x.id);
+    }
+    if (ready.length) localStorage.setItem(CLEANED, JSON.stringify([...done].slice(-500)));
+  } catch { /* try again next time */ }
 }
 // failed parts go back in the line (up to 3 tries each are the server's rule)
 export async function retryFailed(sourceId) {
