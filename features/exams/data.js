@@ -5,7 +5,7 @@ import { outbox } from '../../core/outbox-app.js';
 import { session } from '../../core/session.js';
 import { dhakaDay, uuid } from '../../core/bn.js';
 import { loadRoutine, studentView } from '../teacher/data.js';
-import { examRow, marksPlan, splitText, storagePath, extOf, kindOfFile, classReadiness, reportWeek, subjectName } from './logic.js';
+import { examRow, marksPlan, splitText, storagePath, extOf, kindOfFile, planRanges, PDF_KEEP, classReadiness, reportWeek, subjectName } from './logic.js';
 
 const fail = r => ({ kind: r.kind === 'ok' ? 'error' : r.kind });
 const list = ids => `in.(${ids.join(',')})`;
@@ -66,28 +66,89 @@ export async function saveMarks({ exam_id, rows: list }) {
 // ---- upload ----
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 export const sha256 = async blobOrText => hex(await crypto.subtle.digest('SHA-256', typeof blobOrText === 'string' ? new TextEncoder().encode(blobOrText) : await blobOrText.arrayBuffer()));
+// pdf-lib (vendor/, MIT) loads the first time a PDF is chosen; it is not in the service-worker shell.
+let libP = null;
+function pdfLib() {
+  if (globalThis.PDFLib) return Promise.resolve(globalThis.PDFLib);
+  return libP ||= new Promise((ok, no) => {
+    const s = document.createElement('script'); s.src = 'vendor/pdf-lib.min.js';
+    s.onload = () => globalThis.PDFLib ? ok(globalThis.PDFLib) : (libP = null, no(new Error('lib')));
+    s.onerror = () => { libP = null; s.remove(); no(new Error('lib')); };
+    document.head.appendChild(s);
+  });
+}
+const tick = () => new Promise(r => setTimeout(r, 0));
+async function pdfBytes(L, doc, a, b) {
+  const out = await L.PDFDocument.create(), idx = []; for (let p = a; p <= b; p++) idx.push(p - 1);
+  (await out.copyPages(doc, idx)).forEach(pg => out.addPage(pg));
+  return out.save({ useObjectStreams: true });
+}
+// One range as a piece; over PDF_KEEP -> 2-page pieces, then 1-page pieces. One piece in memory at a time.
+async function* pdfPieces(L, doc, r, level = 0) {
+  await tick();
+  const bytes = await pdfBytes(L, doc, r.a, r.b);
+  if (bytes.byteLength <= PDF_KEEP) { yield { a: r.a, b: r.b, bytes }; return; }
+  if (level >= 2) throw new Error('bigpage');
+  for (const s of planRanges(r.a, r.b, level === 0 ? 2 : 1)) yield* pdfPieces(L, doc, s, level + 1);
+}
+// Retry a flaky step a few times with a short wait before giving up.
+async function again(fnc, tries = 3) {
+  let r;
+  for (let i = 0; i < tries; i++) { r = await fnc(); if (r.kind === 'ok' || r.kind === 'offline' && i === tries - 1 || r.status === 409) return r; await new Promise(x => setTimeout(x, 800 * (i + 1))); }
+  return r;
+}
 // One source = one sources row, then each part (storage object first, then its job row), then "queued". Needs the net.
-// -> { state: 'ok' } | { state: 'offline' | 'duplicate' | 'failed', why? }   progress(done, total) is called after each part
+// A PDF is cut in the browser into pieces of 3 pages (1 page overlap) and goes up piece by piece. If it stops half way, giving the same file again carries on from where it stopped.
+// -> { state: 'ok' } | { state: 'offline' | 'duplicate' | 'failed' | 'nolib' | 'bigpage', why? }   progress(done, total) is called after each part
 export async function submitSource({ kind, title, class_level, subject_id, text, file }, progress = () => {}) {
   const hash = await sha256(kind === 'text' ? text : file);
-  const id = uuid(), parts = kind === 'text' ? splitText(text) : [null];
-  const ins = await request('POST', '/rest/v1/sources', { id, coaching_id: coaching(), created_by: uid(), kind, title: title.trim(), class_level, subject_id: subject_id || null, file_hash: hash, parts_total: parts.length, pii_ack: true, status: 'uploading' }, { prefer: 'return=minimal' });
-  if (ins.kind === 'conflict' || (ins.status === 409)) return { state: 'duplicate' };
-  if (ins.kind !== 'ok') return { state: outcome(ins), why: 'sources' };
-  for (let i = 0; i < parts.length; i++) {
-    const row = { coaching_id: coaching(), source_id: id, part_no: i + 1, status: 'queued' };
-    if (kind === 'text') row.text_body = parts[i];
-    else {
-      const path = storagePath(coaching(), id, i + 1, extOf(file));
-      const up = await upload('sources', path, file, file.type || (kind === 'pdf' ? 'application/pdf' : 'image/jpeg'));
+  let L = null, doc = null, pages = 0;
+  if (kind === 'pdf') {
+    try { L = await pdfLib(); doc = await L.PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false }); pages = doc.getPageCount(); } catch { return { state: 'nolib' }; }
+  }
+  const textParts = kind === 'text' ? splitText(text) : null;
+  const plan = kind === 'pdf' ? planRanges(1, pages) : null;
+  let total = kind === 'text' ? textParts.length : kind === 'pdf' ? plan.length : 1;
+  let id = uuid(), have = new Set();
+  const ins = await request('POST', '/rest/v1/sources', { id, coaching_id: coaching(), created_by: uid(), kind, title: title.trim(), class_level, subject_id: subject_id || null, file_hash: hash, parts_total: total, pii_ack: true, status: 'uploading' }, { prefer: 'return=minimal' });
+  if (ins.kind === 'conflict' || ins.status === 409) {
+    // Same file again: only a source that never finished uploading is carried on; a finished one is a real duplicate.
+    const old = rows(await sel('sources', `select=id,status&file_hash=eq.${hash}&coaching_id=eq.${coaching()}&limit=1`))[0];
+    if (!old || old.status !== 'uploading') return { state: 'duplicate' };
+    id = old.id;
+    for (const j of rows(await sel('source_jobs', `select=part_no&source_id=eq.${id}&limit=1000`))) have.add(j.part_no);
+  } else if (ins.kind !== 'ok') return { state: outcome(ins), why: 'sources' };
+  let no = 0;
+  const addPart = async (extra, put) => {
+    no++;
+    if (have.has(no)) return null;
+    const row = { coaching_id: coaching(), source_id: id, part_no: no, status: 'queued', ...extra };
+    if (put) {
+      const path = storagePath(coaching(), id, no, put.ext);
+      const up = await again(() => upload('sources', path, put.blob, put.type));
       if (up.kind !== 'ok') return { state: outcome(up), why: 'upload', id };
       row.storage_path = path;
     }
-    const j = await request('POST', '/rest/v1/source_jobs', row, { prefer: 'return=minimal' });
+    const j = await again(() => request('POST', '/rest/v1/source_jobs', row, { prefer: 'return=minimal' }));
     if (j.kind !== 'ok' && j.status !== 409) return { state: outcome(j), why: 'job', id };
-    progress(i + 1, parts.length);
-  }
-  const done = await request('PATCH', `/rest/v1/sources?id=eq.${id}`, { parts_total: parts.length, status: 'queued' }, { prefer: 'return=minimal' });
+    progress(no, total);
+    return null;
+  };
+  let bad = null;
+  try {
+    if (kind === 'text') { for (const t of textParts) if ((bad = await addPart({ text_body: t }))) break; }
+    else if (kind === 'pdf') {
+      outer: for (const r of plan) {
+        for await (const p of pdfPieces(L, doc, r)) {
+          if (have.has(no + 1)) { no++; continue; }
+          if ((bad = await addPart({ page_from: p.a, page_to: p.b }, { ext: 'pdf', blob: new Blob([p.bytes], { type: 'application/pdf' }), type: 'application/pdf' }))) break outer;
+        }
+      }
+      total = no;
+    } else bad = await addPart({}, { ext: extOf(file), blob: file, type: file.type || 'image/jpeg' });
+  } catch (e) { return { state: e.message === 'bigpage' ? 'bigpage' : 'failed', why: 'split', id }; }
+  if (bad) return bad;
+  const done = await request('PATCH', `/rest/v1/sources?id=eq.${id}`, { parts_total: total, status: 'queued' }, { prefer: 'return=minimal' });
   return done.kind === 'ok' ? { state: 'ok', id } : { state: outcome(done), why: 'queued', id };
 }
 // The worker does one job per call. -> { state: 'idle' | 'processed' | 'offline' | 'failed', due, waiting }
