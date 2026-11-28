@@ -1,6 +1,7 @@
 // Pieces every student page shares: the student's own record, "আমার অগ্রগতি", a page that shows its states, a tap-tile grid.
 import { h } from '../../ui/dom.js';
 import { icon } from '../../ui/icons.js';
+import { aicon } from '../../ui/aicons.js';
 import { stateCard, offlineState, errorState } from '../../ui/states.js';
 import * as router from '../../core/router.js';
 import { dataPage } from '../../ui/datapage.js';
@@ -39,7 +40,7 @@ export function progressCard(rec, { extra } = {}) {
 // A two-column grid of big tap tiles: [{ e (emoji or icon name), title, sub, onclick, on, disabled }]
 export function tiles(list) {
   return h('div', { class: 'st-tiles' }, ...list.map(t => h('button', { class: 'st-tile' + (t.on ? ' is-on' : ''), type: 'button', onclick: t.onclick, disabled: t.disabled, 'aria-pressed': t.on == null ? null : String(!!t.on) },
-    h('span', { class: 'st-tile__e', 'aria-hidden': 'true' }, t.icon ? icon(t.icon) : t.e), h('span', { class: 'st-tile__t', text: t.title }), t.sub ? h('span', { class: 'st-tile__s', text: t.sub }) : null)));
+    h('span', { class: 'st-tile__e', 'aria-hidden': 'true' }, t.ai ? aicon(t.ai) : t.icon ? icon(t.icon) : t.e), h('span', { class: 'st-tile__t', text: t.title }), t.sub ? h('span', { class: 'st-tile__s', text: t.sub }) : null)));
 }
 // replaceChildren that skips empty slots and flattens lists (Element.replaceChildren would print "null" or "[object ...]")
 export const put = (root, ...k) => root.replaceChildren(...k.flat(Infinity).filter(Boolean));

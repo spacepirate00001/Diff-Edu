@@ -21,7 +21,7 @@ function haatShop(root, done, rnd = Math.random, { cls = 5 } = {}) {
   const refresh = () => { trayEl.replaceChildren(...(tray.length ? tray.map((d, i) => h('button', { class: 'gm-denom is-note is-small', type: 'button', 'aria-label': `${bn(d)} টাকা সরাও`, onclick: () => { if (!locked) { tray.splice(i, 1); fx.tick(); refresh(); } }, text: money(d) })) : [h('span', { class: 'de-row__sub', text: 'নোট বা কয়েনে ট্যাপ করে ফেরত সাজাও' })])); msgEl.textContent = `ফেরত দিচ্ছ: ${money(sum())}`; };
   const finish = (ok, why) => {
     if (locked || over) return; locked = true;
-    if (ok) { correct++; combo++; fx.ok(combo); msgEl.textContent = 'ধন্যবাদ! 😊'; } else { wrong++; combo = 0; fx.bad(); shake(box); msgEl.textContent = `${why} ঠিক ফেরত ছিল ${money(order.change)}।`; }
+    if (ok) { correct++; combo++; fx.ok(combo); msgEl.textContent = 'ধন্যবাদ! আবার আসবেন।'; } else { wrong++; combo = 0; fx.bad(); shake(box); msgEl.textContent = `${why} ঠিক ফেরত ছিল ${money(order.change)}।`; }
     show(); n++;
     next = setTimeout(() => (n >= CUSTOMERS ? end() : serve()), ok ? 800 : 2200);
   };
@@ -49,7 +49,7 @@ function monsterBattle(root, done, rnd = Math.random, { cls = 5, id = '' } = {})
   let m = 0, hp = HP[0], hearts = 3, right = 0, wrong = 0, combo = 0, locked = false, over = false, next;
   const monEl = h('div', { class: 'gm-mon', 'aria-hidden': 'true' }), nameEl = h('div', { class: 'de-row__title st-center' }), hpFill = h('i'), hpBar = h('div', { class: 'gm-bar gm-hp', role: 'presentation' }, hpFill), msg = h('p', { class: 'gm-note st-center de-row__sub', 'aria-live': 'polite' }), qbox = h('div', { class: 'gm-box' });
   const show = () => { hud.set({ text: bn(`দানব ${m + 1}/${line.length} · ${right} ঠিক`), hearts, combo }); hpFill.style.width = Math.max(0, hp / HP[m] * 100) + '%'; };
-  const setMon = () => { const [e, name] = line[m]; monEl.textContent = e; nameEl.textContent = (m === line.length - 1 ? '👑 বস: ' : '') + name; hp = HP[m]; show(); };
+  const setMon = () => { const [e, name] = line[m]; monEl.textContent = e; nameEl.textContent = (m === line.length - 1 ? 'বস: ' : '') + name; hp = HP[m]; show(); };
   const end = () => { if (over) return; over = true; clearTimeout(next); fx.end(); done({ correct: right, total: Math.max(1, right + wrong), seconds: secs(t0), extra }); };
   const ask = () => {
     const q = quickQ(rnd, cls, right, seen); locked = false;
@@ -62,7 +62,7 @@ function monsterBattle(root, done, rnd = Math.random, { cls = 5, id = '' } = {})
         right++; combo++; const big = combo >= 3; hp -= big ? 2 : 1; fx.ok(combo); monEl.classList.remove('is-hit'); void monEl.offsetWidth; monEl.classList.add('is-hit'); msg.textContent = big ? '💥 মহা-আঘাত!' : '⚔️ আঘাত!';
         if (big) combo = 0;
         if (hp <= 0) { hp = 0; show(); const isNew = id && stats.collect(id, line[m][1]); if (isNew) extra.push(`${line[m][0]} নতুন দানব ধরেছ: ${line[m][1]}!`); fx.win(); msg.textContent = `🎉 ${line[m][1]} হেরে গেল!`; m++; next = setTimeout(() => { if (m >= line.length) end(); else { setMon(); msg.textContent = ''; ask(); } }, 1300); return; }
-      } else { wrong++; combo = 0; hearts--; fx.bad(); shake(qbox); msg.textContent = '😵 দানব আঘাত করেছে!'; }
+      } else { wrong++; combo = 0; hearts--; fx.bad(); shake(qbox); msg.textContent = 'দানব আঘাত করেছে!'; }
       show();
       next = setTimeout(() => { if (hearts <= 0) end(); else ask(); }, ok ? 500 : 1000);
     }));
@@ -98,7 +98,7 @@ function numberMerge(root, done, rnd = Math.random, { cls = 5 } = {}) {
     box.replaceChildren(h('section', { class: 'de-card st-q' }, sub('দুটো সংখ্যা জোড়া লাগিয়ে এই সংখ্যাটা বানাও'), h('div', { class: 'st-big gm-target', 'aria-live': 'polite', text: `🎯 ${bn(p.target)}` }),
       h('div', { class: 'gm-tiles' }, ...tiles.map((t, i) => h('button', { class: 'gm-tile' + (a === i ? ' is-on' : '') + (won && t.v === p.target ? ' is-win' : ''), type: 'button', onclick: () => pickTile(i), text: bn(t.v) }))),
       h('div', { class: 'gm-ops' }, ...ops.map(o => h('button', { class: 'gm-key' + (op === o ? ' is-on' : ''), type: 'button', 'aria-label': o === '+' ? 'যোগ' : o === '−' ? 'বিয়োগ' : o === '×' ? 'গুণ' : 'ভাগ', onclick: () => { if (a === null || won) return; op = op === o ? null : o; fx.tick(); draw(); }, text: o }))),
-      sub(won ? '🎉 মিলে গেছে!' : stuck ? 'মেলেনি। ↶ চেপে পিছিয়ে আবার চেষ্টা করো।' : a === null ? 'একটা সংখ্যা বাছো' : op === null ? 'এবার একটা চিহ্ন বাছো' : 'এবার আরেকটা সংখ্যা বাছো'),
+      sub(won ? 'মিলে গেছে! দারুণ!' : stuck ? 'মেলেনি। ↶ চেপে পিছিয়ে আবার চেষ্টা করো।' : a === null ? 'একটা সংখ্যা বাছো' : op === null ? 'এবার একটা চিহ্ন বাছো' : 'এবার আরেকটা সংখ্যা বাছো'),
       h('div', { class: 'st-actions' }, h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: () => { if (hist.length && !won) { tiles = hist.pop(); a = null; op = null; draw(); } }, text: '↶ পিছনে' }), h('button', { class: 'de-btn de-btn--secondary', type: 'button', onclick: () => { if (!won) { tiles = p.nums.map(v => ({ v })); hist = []; a = null; op = null; draw(); } }, text: 'আবার শুরু' }), h('button', { class: 'de-btn de-btn--text', type: 'button', onclick: () => { if (!won) nextPuzzle(); }, text: 'পরেরটা' }))));
   };
   const tick = setInterval(() => { const now = Date.now(); left -= (now - last) / 1000; last = now; if (left <= 0) end(); else show(); }, 200);
@@ -123,7 +123,7 @@ function wordDetective(root, done, rnd = Math.random, { cls = 5 } = {}) {
   };
   const draw = () => {
     hud.set({ text: bn(`${Math.min(n + 1, WORDS_IN_ROUND)}/${WORDS_IN_ROUND} শব্দ · ${correct} ধরা পড়ল`), hearts: lives, combo });
-    const state = locked ? (complete() && lives > 0 ? '🎉 ধরে ফেলেছ!' : '😅 পালিয়ে গেল, শব্দটা ছিল এটা') : 'ইংরেজি শব্দটা কী? অক্ষরে ট্যাপ করো';
+    const state = locked ? (complete() && lives > 0 ? 'ধরে ফেলেছ! দারুণ!' : 'পালিয়ে গেল, শব্দটা ছিল এটা') : 'ইংরেজি শব্দটা কী? অক্ষরে ট্যাপ করো';
     box.replaceChildren(h('section', { class: 'de-card st-q' }, sub('বাংলা অর্থ দেখে ইংরেজি শব্দটা ধরো'), h('div', { class: 'st-big', text: w.clue }),
       h('div', { class: 'gm-slots', 'aria-live': 'polite', 'aria-label': 'শব্দ' }, ...[...w.word].map(ch => h('span', { class: 'gm-slot' + (got.has(ch) ? ' is-on' : ''), text: got.has(ch) ? ch : '' }))),
       sub(state),

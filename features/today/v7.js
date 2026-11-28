@@ -337,6 +337,13 @@
     requestAnimationFrame(frame);
   }
 
+  // a small gold flame that flickers (replaces the fire emoji); built with createElementNS, no innerHTML
+  function flameIcon() {
+    var NS = "http://www.w3.org/2000/svg", s = document.createElementNS(NS, "svg"), p = document.createElementNS(NS, "path");
+    s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("class", "ai ai--inline ai--live ai-flame"); s.setAttribute("aria-hidden", "true");
+    p.setAttribute("d", "M12 3c1 3.500 5.500 5.500 5.500 10.500a5.500 5.500 0 0 1-11 0c0-2 1-3.500 2-4.500.200 1.500 1 2.300 1.800 2.500C10 9 10.500 5.500 12 3z");
+    p.setAttribute("class", "s a-flick"); s.appendChild(p); return s;
+  }
   function stars(score, max) {
     var on = Math.max(0, Math.min(5, Math.round(score / (max || DEFAULT_MAX) * 5)));
     var row = el("span", "de-stars");
@@ -742,7 +749,7 @@
       var line = el("div", "de-streak" + (streak >= 2 ? " de-streak--fun" : ""));
       if (streak >= 2) {
         line.appendChild(sticker("টানা " + streak + " দিন!", "sunny", "diamond", true));
-        line.appendChild(el("span", "", "একদিনও কামাই নেই। 🔥"));
+        var fl = el("span", "", "একদিনও কামাই নেই। "); fl.appendChild(flameIcon()); line.appendChild(fl);
       } else {
         line.appendChild(el("i", "de-diamond"));
         line.appendChild(el("span", "", "নিয়মিত আসা বড় অভ্যাস। আজই শুরু হোক।"));

@@ -56,7 +56,7 @@ export function attendPage(ctx, query = {}) {
         const st = statuses[s.id], away = !isPresent(st), locked = s.id in view.saved && view.saved[s.id].server !== false;
         const main = h('button', { class: 'tc-att__main', type: 'button', 'aria-pressed': String(!away), 'aria-label': `${s.name}, রোল ${bn(s.roll)}, ${STATUS_NAME[st]}. চাপলে ${away ? 'উপস্থিত' : 'অনুপস্থিত'} হবে`, onclick: () => { statuses[s.id] = toggleAbsent(st); paint(); } },
           avatar(s.name), h('span', { class: 'tc-att__name' }, h('b', { text: s.name }), h('span', { text: `রোল ${bn(s.roll)}${levels.length > 1 ? ' · ক্লাস ' + bn(s.class_level) : ''}${locked ? ' · সংরক্ষিত' : ''}` })),
-          h('span', { class: 'de-chip de-chip--' + (away ? 'bad' : st === 'late' ? 'warn' : 'good'), text: STATUS_NAME[st] }));
+          h('span', { class: 'de-chip de-chip--' + (away ? 'bad' : st === 'late' ? 'warn' : 'good') + ' tc-att__chip', 'data-st': away ? 'away' : st }, STATUS_NAME[st]));
         const key2 = h('button', { class: 'tc-att__key', type: 'button', 'aria-label': `${s.name}: আরও অবস্থা (দেরি, আগে গেছে)`, onclick: () => choose(s) }, icon('more'));
         return h('li', null, h('div', { class: 'tc-att' + (away ? ' is-away' : '') }, main, key2));
       };
@@ -83,6 +83,7 @@ export function attendPage(ctx, query = {}) {
         const res = await saveAttendance({ view, statuses, shift, slot });
         busy = false;
         const failed = ['failed', 'rejected'].includes(res.state);
+        if (res.state === 'saved') import('../student/fx.js').then(m => m.confetti()).catch(() => {});
         saveBar.show(res.state, { onRetry: save, onOpen: async () => (await import('../offline/pending-sheet.js')).openPending() });
         if (!failed) for (const f of df.fresh) view.saved[f.id] = { present: f.present, session: 'class', server: res.state === 'saved' };
         paint();

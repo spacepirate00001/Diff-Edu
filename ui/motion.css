@@ -41,3 +41,58 @@
 .page { min-height: 0; }
 img, svg { max-width: 100%; }
 img:not([width]):not([height]):not([class]) { height: auto; }
+
+/* ---- Richer motion (second layer). Still only opacity and transform, still all inside no-preference. ---- */
+@media (prefers-reduced-motion: no-preference) {
+  /* Cards, rows and tiles rise in one after another when a page opens. */
+  .page.is-entering .de-card, .page.is-entering .de-row, .page.is-entering .st-tile, .page.is-entering .tc-att { animation: mo-rise 360ms var(--de-ease) both; }
+  .page.is-entering .st-tile { animation-name: mo-tile; }
+  .page.is-entering .st-tile:nth-child(2n) { animation-delay: 60ms; } .page.is-entering .st-tile:nth-child(3n) { animation-delay: 110ms; } .page.is-entering .st-tile:nth-child(4n) { animation-delay: 160ms; }
+  .page.is-entering .de-card:nth-of-type(2) { animation-delay: 70ms; } .page.is-entering .de-card:nth-of-type(3) { animation-delay: 140ms; } .page.is-entering .de-card:nth-of-type(n+4) { animation-delay: 200ms; }
+  @keyframes mo-tile { from { opacity: 0; transform: translateY(14px) scale(0.92); } }
+
+  /* Bottom sheet slides up, a toast bounces in, a save strip pops in. */
+  .de-sheet-scrim.is-open .de-sheet { animation: mo-sheet 300ms var(--de-ease-spring) both; }
+  @keyframes mo-sheet { from { transform: translateY(40px); opacity: 0.6; } }
+  .de-toast--fixed { animation: mo-toast 320ms var(--de-ease-spring) both; }
+  @keyframes mo-toast { from { opacity: 0; transform: translateY(18px) scale(0.96); } }
+  .de-savebar { animation: mo-save 380ms var(--de-ease-spring) both; }
+  @keyframes mo-save { from { opacity: 0; transform: translateY(14px) scale(0.94); } }
+  .de-savebar--saved .ai-check .a-draw { animation-delay: 150ms; }
+  .de-savebar--saved .ai-check { animation: mo-tab 520ms var(--de-ease-spring) 120ms both; }
+
+  /* Pressing anything big feels soft. */
+  .st-tile, .st-opt, .st-card, .de-btn--primary { transition: transform var(--de-t-press) var(--de-ease), background-color var(--de-t-press) var(--de-ease); }
+  .st-tile:active, .st-opt:active { transform: scale(0.95); }
+  .de-btn--primary:not([disabled]):active { transform: scale(0.97); }
+  .tc-att__main:active { transform: scale(0.98); }
+  @media (hover: hover) { .st-tile:hover { transform: translateY(-2px); } }
+
+  /* Icons that already live in the sprite get a small move of their own (matched by the symbol they use). */
+  .de-icon:has(use[href="#i-bell"]) { transform-origin: 50% 8%; animation: mo-ring 1.6s ease-in-out 600ms 2 both; }
+  @keyframes mo-ring { 0%, 40%, 100% { transform: rotate(0); } 8% { transform: rotate(14deg); } 16% { transform: rotate(-12deg); } 24% { transform: rotate(8deg); } 32% { transform: rotate(-5deg); } }
+  .de-icon:has(use[href="#i-chat"]), .de-icon:has(use[href="#i-people"]) { transform-origin: 50% 100%; }
+  .is-on > .de-icon:has(use[href="#i-chat"]), .is-on .de-icon:has(use[href="#i-chat"]) { animation: mo-tab 360ms var(--de-ease-spring), mo-nod 480ms ease-out 360ms; }
+  @keyframes mo-nod { 40% { transform: rotate(-8deg); } 70% { transform: rotate(5deg); } }
+  .de-icon:has(use[href="#i-gamepad"]), .is-on .de-icon:has(use[href="#i-play"]) { animation: ai-wobble 900ms ease-in-out 1 both; }
+  .de-icon:has(use[href="#i-gift"]) { animation: ai-wobble 1s ease-in-out 800ms 2 both; }
+  .de-icon:has(use[href="#i-star"]), .de-icon:has(use[href="#i-trophy"]) { animation: ai-twinkle 1.2s ease-in-out 400ms 2 both; }
+  .de-icon:has(use[href="#i-down"]) { animation: mo-bounce 1.2s ease-in-out 2 both; } @keyframes mo-bounce { 50% { transform: translateY(3px); } }
+  .de-icon:has(use[href="#i-refresh"]):active { animation: mo-spin 500ms ease-out; } @keyframes mo-spin { to { transform: rotate(360deg); } }
+  .de-icon:has(use[href="#i-alert"]) { animation: mo-shake 700ms ease-in-out 500ms 1 both; }
+  @keyframes mo-shake { 20%, 60% { transform: translateX(-2px); } 40%, 80% { transform: translateX(2px); } }
+  .de-icon:has(use[href="#i-check"]) { animation: mo-tab 500ms var(--de-ease-spring) both; }
+
+  /* Badges and numbers: a gentle heartbeat, then still. */
+  .de-bottomnav__badge, .de-badge:not(.de-badge--dot) { animation: mo-beat 1.6s ease-in-out 700ms 3 both; }
+  @keyframes mo-beat { 0%, 100% { transform: scale(1); } 20% { transform: scale(1.22); } 40% { transform: scale(1); } }
+  .gx-big, .tc-count, .v7-big { animation: mo-numpop 520ms var(--de-ease-spring) both; }
+  @keyframes mo-numpop { from { opacity: 0; transform: scale(0.8); } }
+  .gx-cal__d--present i { animation: mo-tab 400ms var(--de-ease-spring) both; }
+  .gx-cal__d:nth-child(7n+1) i { animation-delay: 0ms; } .gx-cal__d:nth-child(7n+3) i { animation-delay: 80ms; } .gx-cal__d:nth-child(7n+5) i { animation-delay: 160ms; }
+
+  /* The streak diamond and mascot already wiggle; the stars and chips pop in. */
+  .de-chip--good, .de-chip--now { animation: mo-pop 300ms var(--de-ease-spring) both; }
+  .gm-mission .gm-dots i.is-on { animation: mo-tab 420ms var(--de-ease-spring) both; }
+  .gm-mission .gm-dots i.is-on:nth-child(2) { animation-delay: 120ms; } .gm-mission .gm-dots i.is-on:nth-child(3) { animation-delay: 240ms; }
+}
