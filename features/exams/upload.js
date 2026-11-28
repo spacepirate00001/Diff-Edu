@@ -83,7 +83,7 @@ export function uploadPage(ctx) {
     h('p', { class: 'tc-sub', text: 'পাতার PDF, ছবি বা লেখা দিন। AI প্রশ্ন বের করবে। আপনি দেখে "হ্যাঁ" না বললে কোনো প্রশ্ন শিক্ষার্থীর কাছে যাবে না।' }),
     modeBox, lvBox, subBox, title.el, fileBox, text.el,
     h('label', { class: 'tc-ack', for: 'ack' }, ackBox, h('span', { text: 'এই উৎসে কোনো শিক্ষার্থীর নাম, ছবি বা ব্যক্তিগত তথ্য নেই।' })), ackErr, go), list.node);
-  fileBox.append(h('p', { class: 'tc-cap', text: 'একটা PDF (৬০ MB পর্যন্ত) বা ছবি। বড় PDF নিজে নিজেই ছোট ছোট অংশে ভেঙে একে একে জমা হবে, আপনাকে কিছু করতে হবে না।' }));
+  fileBox.append(h('p', { class: 'tc-cap', text: 'একটা PDF (২০০ MB পর্যন্ত) বা ছবি। বড় PDF নিজে নিজেই ছোট ছোট অংশে ভেঙে একে একে জমা হবে, আপনাকে কিছু করতে হবে না।' }));
   text.el.hidden = true;
   return { node: root, destroy() { dead = true; list?.destroy(); } };
 }
