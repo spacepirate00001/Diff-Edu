@@ -9,6 +9,7 @@ export async function teacherPage(segs, ctx, query = {}) {
     if (name === 'attend') return { tab: 'class', title: 'হাজিরা নিন', back: true, result: (await import('./attend.js')).attendPage(ctx, query) };
     if (name === 'rate') return { tab: 'class', title: 'ক্লাস রেটিং', back: true, result: (await import('./rate.js')).ratePage(ctx, query) };
     if (name === 'homework') return { tab: 'class', title: 'বাড়ির কাজ', back: true, result: (await import('./homework.js')).homeworkPage(ctx) };
+    if (name === 'all') return { tab: 'class', title: 'সবাই আজ', back: true, result: (await import('./everyone.js')).everyonePage(ctx, query, '/class/all') };
     if (name === 'students') return { tab: 'class', title: 'শিক্ষার্থী ও ফোন', back: true, result: (await import('./students.js')).studentsPage(ctx) };
   }
   if (area === 'contact') {

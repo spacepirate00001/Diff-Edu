@@ -24,6 +24,7 @@ import * as router from './core/router.js';
 import { tabsFor, tabById, hasTab } from './roles/tabs.js';
 import { createShell } from './roles/shell.js';
 import { inbox } from './features/inbox/store.js';
+import { presence } from './core/presence.js';
 import { openSwitcher } from './features/switcher/child-switcher.js';
 
 const root = document.getElementById('app');
@@ -69,6 +70,7 @@ async function enterApp() {
   startFlushing();
   if (m.role === 'guardian') kids.load();
   if (m.role === 'student') self.load();
+  if (m.role === 'student') presence.start();
   sky.load(); inbox.load();
   if (store.get('de.next.opened') !== dhakaDay()) { store.set('de.next.opened', dhakaDay()); rpc('log_app_open'); }
   return true;

@@ -57,6 +57,7 @@ export function classTab(ctx) {
           navRow({ ic: 'check', text: 'হাজিরা নিন', sub: cur ? periodName(cur) : 'ক্লাস বেছে নিন', onclick: () => ctx.go(cur ? periodUrl('/class/attend', cur.shift, cur.slot) : '/class/attend') }),
           navRow({ ic: 'star', text: 'ক্লাস রেটিং', sub: 'হাজিরার পর উপস্থিতদের রেটিং', onclick: () => ctx.go(cur ? periodUrl('/class/rate', cur.shift, cur.slot) : '/class/rate') }),
           navRow({ ic: 'book', text: 'বাড়ির কাজ', sub: 'দিন ও দেখুন', onclick: () => ctx.go('/class/homework') }),
+          navRow({ ic: 'people', text: 'সবাই আজ', sub: 'কে এসেছে, কে আসেনি, কে অ্যাপে আছে, ফোন', onclick: () => ctx.go('/class/all') }),
           navRow({ ic: 'user', text: 'শিক্ষার্থী ও অভিভাবকের ফোন', sub: 'নাম দিয়ে খুঁজুন', onclick: () => ctx.go('/class/students') })),
         noteCard())];
     },

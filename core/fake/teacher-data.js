@@ -105,6 +105,9 @@ export function createTeacherData({ p, now, mem }) {
     },
     rpc(name, body) {
       switch (name) {
+        case 'attendance_today': return ok(ROSTER.filter(s => SHIFT_OF[s.batch_id] === body.p_shift).slice(0, 5).map((s, i) => ({ student_id: s.id, state: i === 1 || i === 3 ? 'absent' : 'present' })));
+        case 'students_presence': return ok(ROSTER.map((s, i) => ({ student_id: s.id, last_seen: i % 3 === 0 ? new Date(Date.now() - 60000).toISOString() : i % 3 === 1 ? new Date(Date.now() - 3 * 3600000).toISOString() : null, opened_today: i % 3 !== 2 })));
+        case 'ping_presence': return ok(null);
         case 'resolve_gate_review': th.review = th.review.filter(r => r.id !== body.p_attendance_id); return ok(null);
         case 'change_attendance': {
           if (String(body.p_reason || '').trim().length < 3) return bad('reason_required');
