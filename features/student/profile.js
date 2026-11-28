@@ -9,6 +9,8 @@ import { bn } from '../../core/bn.js';
 import { initialsOf, classLabel } from '../today/today.js';
 import { me, noRecState, progressCard, section } from './common.js';
 import { shopItem } from './logic.js';
+import { lookHero } from './look.js';
+import { lookFrom } from './looks.js';
 
 export function profilePage(ctx) {
   const root = h('div', { class: 'st-page' });
@@ -17,16 +19,17 @@ export function profilePage(ctx) {
     root.append(loading(2));
     const rec = await me();
     if (!rec) return root.replaceChildren(noRecState());
-    const [d, c] = await Promise.all([sel('student_decor', `select=mascot&student_id=eq.${rec.id}`), sel('sticker_catalog', 'select=key,emoji&active=is.true')]);
+    const [d, c, lr, sh] = await Promise.all([sel('student_decor', `select=mascot&student_id=eq.${rec.id}`), sel('sticker_catalog', 'select=key,emoji&active=is.true'), sel('student_rewards', `select=loadout,avatar,theme&student_id=eq.${rec.id}`), sel('shop_items', 'select=key,slot,name,meta&active=is.true')]);
     if (dead) return;
-    const mascot = rows(c).find(x => x.key === rows(d)[0]?.mascot)?.emoji, face = shopItem(rec.avatar)?.[2] || mascot || null, me0 = ctx.me;
+    const cat = sh.kind === 'ok' ? rows(sh) : [], w = (lr.kind === 'ok' && rows(lr)[0]) || {}, look = lookFrom(w, cat);
+    // Equipped look (loadout slots + the older avatar/theme columns). Any failure or missing column just means the plain hero.
+    const mascot = rows(c).find(x => x.key === rows(d)[0]?.mascot)?.emoji, face = look.avatar?.meta?.emoji || shopItem(rec.avatar)?.[2] || mascot || null, me0 = ctx.me;
+    const sub = [classLabel(rec.class_level), rec.roll ? `রোল ${bn(rec.roll)}` : '', rec.shift === 'morning' ? 'সকাল' : rec.shift === 'afternoon' ? 'বিকেল' : ''].filter(Boolean).join(' · ');
     root.replaceChildren(
-      h('section', { class: 'de-card st-who' }, h('span', { class: 'de-avatar de-avatar--lg st-who__av', 'aria-hidden': 'true', text: face || initialsOf(rec.name) }), h('b', { class: 'st-who__n', text: rec.name }),
-        h('span', { class: 'de-row__sub', text: [classLabel(rec.class_level), rec.roll ? `রোল ${bn(rec.roll)}` : '', rec.shift === 'morning' ? 'সকাল' : rec.shift === 'afternoon' ? 'বিকেল' : ''].filter(Boolean).join(' · ') }),
-        h('span', { class: 'de-row__sub', text: `লগইন আইডি ${bn(me0.login_id)}` })),
+      lookHero({ name: rec.name, sub, face: face || initialsOf(rec.name), look, extra: h('span', { class: 'de-row__sub', text: `লগইন আইডি ${bn(me0.login_id)}` }) }),
       progressCard(rec),
       section('সাজাও ও দেখো'),
-      h('div', { class: 'de-card more-card' }, navRow({ ic: 'star', text: 'সাজঘর', sub: 'মাসকট, ফ্রেম ও স্টিকার', onclick: () => ctx.go('/play/decor') }), navRow({ ic: 'gift', text: 'পয়েন্টের দোকান', sub: 'স্টার দিয়ে অবতার', onclick: () => ctx.go('/play/shop') }),
+      h('div', { class: 'de-card more-card' }, navRow({ ic: 'star', text: 'সাজঘর', sub: 'মাসকট, ফ্রেম ও স্টিকার', onclick: () => ctx.go('/play/decor') }), navRow({ ic: 'gift', text: 'পয়েন্টের দোকান', sub: 'স্টার বা পয়েন্ট দিয়ে প্রোফাইল সাজাও', onclick: () => ctx.go('/play/shop') }),
         navRow({ ic: 'file', text: 'আমার সার্টিফিকেট', sub: 'যা যা অর্জন হয়েছে', onclick: () => ctx.go('/learn/certs') }), navRow({ ic: 'check', text: 'আমার লক্ষ্য', onclick: () => ctx.go('/learn/goals') })),
       h('p', { class: 'de-row__sub gx-note', text: 'অন্য বন্ধুরা শুধু তোমার প্রথম নাম, ক্লাস আর অবতার দেখে। তোমার ছবি, ফোন নম্বর বা ঠিকানা কেউ দেখে না।' }),
       h('p', { class: 'de-row__sub gx-note', text: 'নাম, ক্লাস বা ছবি বদলাতে চাইলে অফিসে বলো।' }), callOfficeButton('অফিসে ফোন করো'));
