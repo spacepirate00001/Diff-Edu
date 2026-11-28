@@ -362,3 +362,4 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .chips--scroll > *, .inbox-chips .chips > * { flex: none; white-space: nowrap; scroll-snap-align: start; }
 .inbox-chips { margin-inline: calc(-1 * var(--de-s4)); }
 .inbox-chips .chips { margin-inline: 0; }
+.licenses-pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; padding: var(--de-s3); background: var(--de-raised); border-radius: var(--de-r-lg); }

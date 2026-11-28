@@ -31,7 +31,7 @@ export const ROUTES = [
   { path: '/welcome', public: true }, { path: '/login', public: true }, { path: '/admission', public: true },
   { path: '/pin-set', gate: true }, { path: '/consent', gate: true, roles: ['guardian'] },
   { path: '/inbox' }, { path: '/inbox/:id' }, { path: '/search' },
-  { path: '/more/display' }, { path: '/more/pin' }, { path: '/more/privacy', roles: ['guardian'] }, { path: '/more/pending' }, { path: '/more/help' },
+  { path: '/more/display' }, { path: '/more/pin' }, { path: '/more/privacy', roles: ['guardian'] }, { path: '/more/pending' }, { path: '/more/help' }, { path: '/more/licenses' },
   ...STUDY_PAGES.map(n => ({ path: '/study/' + n, roles: ['guardian'] })),
   { path: '/more/fees', roles: ['guardian'] }, { path: '/more/profile', roles: ['guardian'] },
   { path: '/contact/chat', roles: ['guardian'] }, { path: '/contact/friends', roles: ['guardian'] },

@@ -63,7 +63,7 @@ export function makeHud({ hearts = 0, maxTime = 60, bar: showBar = true } = {}) 
     set({ time, text, hearts: hl, combo: cb }) {
       if (time != null) { fill.style.width = Math.max(0, Math.min(100, time / maxTime * 100)) + '%'; bar.classList.toggle('is-low', time < maxTime * 0.2); }
       if (text != null) info.textContent = text;
-      if (hl != null) lives.replaceChildren(...Array.from({ length: Math.max(0, hl) }, () => aicon('heart')), ...Array.from({ length: Math.max(0, hearts - hl) }, () => aicon('heartoff')));
+      if (hl != null) lives.replaceChildren(...Array.from({ length: Math.max(0, hl) }, () => aicon('heart')), ...Array.from({ length: Math.max(0, hearts - hl) }, () => aicon('heart', 'ai--dim')));
       if (cb != null) { const t = cb >= 3 ? `${bn(cb)} কম্বো!` : ''; if (t !== combo.textContent) { combo.replaceChildren(...(t ? [aicon('flame', 'ai--live'), t] : [])); combo.classList.remove('pop'); if (t) { void combo.offsetWidth; combo.classList.add('pop'); } } }
     },
   };

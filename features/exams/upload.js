@@ -43,11 +43,13 @@ export function uploadPage(ctx) {
     if (v.errors.class_level) toast(v.errors.class_level);
     if (!v.ok) return;
     busy = true; go.disabled = true; go.textContent = 'জমা হচ্ছে…';
-    const r = await submitSource({ kind, title: title.input.value, class_level: level, subject_id: subject, text: text.input.value, file }, (n, t) => { go.textContent = `জমা হচ্ছে… ${bn(n)}/${bn(t)}`; });
+    const r = await submitSource({ kind, title: title.input.value, class_level: level, subject_id: subject, text: text.input.value, file }, (n, t) => { go.textContent = t > 1 ? `জমা হচ্ছে… ${bn(n)}/${bn(t)} অংশ` : 'জমা হচ্ছে…'; });
     busy = false; go.disabled = false; go.textContent = 'জমা দিন';
     if (r.state === 'duplicate') return toast('এই ফাইল বা লেখা আগেই দেওয়া হয়েছে। নিচের তালিকা দেখুন।');
     if (r.state === 'offline') return saveBar.show('failed', { text: 'নেট নেই। ফাইল যায়নি, নেট এলে আবার দিন।', onRetry: () => go.click() });
-    if (r.state !== 'ok') return saveBar.show('failed', { text: 'জমা হয়নি। আবার চেষ্টা করুন।', onRetry: () => go.click() });
+    if (r.state === 'nolib') return saveBar.show('failed', { text: 'PDF কাটার অংশ লোড হয়নি। নেট দেখে আবার চেষ্টা করুন।', onRetry: () => go.click() });
+    if (r.state === 'bigpage') return saveBar.show('failed', { text: 'PDF-এর একটা পাতাই খুব বড়। ফাইলটা ছোট করে দিন।' });
+    if (r.state !== 'ok') return saveBar.show('failed', { text: 'সব অংশ যায়নি। "জমা দিন" আবার চাপুন, যেখানে থেমেছিল সেখান থেকে চলবে।', onRetry: () => go.click() });
     saveBar.show('saved', { text: 'জমা হয়েছে। AI প্রশ্ন বানাচ্ছে।' });
     title.input.value = ''; text.input.value = ''; fileIn.value = ''; file = null; fileInfo.textContent = ''; ackBox.checked = false; ack = false;
     polls = 0; list?.reload(); work();
@@ -81,7 +83,7 @@ export function uploadPage(ctx) {
     h('p', { class: 'tc-sub', text: 'পাতার PDF, ছবি বা লেখা দিন। AI প্রশ্ন বের করবে। আপনি দেখে "হ্যাঁ" না বললে কোনো প্রশ্ন শিক্ষার্থীর কাছে যাবে না।' }),
     modeBox, lvBox, subBox, title.el, fileBox, text.el,
     h('label', { class: 'tc-ack', for: 'ack' }, ackBox, h('span', { text: 'এই উৎসে কোনো শিক্ষার্থীর নাম, ছবি বা ব্যক্তিগত তথ্য নেই।' })), ackErr, go), list.node);
-  fileBox.append(h('p', { class: 'tc-cap', text: 'একটা PDF বা ছবি, সর্বোচ্চ ১২ MB। বড় হলে কয়েক পাতা করে আলাদা দিন।' }));
+  fileBox.append(h('p', { class: 'tc-cap', text: 'একটা PDF (২০০ MB পর্যন্ত) বা ছবি। বড় PDF নিজে নিজেই ছোট ছোট অংশে ভেঙে একে একে জমা হবে, আপনাকে কিছু করতে হবে না।' }));
   text.el.hidden = true;
   return { node: root, destroy() { dead = true; list?.destroy(); } };
 }

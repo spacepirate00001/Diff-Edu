@@ -105,7 +105,7 @@ session.onExpired(() => { returnTo = router.here().path; toast('আবার ল
 // ---- showing a page ----
 function teardown() { try { page?.destroy?.(); } catch { /* ignore */ } page = null; if (shell) { shell.destroy(); shell = null; } view = null; }
 function finishBoot() { document.documentElement.classList.add('booted'); const sp = document.getElementById('splash'); if (sp) { sp.classList.add('is-leaving'); setTimeout(() => sp.remove(), 200); } }
-const TITLES = { '/inbox': 'ইনবক্স', '/more/display': 'থিম ও লেখার সাইজ', '/more/help': 'সাহায্য', '/more/pending': 'আরও' };
+const TITLES = { '/inbox': 'ইনবক্স', '/more/display': 'থিম ও লেখার সাইজ', '/more/help': 'সাহায্য', '/more/licenses': 'ওপেন-সোর্স লাইসেন্স', '/more/pending': 'আরও' };
 
 async function build(d) {
   const R = d.route.path, role = me()?.role;
@@ -132,6 +132,7 @@ async function build(d) {
     case '/contact/friends': return { mode: 'shell', tab: 'inbox', title: 'বন্ধুদের সাথে চ্যাট', back: true, result: (await import('./features/contact/friends.js')).friendsPage(ctx) };
     case '/more/push': return { mode: 'shell', tab: 'more', title: 'ফোনে খবর', back: true, result: (await import('./features/more/push.js')).pushPage(ctx) };
     case '/more/display': return { mode: 'shell', tab: 'more', title: TITLES[R], back: true, result: (await import('./features/more/display.js')).displayPage() };
+    case '/more/licenses': return { mode: 'shell', tab: 'more', title: TITLES[R], back: true, result: (await import('./features/more/licenses.js')).licensesPage() };
     case '/more/help': return { mode: 'shell', tab: 'more', title: TITLES[R], back: true, result: (await import('./features/more/help.js')).helpPage() };
     case '/more/pending': {
       const mod = await import(`./roles/${role}.js`);
