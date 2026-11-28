@@ -107,7 +107,7 @@ html.booted .boot-fail:not(.show) { display: none; }
 .pin-wrap .de-pindots { padding-top: var(--de-s2); }
 .pin-wrap .de-pindots__dot { width: 16px; height: 16px; }
 .pin-wrap .de-pinpad { gap: var(--de-s3); }
-.pin-wrap .de-pinpad__key { min-height: 56px; font: var(--de-display); font-size: 24px; line-height: 32px; }
+.pin-wrap .de-pinpad__key { min-height: 56px; font: var(--de-display); font-size: 24px; line-height: 1.333; }
 .pin-wrap .de-pinpad__key--go, .pin-wrap .de-pinpad__key[aria-label="শেষ সংখ্যা মুছুন"] { font: var(--de-label); }
 .pin-wrap .de-pinpad__key:disabled { opacity: 0.55; cursor: not-allowed; }
 :root[data-text="large"] .pin-wrap .de-pinpad__key { min-height: 68px; }
@@ -150,7 +150,7 @@ html.booted .boot-fail:not(.show) { display: none; }
 .size-pick { flex-direction: column; align-items: flex-start; gap: var(--de-s1); min-height: 72px; padding: var(--de-s3) var(--de-s4); text-align: start; }
 .size-pick span { font: var(--de-body); }
 .size-pick--big { font-size: 20px; }
-.size-pick--big span { font-size: 20px; line-height: 30px; }
+.size-pick--big span { font-size: 20px; line-height: 1.5; }
 
 /* ---- fields in cream pages ---- */
 .admission-form { display: flex; flex-direction: column; gap: var(--de-s3); }
@@ -345,3 +345,20 @@ h2.de-row__title, h3.de-row__title { font: var(--de-heading); color: var(--de-in
 button.de-msg { border: 0; cursor: pointer; text-align: start; min-height: var(--de-touch); font-family: inherit; }
 .de-ask__body { display: contents; }
 .contact-top { display: flex; flex-direction: column; gap: var(--de-s2); }
+
+/* ---- Robust layout: any phone width, any system font size (Android "font size" makes px text bigger, so nothing here may depend on a fixed height) ---- */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+.de-appbar__title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.de-appbar__sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.de-row__title, .de-row__sub { overflow-wrap: anywhere; }
+.de-row > .de-chip, .de-row > .de-icon, .more-ic, .inbox-ic, .de-avatar { flex: none; }
+.de-row > .de-icon:last-child { align-self: center; }
+.de-bottomnav__item { min-width: 0; padding-inline: 2px; }
+.de-bottomnav__item { font-size: min(12px, 3.3vw); }
+.de-bottomnav__item > span:not(.de-bottomnav__badge) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* filter chips: one line that scrolls sideways instead of wrapping into a tall block */
+.chips--scroll, .inbox-chips .chips { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding-inline: var(--de-s4); scrollbar-width: none; padding-block: 2px; margin-inline: calc(-1 * var(--de-s4)); padding-inline: var(--de-s4); }
+.chips--scroll::-webkit-scrollbar, .inbox-chips .chips::-webkit-scrollbar { display: none; }
+.chips--scroll > *, .inbox-chips .chips > * { flex: none; white-space: nowrap; scroll-snap-align: start; }
+.inbox-chips { margin-inline: calc(-1 * var(--de-s4)); }
+.inbox-chips .chips { margin-inline: 0; }

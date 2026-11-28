@@ -31,7 +31,7 @@
 .st-tile.is-on { border-color: var(--de-brand-text); background: var(--de-brand-soft); }
 .st-tile:active { background: var(--de-press); }
 .st-tile:focus-visible, .st-opt:focus-visible, .st-card:focus-visible { outline: var(--de-focus) solid var(--de-ring); outline-offset: 2px; }
-.st-tile__e { font-size: 30px; line-height: 36px; color: var(--de-brand-text); }
+.st-tile__e { font-size: 30px; line-height: 1.2; color: var(--de-brand-text); }
 .st-tile__e .de-icon { width: 32px; height: 32px; }
 .st-tile__t { font: var(--de-heading); overflow-wrap: anywhere; }
 .st-tile__s { font: var(--de-caption); color: var(--de-ink-muted); overflow-wrap: anywhere; }
@@ -65,8 +65,8 @@
 /* decor stage and profile */
 .st-stage { align-items: center; text-align: center; gap: var(--de-s2); min-height: 150px; justify-content: center; }
 .st-stage[data-frame] { border-width: 3px; }
-.st-stage__m { font-size: 64px; line-height: 72px; }
-.st-stage__s { font-size: 26px; line-height: 32px; min-height: 32px; }
+.st-stage__m { font-size: 64px; line-height: 1.125; }
+.st-stage__s { font-size: 26px; line-height: 1.231; min-height: 32px; }
 .st-who { align-items: center; text-align: center; gap: var(--de-s2); }
 .st-who__av { width: 88px; height: 88px; font-size: 44px; }
 .st-who__n { font: var(--de-title); color: var(--de-ink); }
@@ -115,7 +115,7 @@
 .gm-dots i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--de-line-ui); }
 .gm-dots i.is-on { background: var(--de-good-solid); border-color: var(--de-good-solid); }
 .gm-best { color: var(--de-brand-text); }
-.st-card--w { font-size: 15px; line-height: 20px; padding: 4px; overflow-wrap: anywhere; }
+.st-card--w { font-size: 15px; line-height: 1.333; padding: 4px; overflow-wrap: anywhere; }
 .gm-shake { animation: gm-shake 0.3s; }
 @keyframes gm-pop { 0% { transform: scale(0.6); opacity: 0.2; } 60% { transform: scale(1.25); } 100% { transform: scale(1); opacity: 1; } }
 @keyframes gm-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
@@ -123,7 +123,7 @@
 
 /* shop, monsters, number merge, word detective */
 .gm-cust { display: flex; align-items: center; gap: var(--de-s3); }
-.gm-face { font-size: 44px; line-height: 52px; }
+.gm-face { font-size: 44px; line-height: 1.182; }
 .gm-order .gm-total { font-weight: 700; }
 .gm-tray { display: flex; flex-wrap: wrap; gap: var(--de-s2); min-height: 48px; align-items: center; padding: var(--de-s2); border: 2px dashed var(--de-line-ui); border-radius: var(--de-r-md); }
 .gm-denoms { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: var(--de-s2); }
@@ -133,7 +133,7 @@
 .gm-denom:active { background: var(--de-press); }
 .gm-denom:focus-visible { outline: var(--de-focus) solid var(--de-ring); outline-offset: 2px; }
 .gm-arena { align-items: center; text-align: center; gap: var(--de-s2); }
-.gm-mon { font-size: 88px; line-height: 100px; }
+.gm-mon { font-size: 88px; line-height: 1.136; }
 .gm-mon.is-hit { animation: gm-shake 0.35s; filter: drop-shadow(0 0 8px var(--de-bad-solid)); }
 .gm-hp { width: 100%; }
 .gm-hp > i { background: var(--de-bad-solid); }
