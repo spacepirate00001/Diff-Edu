@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { fitSize, sayError, byline, MAX_SIDE } from './logic.js';
+assert.deepEqual(fitSize(4000, 2000), { w: MAX_SIDE, h: 540 });
+assert.deepEqual(fitSize(800, 600), { w: 800, h: 600 });
+assert.deepEqual(fitSize(0, 5), { w: 0, h: 0 });
+assert.match(sayError('too_many_waiting'), /তিনটা/);
+assert.match(sayError('too_many_today'), /পাঁচটা/);
+assert.match(sayError('weird'), /একটু পরে/);
+assert.equal(byline('রিয়া', 8, x => x), 'রিয়া · ক্লাস 8');
+assert.equal(byline('রিয়া', null, x => x), 'রিয়া');
+console.log('memes logic ok');

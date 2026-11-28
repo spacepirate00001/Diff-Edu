@@ -38,6 +38,6 @@ export const ROLE_BN = { guardian: 'অভিভাবক', student: 'শিক�
 export const MORE_GROUPS = {
   guardian: [{ title: 'ফি ও বার্তা', ids: ['g_fees', 'g_director'] }, { title: 'পড়ালেখার আরও', ids: ['g_goals', 'g_certs', 'g_videos', 'g_materials'] }],
   student: [{ title: 'অগ্রগতি', ids: ['s_report', 's_ratings', 's_goals', 's_certs'] }, { title: 'খবর ও প্রোফাইল', ids: ['s_notices', 's_profile'] }],
-  teacher: [{ title: 'শিক্ষার্থী', ids: ['t_find', 't_risk', 't_batch', 't_meet'] }, { title: 'অটোমেশন', ids: ['t_auto'] }, { title: 'পরীক্ষা ও রিপোর্ট', ids: ['t_marks', 't_cards', 't_routine', 't_plans', 't_qupload', 't_qapprove', 't_qbank', 't_paper', 't_aipaper', 't_seat'] }, { title: 'আমার কাজ', ids: ['t_me', 't_honor', 't_leave', 't_requests'] }],
-  admin: [{ title: 'পরীক্ষা ও রিপোর্ট', ids: ['a_exams', 'a_reports'] }, { title: 'মানুষ ও নিয়ম', ids: ['a_people', 'a_control', 'a_strings', 'a_history'] }],
+  teacher: [{ title: 'শিক্ষার্থী', ids: ['t_find', 't_risk', 't_batch', 't_meet'] }, { title: 'অটোমেশন', ids: ['t_auto'] }, { title: 'পরীক্ষা ও রিপোর্ট', ids: ['t_marks', 't_cards', 't_routine', 't_plans', 't_qupload', 't_qapprove', 't_qbank', 't_paper', 't_aipaper', 't_memes', 't_seat'] }, { title: 'আমার কাজ', ids: ['t_me', 't_honor', 't_leave', 't_requests'] }],
+  admin: [{ title: 'পরীক্ষা ও রিপোর্ট', ids: ['a_exams', 'a_reports', 't_memes'] }, { title: 'মানুষ ও নিয়ম', ids: ['a_people', 'a_control', 'a_strings', 'a_history'] }],
 };
