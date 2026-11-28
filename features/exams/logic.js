@@ -75,7 +75,7 @@ export const KIND_BN = { pdf: 'PDF', image: 'ছবি', text: 'লেখা', d
 export const TEXT_MAX = 100000;            // source_jobs.text_body limit
 export const FILE_MAX = 12 * 1024 * 1024;  // a photo or text file goes up as ONE part; a PDF is cut in the browser, so it can be bigger (PDF_MAX)
 export const PDF_CHUNK = 3, PDF_KEEP = 12 * 1024 * 1024;   // pages per piece (1 page overlap); a piece over PDF_KEEP is retried as 2, then 1 page
-export const PDF_MAX = 60 * 1024 * 1024;
+export const PDF_MAX = 200 * 1024 * 1024;
 // 1-based inclusive page ranges from..to of up to `size` pages; a range shares its last page with the next (size 1: none). 25 pages -> 1-3, 3-5, ..., 23-25.
 export function planRanges(from, to, size = PDF_CHUNK) {
   const out = [], step = size > 1 ? size - 1 : 1;
@@ -116,7 +116,7 @@ export function validateUpload({ kind, class_level, title, text, file, ack }) {
   else if (!file) errors.file = 'ফাইল বেছে নিন';
   else if (!kindOfFile(file)) errors.file = 'PDF, ছবি বা .txt ফাইল দিন';
   else if (kindOfFile(file) === 'docx') errors.file = 'ওয়ার্ড ফাইল এখনো চলে না: লেখা কপি করে পেস্ট করুন বা PDF করে দিন';
-  else if (kindOfFile(file) === 'pdf' ? file.size > PDF_MAX : file.size > FILE_MAX) errors.file = kindOfFile(file) === 'pdf' ? 'PDF ৬০ MB-এর বেশি। দুই ভাগ করে দিন' : 'ছবি বা ফাইল ১২ MB-এর বেশি। ছোট করে দিন';
+  else if (kindOfFile(file) === 'pdf' ? file.size > PDF_MAX : file.size > FILE_MAX) errors.file = kindOfFile(file) === 'pdf' ? 'PDF ২০০ MB-এর বেশি। দুই ভাগ করে দিন' : 'ছবি বা ফাইল ১২ MB-এর বেশি। ছোট করে দিন';
   if (!ack) errors.ack = 'শিক্ষার্থীর ব্যক্তিগত তথ্য নেই, এটা মেনে নিন';
   return { ok: !Object.keys(errors).length, errors };
 }
