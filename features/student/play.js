@@ -133,36 +133,8 @@ export function teamsPage() {
   return { node: root, destroy() { dead = true; } };
 }
 
-// ---- points shop (the live app's stars -> avatar shop, fun.sql buy_item / equip_item) ----
-export function shopPage() {
-  const root = h('div', { class: 'st-page' });
-  let dead = false;
-  const draw = async () => {
-    const rec = await me();
-    if (!rec) return root.replaceChildren(noRecState());
-    const rr = await sel('student_rewards', `select=stars,owned,avatar&student_id=eq.${rec.id}`);
-    if (dead) return;
-    if (rr.kind !== 'ok') return root.replaceChildren(stateCard({ kind: rr.kind === 'offline' ? 'offline' : 'error', title: rr.kind === 'offline' ? 'ইশ, নেট হারিয়ে গেছে' : 'ইশ, তথ্য আনা যায়নি', text: 'আবার চেষ্টা করো।', action: 'আবার চেষ্টা করো', onAction: draw }));
-    const w = rows(rr)[0] || { stars: 0, owned: [] }, owned = new Set(w.owned || []);
-    self.patch({ stars: w.stars, owned: w.owned || [], avatar: w.avatar || null });
-    const buy = async item => {
-      if (!canAfford(w.stars, item[0])) return toast(`আর ${bn(item[4] - w.stars)}টা স্টার হলে এটা পাবে। কুইজ খেলে স্টার জমাও!`);
-      if (!await confirmBox({ title: 'কিনবে?', text: `${item[2]} ${item[3]} · ${bn(item[4])} স্টার`, ok: 'কিনে নাও', cancel: 'না, থাক' })) return;
-      const r = await rpc('buy_item', { p_student_id: rec.id, p_item: item[0] });
-      if (r.kind !== 'ok') return toast(/not enough/.test(msgOf(r)) ? 'যথেষ্ট স্টার নেই।' : 'এখন হলো না, একটু পরে আবার চেষ্টা করো।');
-      await equip(item[0]);
-    };
-    const equip = async key => {
-      const off = w.avatar === key, r = await rpc('equip_item', { p_student_id: rec.id, p_slot: 'avatar', p_item: off ? null : key });
-      toast(r.kind === 'ok' ? 'হয়ে গেছে!' : 'এখন হলো না, আবার চেষ্টা করো।'); draw();
-    };
-    root.replaceChildren(h('section', { class: 'de-card st-prog' }, h('span', { class: 'de-row__sub', text: 'তোমার স্টার' }), h('span', { class: 'st-prog__n' }, icon('star'), h('b', { text: bn(w.stars) }), h('span', { text: 'স্টার' }))),
-      section('অবতার'), tiles(SHOP.map(it => ({ e: it[2], title: it[3], sub: w.avatar === it[0] ? 'ব্যবহার হচ্ছে' : owned.has(it[0]) ? 'চাপলে ব্যবহার করো' : `${bn(it[4])} স্টার`, on: w.avatar === it[0], onclick: () => (owned.has(it[0]) ? equip(it[0]) : buy(it)) }))),
-      h('p', { class: 'de-row__sub gx-note', text: 'অবতার শুধু তুমি আর তোমার বন্ধুরা প্রোফাইলে দেখে। স্টার পাওয়া যায় কুইজ আর খেলায়।' }));
-  };
-  root.append(loading(2)); draw();
-  return { node: root, destroy() { dead = true; } };
-}
+// ---- points shop: moved to shop.js ----
+export { shopPage } from './shop.js';
 
 // ---- decor (45): place the mascot, frame, backdrop and up to 6 stickers the office gave ----
 export function decorPage() {
