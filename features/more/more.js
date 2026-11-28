@@ -43,6 +43,7 @@ export function moreTab(ctx) {
     row({ ic: 'phone', text: 'অফিসে ফোন করুন', sub: OFFICE_PHONE_BN, href: 'tel:' + OFFICE_PHONE }),
     row({ ic: 'chat', text: 'মতামত দিন', sub: 'সমস্যা, পরামর্শ বা ভালো লাগার কথা', onclick: async () => (await import('../feedback/feedback.js')).openFeedback('আরও') }),
     row({ ic: 'help', text: 'সাহায্য', onclick: () => ctx.go('/more/help') }),
+    row({ ic: 'file', text: 'ওপেন-সোর্স লাইসেন্স', sub: 'আইকনের জন্য ধন্যবাদ', onclick: () => ctx.go('/more/licenses') }),
     row({ ic: 'refresh', text: 'অ্যাপ রিফ্রেশ করুন', sub: 'আটকে গেলে এটা চাপুন', onclick: async () => { if (await confirmBox({ title: 'অ্যাপ রিফ্রেশ', text: 'অ্যাপ নতুন করে খুলবে। অফলাইন পেন্ডিং কাজ থেকে যাবে।', ok: 'রিফ্রেশ করুন' })) refreshApp(); } }))));
   root.append(h('button', { class: 'de-btn de-btn--secondary logout-btn', type: 'button', onclick: () => ctx.confirmLogout() }, icon('logout'), 'লগআউট'), h('p', { class: 'more-ver', text: VERSION }));
   return { node: root };

@@ -337,12 +337,17 @@
     requestAnimationFrame(frame);
   }
 
-  // a small gold flame that flickers (replaces the fire emoji); built with createElementNS, no innerHTML
+  // a small flame that flickers (Lucide flame shape, motion from animateicons; MIT, see licenses.txt); createElementNS only
   function flameIcon() {
     var NS = "http://www.w3.org/2000/svg", s = document.createElementNS(NS, "svg"), p = document.createElementNS(NS, "path");
-    s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("class", "ai ai--inline ai--live ai-flame"); s.setAttribute("aria-hidden", "true");
-    p.setAttribute("d", "M12 3c1 3.500 5.500 5.500 5.500 10.500a5.500 5.500 0 0 1-11 0c0-2 1-3.500 2-4.500.200 1.500 1 2.300 1.800 2.500C10 9 10.500 5.500 12 3z");
-    p.setAttribute("class", "s a-flick"); s.appendChild(p); return s;
+    s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("class", "ai ai--inline v7-streak-fire"); s.setAttribute("aria-hidden", "true");
+    s.setAttribute("fill", "none"); s.setAttribute("stroke", "currentColor"); s.setAttribute("stroke-width", "2"); s.setAttribute("stroke-linecap", "round"); s.setAttribute("stroke-linejoin", "round");
+    p.setAttribute("d", "M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4");
+    p.style.transformBox = "view-box"; p.style.transformOrigin = "12px 21px"; s.appendChild(p);
+    if (p.animate && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) p.animate([
+      { transform: "scale(1,1) skewX(0)" }, { transform: "scale(.93,1.08) skewX(-5deg)" }, { transform: "scale(1.04,.95) skewX(4deg)" }, { transform: "scale(.98,1.03) skewX(-2deg)" }, { transform: "scale(1,1) skewX(0)" }
+    ], { duration: 1100, iterations: Infinity, easing: "ease-in-out" });
+    return s;
   }
   function stars(score, max) {
     var on = Math.max(0, Math.min(5, Math.round(score / (max || DEFAULT_MAX) * 5)));
