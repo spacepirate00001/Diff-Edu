@@ -64,6 +64,7 @@ const R = [
   ['t_paper', 'প্রশ্নপত্র বানান', 'প্রশ্নপত্র পেপার question paper exam প্রিন্ট pdf পরীক্ষা তৈরি', 'teacher', 'more', 5, null],
   ['t_aipaper', 'AI প্রশ্নপত্র ও খাতা দেখা', 'এআই প্রশ্নপত্র ai grading', 'teacher', 'more', 5, null],
   ['t_seat', 'সিট প্ল্যান', 'আসন seat plan', 'teacher', 'more', 5, null],
+  ['t_everyone', 'সবাই আজ', 'উপস্থিত অনুপস্থিত সবাই কে এসেছে অ্যাপে আছে এক্টিভ ফোন কল', 'teacher', 'more', 4, null],
   ['t_find', 'শিক্ষার্থী খোঁজা', 'ছাত্র খুঁজুন student search ফোন', 'teacher', 'more', 5, null],
   ['t_risk', 'ঝুঁকিতে থাকা শিক্ষার্থী', 'পিছিয়ে risk', 'teacher', 'more', 5, null],
   ['t_batch', 'ব্যাচ তুলনা', 'ব্যাচ batch compare', 'teacher', 'more', 5, null],
@@ -83,6 +84,7 @@ const R = [
   ['a_feedback', 'মতামত', 'মতামত ফিডব্যাক সমস্যা পরামর্শ feedback', 'admin', 'office', 6, null],
   ['a_accounts', 'নতুন ছাত্র যোগ', 'নতুন ভর্তি পরিবার অ্যাকাউন্ট আইডি পিন টেস্ট account', 'admin', 'office', 6, null],
   ['a_profiles', 'মানুষ ও পিন', 'প্রোফাইল বদলান নাম ফোন পিন রিসেট profile pin', 'admin', 'office', 6, null],
+  ['a_everyone', 'সবাই আজ', 'উপস্থিত অনুপস্থিত সবাই কে এসেছে অ্যাপে আছে এক্টিভ ফোন কল', 'admin', 'office', 6, null],
   ['a_routine', 'রুটিন', 'সময়সূচি routine', 'admin', 'office', 6, null],
   ['a_corr', 'নম্বর সংশোধন', 'অনুরোধ সংশোধন ভুল নম্বর ফোন correction', 'admin', 'office', 6, null],
   ['a_honor', 'সম্মানী', 'বেতন honorarium', 'admin', 'office', 6, null],
@@ -113,7 +115,7 @@ export const LIVE_ROUTES = {
   g_videos: ['/study/materials?kind=video', 'play'], g_materials: ['/study/materials', 'book'], g_fees: ['/more/fees', 'coin'], g_director: ['/inbox?kind=notice', 'user'],
   s_notices: ['/inbox', 'bell'],
   // the teacher's (step 4)
-  t_attend: ['/class/attend', 'check'], t_today_att: ['/class', 'clock'], t_rate: ['/class/rate', 'star'], t_homework: ['/class/homework', 'book'], t_find: ['/class/students', 'search'],
+  t_attend: ['/class/attend', 'check'], t_today_att: ['/class', 'clock'], t_rate: ['/class/rate', 'star'], t_homework: ['/class/homework', 'book'], t_find: ['/class/students', 'search'], t_everyone: ['/class/all', 'people'], a_everyone: ['/office/all', 'people'],
   t_chat: ['/contact/guardians', 'chat'], t_doubts: ['/contact/doubts', 'help'], t_notice: ['/contact/notice', 'bell'], t_auto: ['/more/automation', 'info'], t_me: ['/more/me', 'user'],
   // the teacher's exam work (step 5)
   t_marks: ['/more/marks', 'exam'], t_cards: ['/more/cards', 'file'], t_qupload: ['/more/upload', 'up'], t_qapprove: ['/more/approve', 'check'], t_qbank: ['/more/qbank', 'book'], t_paper: ['/more/paper', 'file'],

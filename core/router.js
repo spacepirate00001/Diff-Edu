@@ -8,13 +8,13 @@ export const STUDY_PAGES = ['report', 'results', 'att', 'homework', 'routine', '
 export const LEARN_PAGES = ['syllabus', 'materials', 'quiz', 'mistakes', 'practice', 'revision', 'exams', 'results', 'report', 'homework', 'merit', 'ratings', 'goals', 'certs', 'flash', 'doubts', 'focus', 'diffy'];
 export const PLAY_PAGES = ['tournament', 'teams', 'games', 'board', 'shop', 'decor', 'chat', 'duel', 'memes'];
 // The teacher's pages (step 4). /class/* under "ক্লাস", /contact/* under "যোগাযোগ", /more/automation and /more/me under "আরও". One word list, tests read it.
-export const CLASS_PAGES = ['attend', 'rate', 'homework', 'students'];
+export const CLASS_PAGES = ['attend', 'rate', 'homework', 'students', 'all'];
 export const CONTACT_PAGES = ['guardians', 'doubts', 'notice'];
 export const TEACHER_MORE = ['automation', 'me'];
 // Step 5: the teacher's exam work under "আরও" (features/exams/route.js). marks and approve also open one item: /more/marks/:id, /more/approve/:id.
 export const EXAM_PAGES = ['marks', 'upload', 'approve', 'qbank', 'cards', 'paper'];
 // Step 6: the admin's office pages under "অফিস" (features/office/route.js); the teacher's honorarium is /more/honorarium.
-export const OFFICE_PAGES = ['fees', 'admissions', 'notices', 'honorarium', 'family', 'feedback', 'people', 'corrections', 'routine'];
+export const OFFICE_PAGES = ['fees', 'admissions', 'notices', 'honorarium', 'family', 'feedback', 'people', 'corrections', 'routine', 'all'];
 export const PUBLIC = ['/welcome', '/login', '/admission'];
 export const GATE = ['/pin-set', '/consent'];
 

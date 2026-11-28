@@ -96,6 +96,7 @@ export function createFake(params, { now = () => Date.now() } = {}) {
       const name = t.replace('rpc/', '');
       if (acc.role === 'student') { const r = sd.rpc(name, body); if (r) return r; }
       if (acc.role === 'teacher') { const r = ed.rpc(name, body) || td.rpc(name, body); if (r) return r; }
+      if (acc.role === 'admin' && ['attendance_today', 'students_presence'].includes(name)) { const r = td.rpc(name, body); if (r) return r; }
       if (acc.role === 'admin') { const r = od.rpc(name, body, acc); if (r) return r; }
       switch (name) {
         case 'my_features': return ok(['attendance', 'ratings', 'reports', 'fees', 'notices', 'chat', 'games', 'battles', 'decor', 'tournament'].map(key => ({ key, tier: 'core' })));
@@ -140,6 +141,7 @@ export function createFake(params, { now = () => Date.now() } = {}) {
     if (route === '/functions/v1/admin-users') return acc.role === 'admin' ? (body?.student?.login_id === 'taken' ? ok({ error: 'student login_id already exists' }, 400) : ok({ ok: true, student_id: 'fk-new', guardian_existed: false })) : ok({ message: 'admin only' }, 403);
     if (route.startsWith('/functions/v1/')) { const g = gd.fn(route.replace('/functions/v1/', ''), body); return g || ok({ message: 'function not found' }, 404); }
     const tname = t.split('?')[0];
+    if (acc.role === 'admin' && ['students', 'batches', 'student_batches'].includes(tname)) { const g = td.table(tname, q, method, body); if (g) return g; }
     if (acc.role === 'teacher') { const g = ed.table(tname, q, method, body) || od.table(tname, q, method, body, acc) || td.table(tname, q, method, body); if (g) return g; }
     if (acc.role === 'admin') { const g = od.table(tname, q, method, body, acc); if (g) return g; }
     if (acc.role === 'student' && tname !== 'fees') { const g = sd.table(tname, q, method, body) || gd.table(tname, q); if (g) return g; }

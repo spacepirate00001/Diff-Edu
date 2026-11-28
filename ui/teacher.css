@@ -123,3 +123,19 @@
 .pp-head[open] > summary { margin-bottom: var(--de-s2); }
 .tc-card.is-picked { border-inline-start: 4px solid var(--de-good-solid, var(--de-brand)); }
 .pp-q { flex-direction: column; flex-wrap: nowrap; }
+
+/* সবাই আজ (features/teacher/everyone.js) */
+.ev-row { align-items: center; }
+.ev-main { display: flex; align-items: center; gap: var(--de-s3); flex: 1; min-width: 0; padding: var(--de-s2) 0; }
+.ev-call { color: var(--de-brand-text); }
+.ev-app { display: inline-flex; align-items: center; gap: 6px; font: var(--de-caption); color: var(--de-ink-muted); }
+.ev-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--de-line); flex: none; }
+.ev-app--live { color: var(--de-good-text, var(--de-ink)); font-weight: 600; }
+.ev-app--live .ev-dot { background: var(--de-good-solid, #1a9a55); animation: ev-pulse 1.6s ease-out infinite; }
+.ev-app--today .ev-dot { background: var(--de-warn-solid, #d99a1e); }
+@keyframes ev-pulse { 0% { box-shadow: 0 0 0 0 rgba(26, 154, 85, .5); } 100% { box-shadow: 0 0 0 8px rgba(26, 154, 85, 0); } }
+@media (prefers-reduced-motion: reduce) { .ev-app--live .ev-dot { animation: none; } }
+.ev-row.is-away .tc-att__name b { text-decoration: none; }
+.ev-row .tc-att__name { flex: 1 1 auto; min-width: 0; }
+.ev-row .tc-att__chip { flex: none; white-space: nowrap; padding-inline: var(--de-s2); font-size: .8125rem; }
+.ev-row .ev-call { flex: none; }
