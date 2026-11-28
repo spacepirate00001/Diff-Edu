@@ -1,6 +1,7 @@
 // Game feel for the learning games: tiny sounds (WebAudio, no files), vibration, confetti, a top bar (time, hearts, combo), and the player's own bests, streak
 // and daily mission. Bests, streak and mission are kept on this phone only (the server keeps the points). Sound and vibration can be switched off.
 import { h } from '../../ui/dom.js';
+import { aicon } from '../../ui/aicons.js';
 import { bn, dhakaDay } from '../../core/bn.js';
 import { addDays } from './logic.js';
 
@@ -53,15 +54,17 @@ export function confetti() {
 // ---- the top bar: a draining time bar, hearts, a combo line ----
 export function makeHud({ hearts = 0, maxTime = 60, bar: showBar = true } = {}) {
   const info = h('span', { class: 'gm-info' }), lives = h('span', { class: 'gm-hearts', 'aria-hidden': 'true' }), fill = h('i'), bar = h('div', { class: 'gm-bar', role: 'presentation' }, fill), combo = h('div', { class: 'gm-combo', 'aria-live': 'polite' });
-  const snd = h('button', { class: 'de-btn de-btn--text gm-snd', type: 'button', 'aria-label': 'শব্দ আর ভাইব্রেশন চালু বা বন্ধ', text: fx.on ? '🔊' : '🔇', onclick: () => { fx.set(!fx.on); snd.textContent = fx.on ? '🔊' : '🔇'; } });
+  const snd = h('button', { class: 'de-btn de-btn--text gm-snd', type: 'button', 'aria-label': 'শব্দ আর ভাইব্রেশন চালু বা বন্ধ', onclick: () => { fx.set(!fx.on); paintSnd(); } });
+  const paintSnd = () => snd.replaceChildren(aicon(fx.on ? 'sound' : 'mute'));
+  paintSnd();
   const el = h('div', { class: 'gm-top' }, h('div', { class: 'gm-hud' }, info, lives, snd), showBar ? bar : null, combo);
   return {
     el,
     set({ time, text, hearts: hl, combo: cb }) {
       if (time != null) { fill.style.width = Math.max(0, Math.min(100, time / maxTime * 100)) + '%'; bar.classList.toggle('is-low', time < maxTime * 0.2); }
       if (text != null) info.textContent = text;
-      if (hl != null) lives.textContent = '❤️'.repeat(Math.max(0, hl)) + '🤍'.repeat(Math.max(0, hearts - hl));
-      if (cb != null) { const t = cb >= 3 ? `🔥 ${bn(cb)} কম্বো!` : ''; if (t !== combo.textContent) { combo.textContent = t; combo.classList.remove('pop'); if (t) { void combo.offsetWidth; combo.classList.add('pop'); } } }
+      if (hl != null) lives.replaceChildren(...Array.from({ length: Math.max(0, hl) }, () => aicon('heart')), ...Array.from({ length: Math.max(0, hearts - hl) }, () => aicon('heartoff')));
+      if (cb != null) { const t = cb >= 3 ? `${bn(cb)} কম্বো!` : ''; if (t !== combo.textContent) { combo.replaceChildren(...(t ? [aicon('flame', 'ai--live'), t] : [])); combo.classList.remove('pop'); if (t) { void combo.offsetWidth; combo.classList.add('pop'); } } }
     },
   };
 }

@@ -26,10 +26,10 @@ export function playTab(ctx) {
   const root = h('div', { class: 'st-page' }), body = h('div', { class: 'st-page' });
   root.append(body);
   const list = [
-    ['s_quiz', { e: '🧠', title: 'কুইজ', sub: 'শেখো, স্টার পাও', route: '/learn/quiz' }], ['s_games', { e: '🎮', title: 'শেখার খেলা', sub: 'গণিত, শব্দ, বানান', route: '/play/games' }],
-    ['s_challenge', { e: '🏆', title: 'সাপ্তাহিক টুর্নামেন্ট', sub: 'এই সপ্তাহের চ্যালেঞ্জ', route: '/play/tournament' }], ['s_teams', { e: '👥', title: 'দল ও লড়াই', sub: 'ক্লাসের বন্ধুদের নিয়ে', route: '/play/teams' }],
-    ['s_duel', { e: '⚔️', title: 'কুইজ ডুয়েল', sub: 'বন্ধুর সাথে টক্কর দাও', route: '/play/duel' }], ['s_board', { e: '📊', title: 'ক্লাসের তালিকা', sub: 'কার কত স্টার', route: '/play/board' }], ['s_shop', { e: '🛍️', title: 'পয়েন্টের দোকান', sub: 'স্টার দিয়ে অবতার', route: '/play/shop' }],
-    ['s_decor', { e: '🎨', title: 'সাজঘর', sub: 'মাসকট ও স্টিকার', route: '/play/decor' }], ['s_chat', { e: '💬', title: 'বন্ধুদের সাথে চ্যাট', sub: 'তৈরি বাক্য আর স্টিকার', route: '/play/chat' }],
+    ['s_quiz', { ai: 'bulb', title: 'কুইজ', sub: 'শেখো, স্টার পাও', route: '/learn/quiz' }], ['s_games', { ai: 'pad', title: 'শেখার খেলা', sub: 'গণিত, শব্দ, বানান', route: '/play/games' }],
+    ['s_challenge', { ai: 'trophy', title: 'সাপ্তাহিক টুর্নামেন্ট', sub: 'এই সপ্তাহের চ্যালেঞ্জ', route: '/play/tournament' }], ['s_teams', { ai: 'people', title: 'দল ও লড়াই', sub: 'ক্লাসের বন্ধুদের নিয়ে', route: '/play/teams' }],
+    ['s_duel', { ai: 'swords', title: 'কুইজ ডুয়েল', sub: 'বন্ধুর সাথে টক্কর দাও', route: '/play/duel' }], ['s_board', { ai: 'chart', title: 'ক্লাসের তালিকা', sub: 'কার কত স্টার', route: '/play/board' }], ['s_shop', { ai: 'bag', title: 'পয়েন্টের দোকান', sub: 'স্টার দিয়ে অবতার', route: '/play/shop' }],
+    ['s_decor', { ai: 'palette', title: 'সাজঘর', sub: 'মাসকট ও স্টিকার', route: '/play/decor' }], ['s_chat', { ai: 'chat', title: 'বন্ধুদের সাথে চ্যাট', sub: 'তৈরি বাক্য আর স্টিকার', route: '/play/chat' }],
   ].filter(([id]) => visible(byId[id], features)).map(([, t]) => ({ ...t, onclick: () => ctx.go(t.route) }));
   body.append(loading(2));
   let dead = false;
