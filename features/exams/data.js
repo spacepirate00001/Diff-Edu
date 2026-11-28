@@ -136,6 +136,10 @@ export async function callApprove(call) {
   const r = await rpc(call.name, call.args);
   return r.kind === 'ok' ? { state: 'ok', result: r.data } : { state: outcome(r) };
 }
+// After an upload: the AI names the chapter of questions that have no usable one (new function; any failure just leaves the old label). -> true when something changed
+export async function classifyChapters(sourceId) {
+  try { const r = await fn('classify-chapters', { source_id: sourceId }, true); return r.kind === 'ok' && Number(r.data?.updated) > 0; } catch { return false; }
+}
 export async function patchItem(id, patch) {
   const r = await request('PATCH', `/rest/v1/source_items?id=eq.${id}&status=eq.pending&select=id`, patch, { prefer: 'return=representation' });
   return r.kind === 'ok' && Array.isArray(r.data) && r.data.length ? 'ok' : outcome(r);
