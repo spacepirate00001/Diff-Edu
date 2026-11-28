@@ -109,7 +109,7 @@ async function build(d) {
   const R = d.route.path, role = me()?.role;
   if (/^\/(learn|play|me)\//.test(R)) { const p = await (await import('./features/student/route.js')).studentPageFor(router.here().segs, ctx, d.query); return p ? { mode: 'shell', ...p } : null; }
   if (role === 'teacher' && /^\/(class\/|contact\/(guardians|doubts|notice)|more\/(automation|me))/.test(R)) { const p = await (await import('./features/teacher/route.js')).teacherPage(router.here().segs, ctx, d.query); return p ? { mode: 'shell', ...p } : null; }
-  if (role === 'teacher' && /^\/more\/(marks|upload|approve|qbank|cards)/.test(R)) { const p = await (await import('./features/exams/route.js')).examsPage(router.here().segs, ctx, d.query); return p ? { mode: 'shell', ...p } : null; }
+  if (role === 'teacher' && /^\/more\/(marks|upload|approve|qbank|cards|paper)/.test(R)) { const p = await (await import('./features/exams/route.js')).examsPage(router.here().segs, ctx, d.query); return p ? { mode: 'shell', ...p } : null; }
   if ((role === 'teacher' && R === '/more/honorarium') || (role === 'admin' && R.startsWith('/office/'))) { const p = await (await import('./features/office/route.js')).officePage(router.here().segs, ctx, d.query); return p ? { mode: 'shell', ...p } : null; }
   if (R.startsWith('/study/')) { const p = await (await import('./features/study/route.js')).studyPage(R.slice(7), ctx, d.query); return p ? { mode: 'shell', tab: 'study', title: p.title, back: true, result: p.result } : null; }
   if (d.route.tab) { const mod = await import(`./roles/${role}.js`); const id = R.slice(1); return { mode: 'shell', tab: id, title: tabById(role, id).name, result: mod[role + 'Tab'](id, ctx) }; }
