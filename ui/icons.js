@@ -1,5 +1,6 @@
 // Icons: one hidden SVG sprite, 24px stroke icons (style comes from .de-icon in components.css).
 import { svgEl } from './dom.js';
+import { aicon, libName } from './aicons.js';
 
 const P = {
   home: 'M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z',
@@ -56,6 +57,8 @@ export function installIcons() {
   document.body.prepend(s);
 }
 export function icon(name, cls = '') {
+  const lib = libName(name);
+  if (lib) return aicon(name, 'de-icon' + (cls ? ' ' + cls : ''), { auto: false });
   const svg = svgEl('svg', { class: 'de-icon' + (cls ? ' ' + cls : ''), 'aria-hidden': 'true', focusable: 'false' });
   svg.appendChild(svgEl('use', { href: '#i-' + name }));
   return svg;
