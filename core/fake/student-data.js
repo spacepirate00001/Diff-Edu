@@ -34,6 +34,19 @@ const PRACTICE = [
   { id: 'pq2', subject: 'গণিত', chapter_name: 'গুণ', body: '৭ × ৮ = কত?', options: ['৫৪', '৫৬', '৬৪', '৪৮'], answer: '৫৬' },
   { id: 'pq3', subject: 'ইংরেজি', chapter_name: null, body: 'Choose the right word: She ___ to school every day.', options: ['go', 'goes', 'going', 'gone'], answer: 'goes' },
 ];
+// practice-v2 (practice_outline / practice_pick / practice_reveal): subject > chapter > type. Fake only.
+const mk = (id, subject, chapter_name, qtype, body, answer = '', options = []) => ({ id, subject, chapter_name, qtype, body, answer, options, marks: qtype === 'creative' ? 10 : qtype === 'short' ? 2 : 1 });
+const PRACTICE2 = [
+  mk('v1', 'গণিত', 'ভগ্নাংশ', 'mcq', '১/২ + ১/৪ = কত?', '৩/৪', ['৩/৪', '২/৬', '১/৬', '২/৪']),
+  mk('v2', 'গণিত', 'ভগ্নাংশ', 'mcq', '১/২ কে দশমিকে লিখলে?', '০.৫', ['০.২', '০.৫', '১.২', '২.০']),
+  mk('v3', 'গণিত', 'গুণ', 'mcq', '৭ × ৮ = কত?', '৫৬', ['৫৪', '৫৬', '৬৪', '৪৮']),
+  mk('v4', 'গণিত', 'ভগ্নাংশ', 'short', 'ভগ্নাংশের হর কাকে বলে?', 'ভগ্নাংশের নিচের সংখ্যাকে হর বলে। হর বলে পুরো জিনিসটা কয় ভাগে ভাগ হয়েছে।'),
+  mk('v5', 'গণিত', 'গুণ', 'short', 'গুণ আর যোগের সম্পর্ক এক লাইনে লেখো।', ''),
+  mk('v6', 'গণিত', 'গুণ', 'creative', 'রহিমের কাছে ১২০ টাকা আছে। সে ৩টি কলম ও ২টি খাতা কিনল।\n(ক) কলম কী কাজে লাগে?\n(খ) কলমের দাম ১০ টাকা হলে মোট কত খরচ?\n(গ) খাতার দাম ২৫ টাকা হলে কত টাকা বাকি থাকে?\n(ঘ) রহিমের কাছে ৫০ টাকা কম থাকলে সে সবকিছু কিনতে পারত কি? যুক্তি দাও।', '(খ) ৩০ টাকা (গ) ১২০ − ৩০ − ৫০ = ৪০ টাকা'),
+  mk('v7', 'ইংরেজি', 'Grammar', 'mcq', 'She ___ to school every day.', 'goes', ['go', 'goes', 'going', 'gone']),
+  mk('v8', 'ইংরেজি', 'Grammar', 'short', 'Write a sentence using "because".', ''),
+  mk('v9', 'ইংরেজি', 'Reading', 'creative', 'Read: "Tuli has a cat. It is white."\n(a) Who has a cat?\n(b) What colour is it?\n(c) Write two lines about your pet.\n(d) Why do people keep pets?', 'Tuli has a cat. It is white.'),
+];
 export function createStudentData({ p, now, mem, gd }) {
   const today = () => dhakaDay(now());
   const st = mem.st = {
@@ -119,7 +132,15 @@ export function createStudentData({ p, now, mem, gd }) {
           ...(p('preview') === 'none' ? {} : { preview: { teacher_note: { text: 'আজ ভগ্নাংশের অঙ্কে ভালো করেছ।', by: 'গণিতের শিক্ষক' }, next_class: { subject: 'ইংরেজি', teacher: 'রহিম স্যার', time_label: '৪:০০', period_label: 'বিকেল', room: '২ নম্বর রুম' } } }) });
         case 'practice_subjects': return ok(p('practice') === 'none' ? [] : [{ subject: 'গণিত', n: 24 }, { subject: 'ইংরেজি', n: 12 }]);
         case 'practice_questions': return ok(PRACTICE.filter(q => q.subject === body.p_subject).map(({ answer, ...q }) => q));
-        case 'practice_check': { const q = PRACTICE.find(x => x.id === body.p_id); return q ? ok({ right: q.answer === body.p_choice, answer: q.answer }) : bad('not_allowed'); }
+        case 'practice_outline': {
+          if (p('practice') === 'old') return bad('function not found', 404);
+          if (p('practice') === 'none') return ok([]);
+          const m = new Map(); for (const q of PRACTICE2) { const k = [q.subject, q.chapter_name, q.qtype].join('|'); m.set(k, (m.get(k) || 0) + 1); }
+          return ok([...m].map(([k, n]) => { const [subject, chapter_name, qtype] = k.split('|'); return { subject, chapter_name, qtype, n }; }));
+        }
+        case 'practice_pick': return ok(PRACTICE2.filter(q => q.subject === body.p_subject && q.qtype === (body.p_qtype || 'mcq') && (!body.p_chapter || q.chapter_name === body.p_chapter)).slice(0, body.p_limit || 10).map(({ answer, ...q }) => q));
+        case 'practice_reveal': { const q = PRACTICE2.find(x => x.id === body.p_id && x.qtype !== 'mcq'); return q ? ok({ answer: q.answer }) : bad('not_allowed'); }
+        case 'practice_check': { const q = PRACTICE.find(x => x.id === body.p_id) || PRACTICE2.find(x => x.id === body.p_id && x.qtype === 'mcq'); return q ? ok({ right: q.answer === body.p_choice, answer: q.answer }) : bad('not_allowed'); }
         case 'submit_quiz': {
           const z = QUIZZES.find(x => x.id === body.p_quiz_id); if (!z) return bad('quiz not found');
           let correct = 0; z.questions.forEach((q, i) => { if (body.p_answers[i] === q.answer_index) correct++; });

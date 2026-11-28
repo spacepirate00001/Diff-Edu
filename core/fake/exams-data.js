@@ -11,6 +11,42 @@ const SUBJ = [['sb6m', 6, 'Math', 'গণিত'], ['sb6e', 6, 'English', 'ই�
 const subjOf = id => SUBJ.find(s => s.id === id) || null;
 const MCQ = (i, body, options, answer, extra = {}) => ({ id: 'it' + i, qtype: 'mcq', body, options, answer, marks: 1, needs_figure: false, has_table: false, review_note: null, chapter_hint: null, topic_suggestion: null, source_ref: 'পৃষ্ঠা ' + (40 + i), difficulty: 'medium', chapter_id: null, item_idx: i, ...extra });
 
+// More class-6 questions so the paper builder (auto-pick, chapters, difficulty, reserved, figure) can be tried locally.
+const MB = (id, subject, chapter_name, qtype, difficulty, body, options, answer, extra = {}) => ({ id: 'mb' + id, class_level: 6, subject, chapter_name, qtype, difficulty, body, options, answer, visibility: 'practice', marks: null, needs_figure: false, created_at: '2026-11-20T00:00:00Z', ...extra });
+const MATH_CH = ['অধ্যায় ১: স্বাভাবিক সংখ্যা', 'অধ্যায় ২: গসাগু', 'অধ্যায় ৩: ভগ্নাংশ', 'অধ্যায় ৪: দশমিক'];
+const MORE_BANK = [
+  MB(1, 'গণিত', MATH_CH[0], 'mcq', 'easy', 'সবচেয়ে ছোট স্বাভাবিক সংখ্যা কোনটি?', ['০', '১', '২', '১০'], '১'),
+  MB(2, 'গণিত', MATH_CH[0], 'mcq', 'easy', '৯৯ এর পরের সংখ্যা কত?', ['৯৮', '১০০', '১০১', '১১০'], '১০০'),
+  MB(3, 'গণিত', MATH_CH[0], 'mcq', 'medium', 'কোনটি জোড় সংখ্যা?', ['১৫', '২১', '২৮', '৩৩'], '২৮'),
+  MB(4, 'গণিত', MATH_CH[0], 'mcq', 'hard', '১ থেকে ১০ পর্যন্ত মৌলিক সংখ্যা কয়টি?', ['৩', '৪', '৫', '৬'], '৪', { visibility: 'reserved' }),
+  MB(5, 'গণিত', MATH_CH[0], 'short', 'medium', 'জোড় ও বিজোড় সংখ্যার পার্থক্য লিখো।', [], 'যে সংখ্যা ২ দিয়ে নিঃশেষে বিভাজ্য তা জোড়, নইলে বিজোড়।'),
+  MB(6, 'গণিত', MATH_CH[1], 'mcq', 'easy', '৬ ও ৮ এর গসাগু কত?', ['১', '২', '৪', '৬'], '২'),
+  MB(7, 'গণিত', MATH_CH[1], 'mcq', 'medium', '১২ ও ১৮ এর লসাগু কত?', ['৬', '১২', '৩৬', '৭২'], '৩৬'),
+  MB(8, 'গণিত', MATH_CH[1], 'mcq', 'medium', '১৫ ও ২৫ এর গসাগু কত?', ['৩', '৫', '১০', '১৫'], '৫'),
+  MB(9, 'গণিত', MATH_CH[1], 'mcq', 'hard', 'দুটি সংখ্যার গুণফল ২৪০, গসাগু ৪। লসাগু কত?', ['৪০', '৬০', '৮০', '৯৬০'], '৬০', { visibility: 'reserved' }),
+  MB(10, 'গণিত', MATH_CH[1], 'short', 'medium', '৪৮ ও ৬০ এর গসাগু নির্ণয় করো।', [], '১২'),
+  MB(11, 'গণিত', MATH_CH[1], 'creative', 'hard', 'একটি ঘরের মেঝে ১২ মিটার লম্বা ও ১৮ মিটার চওড়া। (ক) গসাগু কাকে বলে? (খ) সবচেয়ে বড় বর্গাকার টাইলের এক বাহু কত? (গ) কতটি টাইল লাগবে?', [], '(খ) ৬ মিটার (গ) ৬টি'),
+  MB(12, 'গণিত', MATH_CH[2], 'mcq', 'easy', '১/২ + ১/২ = কত?', ['১/৪', '১', '২', '১/২'], '১'),
+  MB(13, 'গণিত', MATH_CH[2], 'mcq', 'easy', 'কোনটি প্রকৃত ভগ্নাংশ?', ['৫/৩', '৭/৭', '৩/৫', '৯/৪'], '৩/৫'),
+  MB(14, 'গণিত', MATH_CH[2], 'mcq', 'medium', '৩/৪ কে দশমিকে প্রকাশ করলে কত হয়?', ['০.৩৪', '০.৭৫', '০.৮', '১.৩৪'], '০.৭৫'),
+  MB(15, 'গণিত', MATH_CH[2], 'mcq', 'medium', '২/৩ এর সমান ভগ্নাংশ কোনটি?', ['৩/৪', '৪/৬', '৫/৯', '৬/৮'], '৪/৬'),
+  MB(16, 'গণিত', MATH_CH[2], 'mcq', 'medium', 'ছবিতে ছায়াময় অংশ কত ভাগ?', ['১/৪', '১/২', '৩/৪', '১'], '১/২', { needs_figure: true }),
+  MB(17, 'গণিত', MATH_CH[2], 'short', 'easy', '২/৫ + ১/৫ এর মান কত?', [], '৩/৫'),
+  MB(18, 'গণিত', MATH_CH[2], 'creative', 'medium', 'করিম একটি পিৎজার ৩/৮ অংশ ও রহিম ২/৮ অংশ খেল। (ক) ভগ্নাংশ কাকে বলে? (খ) দুজন মিলে কত অংশ খেল? (গ) কত অংশ বাকি রইল?', [], '(খ) ৫/৮ (গ) ৩/৮'),
+  MB(19, 'গণিত', MATH_CH[3], 'mcq', 'easy', '০.৫ = কত?', ['১/২', '১/৪', '১/৫', '৫'], '১/২'),
+  MB(20, 'গণিত', MATH_CH[3], 'mcq', 'medium', '১.২ + ২.৮ = কত?', ['৩.০', '৩.৮', '৪.০', '৪.২'], '৪.০'),
+  MB(21, 'গণিত', MATH_CH[3], 'mcq', 'hard', '০.০১ × ১০০ = কত?', ['০.১', '১', '১০', '১০০'], '১'),
+  MB(22, 'গণিত', MATH_CH[3], 'short', 'medium', '৩.৫ কে ভগ্নাংশে লেখো।', [], '৩১/২ বা ৭/২'),
+  MB(23, 'বিজ্ঞান', 'অধ্যায় ১: জীবজগৎ', 'mcq', 'easy', 'কোনটি জড় বস্তু?', ['গাছ', 'পাথর', 'মাছ', 'পাখি'], 'পাথর'),
+  MB(24, 'বিজ্ঞান', 'অধ্যায় ১: জীবজগৎ', 'mcq', 'medium', 'উদ্ভিদ খাবার তৈরি করে কোন প্রক্রিয়ায়?', ['শ্বসন', 'সালোকসংশ্লেষণ', 'পরিপাক', 'রেচন'], 'সালোকসংশ্লেষণ'),
+  MB(25, 'বিজ্ঞান', 'অধ্যায় ১: জীবজগৎ', 'short', 'easy', 'জীবের দুটি বৈশিষ্ট্য লেখো।', [], 'বৃদ্ধি পায়, শ্বসন করে।'),
+  MB(26, 'বিজ্ঞান', 'অধ্যায় ২: পদার্থ', 'mcq', 'easy', 'পানির স্ফুটনাঙ্ক কত?', ['০° সে.', '৫০° সে.', '১০০° সে.', '২০০° সে.'], '১০০° সে.'),
+  MB(27, 'বিজ্ঞান', 'অধ্যায় ২: পদার্থ', 'mcq', 'medium', 'কোনটি গ্যাসীয় পদার্থ?', ['লোহা', 'দুধ', 'অক্সিজেন', 'তেল'], 'অক্সিজেন'),
+  MB(28, 'বিজ্ঞান', 'অধ্যায় ২: পদার্থ', 'mcq', 'hard', 'বরফ গলে পানি হওয়া কোন ধরনের পরিবর্তন?', ['রাসায়নিক', 'ভৌত', 'নিউক্লীয়', 'জৈব'], 'ভৌত', { visibility: 'reserved' }),
+  MB(29, 'বিজ্ঞান', 'অধ্যায় ২: পদার্থ', 'creative', 'medium', 'রাহেলা একটি পাত্রে পানি গরম করল। (ক) পদার্থ কাকে বলে? (খ) পানি ফুটলে কী হয়? (গ) বাষ্প ঠান্ডা হলে কী হবে ব্যাখ্যা করো।', [], '(খ) বাষ্প হয় (গ) ঘনীভূত হয়ে পানি'),
+  MB(30, 'বিজ্ঞান', 'অধ্যায় ৩: শক্তি', 'mcq', 'easy', 'সূর্য আমাদের কী দেয়?', ['শুধু পানি', 'আলো ও তাপ', 'মাটি', 'বাতাস'], 'আলো ও তাপ'),
+];
+
 export function createExamData({ p, now, mem }) {
   const day = n => dhakaDay(now() + n * 86400e3);
   const none = p('exams') === 'empty';
@@ -36,8 +72,10 @@ export function createExamData({ p, now, mem }) {
       { id: 'q1', class_level: 6, subject: 'গণিত', chapter_name: 'অধ্যায় ২: গসাগু', qtype: 'mcq', difficulty: 'easy', body: '১২ ও ১৮ এর গসাগু কত?', options: ['২', '৩', '৬', '৯'], answer: '৬', created_at: day(-3) },
       { id: 'q2', class_level: 6, subject: 'গণিত', chapter_name: 'অধ্যায় ২: গসাগু', qtype: 'short', difficulty: 'medium', body: 'লসাগু ও গসাগুর সম্পর্ক লিখো।', options: [], answer: '', created_at: day(-3) },
       { id: 'q3', class_level: 6, subject: 'ইংরেজি', chapter_name: '', qtype: 'mcq', difficulty: 'easy', body: 'She ___ to school every day.', options: ['go', 'goes', 'going', 'gone'], answer: 'goes', created_at: day(-5) },
-      { id: 'q4', class_level: 7, subject: 'গণিত', chapter_name: 'অধ্যায় ১', qtype: 'creative', difficulty: 'hard', body: 'একটি দোকানে ...', options: [], answer: '', created_at: day(-6) }],
-    approved: [], rejected: [], uploads: [],
+      { id: 'q4', class_level: 7, subject: 'গণিত', chapter_name: 'অধ্যায় ১', qtype: 'creative', difficulty: 'hard', body: 'একটি দোকানে ...', options: [], answer: '', created_at: day(-6) },
+      ...(MORE_BANK),
+    ],
+    approved: [], rejected: [], uploads: [], papers: [], online: [], exam_questions: [], exam_options: [],
   };
   const withSubj = r => ({ ...r, subject: r.subject_id ? subjOf(r.subject_id) : null });
   const pick = (list, q, ...keys) => list.filter(r => keys.every(k => { const e = eqv(q, k), i = inv(q, k); return (!e || String(r[k]) === e) && (!i || i.includes(String(r[k]))); }));
@@ -66,7 +104,22 @@ export function createExamData({ p, now, mem }) {
         case 'chapters': return ok(none ? [] : [{ id: 'ch1', subject: 'গণিত', number: 2, title: 'গসাগু ও লসাগু', class_level: 6 }, { id: 'ch2', subject: 'গণিত', number: 3, title: 'ভগ্নাংশ', class_level: 6 }, { id: 'ch3', subject: 'ইংরেজি', number: 1, title: 'Tenses', class_level: 6 }]);
         case 'question_bank':
           if (method === 'DELETE') { ex.bank = ex.bank.filter(b => b.id !== eqv(q, 'id')); return ok(null, 204); }
+          if (method === 'PATCH') { const b = ex.bank.find(r => r.id === eqv(q, 'id')); if (b) Object.assign(b, body); return ok(null, 204); }
           return ok(pick(ex.bank, q, 'class_level'));
+        case 'papers': {
+          if (method === 'POST') { if (ex.papers.some(x => x.id === body.id)) return ok({ message: 'duplicate key' }, 409); ex.papers.unshift({ ...body, created_at: new Date(now()).toISOString(), updated_at: new Date(now()).toISOString() }); return ok(null, 201); }
+          if (method === 'PATCH') { const x = ex.papers.find(r => r.id === eqv(q, 'id')); if (x) Object.assign(x, body, { updated_at: new Date(now()).toISOString() }); return ok(null, 204); }
+          if (method === 'DELETE') { ex.papers = ex.papers.filter(r => r.id !== eqv(q, 'id')); return ok(null, 204); }
+          return ok(pick(ex.papers, q, 'id'));
+        }
+        case 'online_exams': {
+          if (method === 'POST') { ex.online.push({ ...body, created_at: new Date(now()).toISOString() }); return ok(null, 201); }
+          if (method === 'PATCH') { const x = ex.online.find(r => r.id === eqv(q, 'id')); if (x) Object.assign(x, body); return ok(null, 204); }
+          if (method === 'DELETE') { ex.online = ex.online.filter(r => r.id !== eqv(q, 'id')); return ok(null, 204); }
+          return ok(pick(ex.online, q, 'id', 'paper_id'));
+        }
+        case 'exam_questions': case 'exam_options': if (method === 'POST') { (ex[t] ||= []).push(...[].concat(body)); return ok(null, 201); } return ok([]);
+        case 'exam_attempts': return ok([]);
         case 'report_cards': return ok(p('cards') === 'published' ? ROSTER.filter(s => s.class_level === 6).map(s => ({ class_level: 6, status: 'published', student_id: s.id })) : []);
         case 'class_ratings': return null;
         default: return null;

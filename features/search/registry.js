@@ -60,6 +60,7 @@ const R = [
   ['t_qupload', 'প্রশ্ন জমা', 'আপলোড বইয়ের পাতা পিডিএফ ছবি upload source', 'teacher', 'more', 5, null],
   ['t_qapprove', 'প্রশ্ন অনুমোদন', 'এআই প্রশ্ন দেখুন হ্যাঁ না approve', 'teacher', 'more', 5, null],
   ['t_qbank', 'প্রশ্ন ব্যাংক', 'প্রশ্ন question bank', 'teacher', 'more', 5, null],
+  ['t_paper', 'প্রশ্নপত্র বানান', 'প্রশ্নপত্র পেপার question paper exam প্রিন্ট pdf পরীক্ষা তৈরি', 'teacher', 'more', 5, null],
   ['t_aipaper', 'AI প্রশ্নপত্র ও খাতা দেখা', 'এআই প্রশ্নপত্র ai grading', 'teacher', 'more', 5, null],
   ['t_seat', 'সিট প্ল্যান', 'আসন seat plan', 'teacher', 'more', 5, null],
   ['t_find', 'শিক্ষার্থী খোঁজা', 'ছাত্র খুঁজুন student search ফোন', 'teacher', 'more', 5, null],
@@ -113,7 +114,7 @@ export const LIVE_ROUTES = {
   t_attend: ['/class/attend', 'check'], t_today_att: ['/class', 'clock'], t_rate: ['/class/rate', 'star'], t_homework: ['/class/homework', 'book'], t_find: ['/class/students', 'search'],
   t_chat: ['/contact/guardians', 'chat'], t_doubts: ['/contact/doubts', 'help'], t_notice: ['/contact/notice', 'bell'], t_auto: ['/more/automation', 'info'], t_me: ['/more/me', 'user'],
   // the teacher's exam work (step 5)
-  t_marks: ['/more/marks', 'exam'], t_cards: ['/more/cards', 'file'], t_qupload: ['/more/upload', 'up'], t_qapprove: ['/more/approve', 'check'], t_qbank: ['/more/qbank', 'book'],
+  t_marks: ['/more/marks', 'exam'], t_cards: ['/more/cards', 'file'], t_qupload: ['/more/upload', 'up'], t_qapprove: ['/more/approve', 'check'], t_qbank: ['/more/qbank', 'book'], t_paper: ['/more/paper', 'file'],
   // step 6: the admin's office and the teacher's honorarium
   a_fees: ['/office/fees', 'coin'], a_honor: ['/office/honorarium', 'coin'], a_admissions: ['/office/admissions', 'people'], a_accounts: ['/office/family', 'people'], a_feedback: ['/office/feedback', 'chat'], a_profiles: ['/office/people', 'people'], a_routine: ['/office/routine', 'clock'], a_corr: ['/office/corrections', 'phone'], a_notices: ['/office/notices', 'bell'], t_honor: ['/more/honorarium', 'coin'],
   // the student's (step 3)

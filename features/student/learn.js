@@ -189,8 +189,9 @@ export function mistakesPage(ctx) {
 export const examsPage = ctx => studentPage({
   key: 'sex', isEmpty: d => !d.exams.length && !d.attempts.length,
   empty: () => emptyState('এখন কোনো অনলাইন পরীক্ষা নেই', 'শিক্ষক পরীক্ষা দিলে এখানে দেখা যাবে।'),
-  load: async () => {
-    const [e, a] = await Promise.all([sel('online_exams', 'select=id,title,kind,starts_at,ends_at,duration_minutes&status=eq.published&order=starts_at.desc.nullslast'), sel('exam_attempts', 'select=id,exam_id,score,total,submitted_at,exam:online_exams(title,kind)&order=started_at.desc&limit=30')]);
+  load: async rec => {
+    const lv = Number(rec?.class_level) >= 1 ? Number(rec.class_level) : null;   // exams made from a paper carry a class; no class on an exam = every class
+    const [e, a] = await Promise.all([sel('online_exams', `select=id,title,kind,starts_at,ends_at,duration_minutes,class_level&status=eq.published${lv ? `&or=(class_level.is.null,class_level.eq.${lv})` : ''}&order=starts_at.desc.nullslast`), sel('exam_attempts', 'select=id,exam_id,score,total,submitted_at,exam:online_exams(title,kind)&order=started_at.desc&limit=30')]);
     const bad = [e, a].find(x => x.kind !== 'ok');
     return bad ? { kind: bad.kind } : { kind: 'ok', data: { exams: rows(e), attempts: rows(a) } };
   },

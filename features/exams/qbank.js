@@ -3,6 +3,8 @@ import { h } from '../../ui/dom.js';
 import { chip, chipRow } from '../../ui/chip.js';
 import { confirmBox } from '../../ui/dialog.js';
 import { toast } from '../../ui/toast.js';
+import { field } from '../../ui/field.js';
+import { openSheet } from '../../ui/sheet.js';
 import { dataPage } from '../../ui/datapage.js';
 import { stateCard } from '../../ui/states.js';
 import { request } from '../../core/api.js';
@@ -43,6 +45,15 @@ export function qbankPage(ctx, query = {}) {
             h('div', { class: 'tc-wrap' }, h('span', { class: 'de-chip', text: QT[x.qtype] || x.qtype }), x.chapter_name ? h('span', { class: 'de-chip', text: x.chapter_name }) : null),
             h('p', { class: 'tc-q', text: x.body }),
             (x.options || []).length ? h('ol', { class: 'tc-opts' }, ...x.options.map((o, i) => h('li', { class: String(o) === x.answer ? 'is-ans' : '' }, h('span', { class: 'tc-lab', text: LAB[i] || bn(i + 1) }), h('span', { text: String(o) + (String(o) === x.answer ? ' ✓' : '') })))) : (x.answer ? h('p', { class: 'tc-cap', text: 'উত্তর: ' + x.answer }) : null),
+            x.qtype !== 'mcq' ? h('button', { class: 'de-btn de-btn--secondary', type: 'button', text: x.answer ? 'নমুনা উত্তর বদলান' : 'নমুনা উত্তর লিখুন', onclick: () => {
+              const f = field({ label: 'নমুনা উত্তর (ছাত্ররা "উত্তর দেখি" চাপলে এটা দেখবে)', value: x.answer || '', multiline: true, rows: 6 });
+              const save = h('button', { class: 'de-btn de-btn--primary', type: 'button', text: 'সংরক্ষণ', onclick: async () => {
+                const v = f.input.value.trim(); if (v.length > 4000) return f.error('৪০০০ অক্ষরের মধ্যে লিখুন');
+                const r = await request('PATCH', `/rest/v1/question_bank?id=eq.${x.id}`, { answer: v }, { prefer: 'return=minimal' });
+                if (r.kind === 'ok') { x.answer = v; document.querySelector('.de-sheet')?.remove(); document.querySelector('.de-sheet-scrim')?.remove(); toast('উত্তর সংরক্ষণ হয়েছে'); paint(); } else toast(r.kind === 'offline' ? 'নেট নেই' : 'হয়নি');
+              } });
+              openSheet({ title: 'নমুনা উত্তর', content: h('div', { class: 'sheet-col' }, f.el, save) });
+            } }) : null,
             h('button', { class: 'de-btn de-btn--secondary', type: 'button', text: 'ব্যাংক থেকে বাদ দিন', onclick: async () => {
               if (!await confirmBox({ title: 'প্রশ্ন বাদ', text: 'এই প্রশ্ন ব্যাংক থেকে চলে যাবে। কুইজে আর আসবে না।', ok: 'বাদ দিন', danger: true })) return;
               const r = await request('DELETE', `/rest/v1/question_bank?id=eq.${x.id}`, undefined, { prefer: 'return=minimal' });

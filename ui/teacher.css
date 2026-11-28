@@ -116,3 +116,10 @@
 .tc-actions > .de-btn { flex: 1 1 140px; width: auto; text-decoration: none; }
 .tc-body { margin: 0; font: var(--de-body); color: var(--de-ink); white-space: pre-wrap; overflow-wrap: anywhere; }
 .tc-pre { margin: 0; padding: var(--de-s3); white-space: pre-wrap; overflow-wrap: anywhere; font: var(--de-body); background: var(--de-brand-soft); color: var(--de-ink); border-radius: var(--de-r-md); user-select: all; }
+
+/* ---- প্রশ্নপত্র (features/exams/paper-pages.js) ---- */
+.pp-n { width: 64px; flex: none; text-align: center; }
+.pp-head > summary { cursor: pointer; min-height: var(--de-touch); display: flex; align-items: center; }
+.pp-head[open] > summary { margin-bottom: var(--de-s2); }
+.tc-card.is-picked { border-inline-start: 4px solid var(--de-good-solid, var(--de-brand)); }
+.pp-q { flex-direction: column; flex-wrap: nowrap; }

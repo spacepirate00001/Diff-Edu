@@ -120,3 +120,33 @@ section{page-break-after:always;height:297mm;position:relative}section:last-chil
 .cut{position:absolute;left:0;right:0;top:148.5mm;border-top:1px dashed #000;height:0}.cut span{position:absolute;left:5mm;top:-9px;font-size:13px;background:#fff;padding:0 3px}
 @media print{.no-print{display:none!important}body{background:#fff}}
 .print-bar .de-btn--secondary{background:#fff;color:#000;border:1.5px solid #000}.print-bar .de-btn--primary{background:#000;color:#fff}
+
+/* ---- question paper (features/exams/paper-print.js) ---- */
+@page qp{size:A4;margin:12mm}
+.qp-doc{page:qp;width:210mm;max-width:100%;margin:0 auto;background:#fff;color:#000;font-size:13px;font-weight:500;line-height:1.55}
+.qp-key{break-before:page}
+@media screen{.qp-doc{margin:12px auto;padding:12mm}}
+.qp-head{border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:10px;text-align:center}
+.qp-inst{margin:0;font-size:22px;font-weight:800;line-height:1.3}
+.qp-exam{font-size:15px;font-weight:700}
+.qp-title{font-size:14px;font-weight:600;margin-top:2px}
+.qp-metas{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 16px;margin-top:6px;font-size:12.5px}
+.qp-meta small{font-size:12px;font-weight:500}
+.qp-note{margin:6px 0 0;font-size:12px;font-style:italic}
+.qp-who{display:flex;gap:10px;margin-top:10px;text-align:left}
+.qp-who span{flex:1;border-bottom:1px solid #000;min-height:18px;font-size:12px}
+.qp-who span:first-child{flex:3}
+.qp-sec{margin-bottom:8px}
+.qp-sh{display:flex;justify-content:space-between;margin:10px 0 6px;padding:2px 8px;border:1.4px solid #000;font-size:13.5px;font-weight:800;break-after:avoid}
+.qp-q{display:flex;gap:6px;margin:0 0 7px;break-inside:avoid}
+.qp-no{flex:none;min-width:24px;font-weight:700}
+.qp-body{flex:1;min-width:0}
+.qp-body p{margin:0;overflow-wrap:anywhere}
+.qp-part{padding-left:12px}
+.qp-fig{font-size:11.5px;font-style:italic}
+.qp-mk{flex:none;font-weight:700;white-space:nowrap}
+.qp-opts{list-style:none;margin:2px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:1px 14px}
+.qp-opts li{break-inside:avoid;overflow-wrap:anywhere}
+.qp-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,1fr);gap:4px 8px;font-weight:600}
+.qp-ans{margin:0 0 4px;break-inside:avoid}
+.qp-key{text-align:center}.qp-key .qp-sec{text-align:left}
