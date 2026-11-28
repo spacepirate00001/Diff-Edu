@@ -39,6 +39,7 @@ const R = [
   ['s_games', 'শেখার খেলা', 'খেলা game গণিত', 'student', 'play', 3, 'games'],
   ['s_decor', 'সাজঘর', 'মাসকট স্টিকার সাজানো decor', 'student', 'play', 3, 'decor'],
   ['s_chat', 'বন্ধুদের সাথে চ্যাট', 'চ্যাট chat বন্ধু', 'student', 'play', 3, 'chat'],
+  ['s_memes', 'মিমস', 'মিম হাসি মজা meme funny', 'student', 'play', 3, null],
   ['s_profile', 'আমার প্রোফাইল', 'প্রোফাইল অবতার profile', 'student', 'more', 3, null],
   ['s_report', 'রিপোর্ট', 'রিপোর্ট কার্ড রেজাল্ট report', 'student', 'more', 3, 'reports'],
   ['s_ratings', 'রেটিং', 'rating', 'student', 'more', 3, 'ratings'],
@@ -71,6 +72,7 @@ const R = [
   ['t_notice', 'নোটিশ পাঠান', 'নোটিশ notice ঘোষণা', 'teacher', 'inbox', 4, 'notices'],
   ['t_homework', 'বাড়ির কাজ', 'হোমওয়ার্ক homework', 'teacher', 'class', 4, null],
   ['t_auto', 'অটোমেশনের নিয়ম', 'স্বয়ংক্রিয় খবর চুপ মোড silent এসএমএস automation', 'teacher', 'more', 5, null],
+  ['t_memes', 'মিম অনুমোদন', 'মিম meme অনুমোদন সরান', 'teacher,admin', 'more', 5, null],
   ['t_me', 'আমার প্রোফাইল ও সময়সূচি', 'প্রোফাইল সময়সূচি রুটিন schedule', 'teacher', 'more', 5, null],
   ['t_meet', 'মিটিং', 'সাক্ষাৎ meeting', 'teacher', 'more', 5, null],
   ['t_honor', 'ক্লাস সম্মানী', 'বেতন honorarium', 'teacher', 'more', 6, null],
@@ -123,7 +125,7 @@ export const LIVE_ROUTES = {
   s_report: ['/learn/report', 'file'], s_ratings: ['/learn/ratings', 'user'], s_goals: ['/learn/goals', 'check'], s_certs: ['/learn/certs', 'file'],
   s_flash: ['/learn/flash', 'file'], s_askbox: ['/learn/doubts', 'chat'], s_timer: ['/learn/focus', 'clock'], s_ai: ['/learn/diffy', 'help'], s_duel: ['/play/duel', 'people'],
   s_challenge: ['/play/tournament', 'trophy'], s_teams: ['/play/teams', 'people'], s_board: ['/play/board', 'chart'], s_games: ['/play/games', 'gamepad'], s_spell: ['/play/games', 'gamepad'],
-  s_shop: ['/play/shop', 'gift'], s_decor: ['/play/decor', 'star'], s_chat: ['/play/chat', 'chat'], s_profile: ['/me/profile', 'user'],
+  s_shop: ['/play/shop', 'gift'], s_decor: ['/play/decor', 'star'], s_chat: ['/play/chat', 'chat'], s_profile: ['/me/profile', 'user'], s_memes: ['/play/memes', 'chat'], t_memes: ['/more/memes', 'check'],
 };
 // The teacher's screens are for teachers only: the same feature listed for the admin keeps saying "ধাপ N-এ আসছে" until the admin step.
 const TEACHER_ONLY = new Set(['t_attend', 't_today_att', 't_rate']);

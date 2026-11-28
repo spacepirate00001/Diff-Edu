@@ -6,7 +6,7 @@ const T = {
   results: ['study', 'পরীক্ষার ফল'], report: ['study', 'রিপোর্ট কার্ড'], homework: ['study', 'বাড়ির কাজ'], merit: ['study', 'মেধা তালিকা'], ratings: ['more', 'রেটিং ও প্রশংসা'], goals: ['more', 'আমার লক্ষ্য'], certs: ['more', 'সার্টিফিকেট'],
   flash: ['study', 'ফ্ল্যাশকার্ড'], doubts: ['study', 'প্রশ্ন বক্স'], focus: ['study', 'ফোকাস টাইমার'], diffy: ['study', 'ডিফি'],
 };
-const P = { tournament: 'সাপ্তাহিক টুর্নামেন্ট', teams: 'দল ও লড়াই', games: 'শেখার খেলা', board: 'ক্লাসের তালিকা', shop: 'পয়েন্টের দোকান', decor: 'সাজঘর', chat: 'বন্ধুদের সাথে চ্যাট', duel: 'কুইজ ডুয়েল' };
+const P = { tournament: 'সাপ্তাহিক টুর্নামেন্ট', teams: 'দল ও লড়াই', games: 'শেখার খেলা', board: 'ক্লাসের তালিকা', shop: 'পয়েন্টের দোকান', decor: 'সাজঘর', chat: 'বন্ধুদের সাথে চ্যাট', duel: 'কুইজ ডুয়েল', memes: 'মিমস' };
 
 export async function studentPageFor(segs, ctx, query = {}) {
   await ready;
@@ -25,7 +25,8 @@ export async function studentPageFor(segs, ctx, query = {}) {
     if (!P[name]) return null;
     const PL = ['tournament', 'teams', 'board', 'shop', 'decor'].includes(name) ? await import('./play.js') : null;
     let result;
-    if (name === 'duel') result = (await import('./extra.js')).duelPage();
+    if (name === 'memes') result = (await import('../memes/memes.js')).memesPage(ctx);
+    else if (name === 'duel') result = (await import('./extra.js')).duelPage();
     else if (name === 'games') { const G = await import('./games.js'); result = arg ? G.gamePage(ctx, arg) : G.gamesPage(ctx); }
     else if (name === 'chat') { const C = await import('./chat.js'); result = arg ? C.chatPage(ctx, arg) : C.chatListPage(ctx); }
     else result = name === 'tournament' ? PL.tournamentPage(ctx) : name === 'teams' ? PL.teamsPage() : name === 'board' ? PL.boardPage() : name === 'shop' ? PL.shopPage() : PL.decorPage();

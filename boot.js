@@ -109,6 +109,7 @@ async function build(d) {
   const R = d.route.path, role = me()?.role;
   if (/^\/(learn|play|me)\//.test(R)) { const p = await (await import('./features/student/route.js')).studentPageFor(router.here().segs, ctx, d.query); return p ? { mode: 'shell', ...p } : null; }
   if (role === 'teacher' && /^\/(class\/|contact\/(guardians|doubts|notice)|more\/(automation|me))/.test(R)) { const p = await (await import('./features/teacher/route.js')).teacherPage(router.here().segs, ctx, d.query); return p ? { mode: 'shell', ...p } : null; }
+  if ((role === 'teacher' || role === 'admin') && R === '/more/memes') return { mode: 'shell', tab: 'more', back: true, title: 'মিম অনুমোদন', result: (await import('./features/memes/memes.js')).memeReviewPage() };
   if (role === 'teacher' && /^\/more\/(marks|upload|approve|qbank|cards|paper)/.test(R)) { const p = await (await import('./features/exams/route.js')).examsPage(router.here().segs, ctx, d.query); return p ? { mode: 'shell', ...p } : null; }
   if ((role === 'teacher' && R === '/more/honorarium') || (role === 'admin' && R.startsWith('/office/'))) { const p = await (await import('./features/office/route.js')).officePage(router.here().segs, ctx, d.query); return p ? { mode: 'shell', ...p } : null; }
   if (R.startsWith('/study/')) { const p = await (await import('./features/study/route.js')).studyPage(R.slice(7), ctx, d.query); return p ? { mode: 'shell', tab: 'study', title: p.title, back: true, result: p.result } : null; }

@@ -6,7 +6,7 @@ import { tabIds } from '../roles/tabs.js';
 export const STUDY_PAGES = ['report', 'results', 'att', 'homework', 'routine', 'revision', 'materials', 'ratings', 'goals', 'certs'];
 // The student's pages (step 3). /learn = "পড়া" and its sub-pages, /play = "খেলা", /me = the student's own profile. The word list is one place (tests read it).
 export const LEARN_PAGES = ['syllabus', 'materials', 'quiz', 'mistakes', 'practice', 'revision', 'exams', 'results', 'report', 'homework', 'merit', 'ratings', 'goals', 'certs', 'flash', 'doubts', 'focus', 'diffy'];
-export const PLAY_PAGES = ['tournament', 'teams', 'games', 'board', 'shop', 'decor', 'chat', 'duel'];
+export const PLAY_PAGES = ['tournament', 'teams', 'games', 'board', 'shop', 'decor', 'chat', 'duel', 'memes'];
 // The teacher's pages (step 4). /class/* under "ক্লাস", /contact/* under "যোগাযোগ", /more/automation and /more/me under "আরও". One word list, tests read it.
 export const CLASS_PAGES = ['attend', 'rate', 'homework', 'students'];
 export const CONTACT_PAGES = ['guardians', 'doubts', 'notice'];
@@ -41,7 +41,7 @@ export const ROUTES = [
   ...CONTACT_PAGES.map(n => ({ path: '/contact/' + n, roles: ['teacher'] })), { path: '/contact/guardians/:sid', roles: ['teacher'] },
   ...TEACHER_MORE.map(n => ({ path: '/more/' + n, roles: ['teacher'] })), { path: '/more/push' },
   ...EXAM_PAGES.map(n => ({ path: '/more/' + n, roles: ['teacher'] })), { path: '/more/marks/:id', roles: ['teacher'] }, { path: '/more/approve/:id', roles: ['teacher'] }, { path: '/more/paper/:id', roles: ['teacher'] }, { path: '/more/paper/:id/edit', roles: ['teacher'] },
-  ...OFFICE_PAGES.map(n => ({ path: '/office/' + n, roles: ['admin'] })), { path: '/more/honorarium', roles: ['teacher'] },
+  ...OFFICE_PAGES.map(n => ({ path: '/office/' + n, roles: ['admin'] })), { path: '/more/honorarium', roles: ['teacher'] }, { path: '/more/memes', roles: ['teacher', 'admin'] },
   { path: '/f/:id' }, { path: '/exam/:id', roles: ['student'] },
 ];
 const matchPath = (pattern, segs) => {
